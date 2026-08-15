@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.python-version
+
+data/raw/
+data/processed/
+data/catalog/*.csv
+data/catalog/*.json
+data/anomalies/
+data/downloads.log
+*.part

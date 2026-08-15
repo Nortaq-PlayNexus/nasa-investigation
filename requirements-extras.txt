@@ -1,0 +1,9 @@
+# Optional extras for deep analysis and integrations.
+# Base install stays stdlib + numpy + Pillow (requirements.txt).
+# Everything here degrades gracefully if absent.
+
+scipy>=1.10                  # photometry stats, signal filters (optional)
+opencv-python>=4.8          # feature matching / registration (optional)
+imagecodecs>=2023.1         # JPEG2000/JP2 browse products (optional)
+discord.py>=2.3             # Discord bot (bot/discord_bot.py)
+aiohttp>=3.9                # Discord asset downloads

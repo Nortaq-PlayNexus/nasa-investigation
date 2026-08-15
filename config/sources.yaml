@@ -1,0 +1,132 @@
+sources:
+  nasa_image_library:
+    base: https://images-api.nasa.gov
+    search: /search
+    params:
+      q: "<query>"
+      media_type: "image|video|audio"
+      page_size: 100
+    auth: none
+    notes: Search API behind images.nasa.gov. Use --media-type video for video frames.
+
+  nasa_rover_rss:
+    base: https://mars.nasa.gov/rss/api/
+    endpoint: "?feed=raw_images&category=mars2020&feedtype=json&ver=1.2&num=25&order=sol+desc&search="
+    categories: [mars2020, ingenuity]
+    auth: none
+    notes: Raw Mars 2020 imagery feed (Perseverance + Ingenuity), no key. Use download_rover.py. Curiosity/Opportunity/Spirit fall back to the featured-gallery feed.
+
+  nasa_mars_photos_api:
+    base: https://api.nasa.gov/mars-photos/api/v1/rovers
+    auth: api_key
+    notes: ARCHIVED (404 as of 2026). Do not rely on it; use the raw_images feed above.
+
+  hirise_catalog:
+    base: https://hirise-pds.lpl.arizona.edu
+    catalog: /catalog/HiRISE_Catalog.json
+    pds: /PDS/EDR
+    auth: none
+    notes: MRO HiRISE 0.25-0.5 m/px products. Catalog approx 60 MB JSON.
+
+  lroc_pds:
+    base: https://pds-imaging.jpl.nasa.gov
+    volumes: /data/lro/lroc/
+    auth: none
+    notes: LRO LROC NAC (0.5-2 m/px) and WAC (~100 m/px) EDR/RDR volumes.
+
+  pds_geosciences_lro:
+    base: https://pds-geosciences.wustl.edu/missions/lro/
+    auth: none
+    notes: LRO other instruments (LOLA, Mini-RF, Diviner).
+
+  mars_trek:
+    base: https://trek.nasa.gov/mars/
+    auth: none
+    notes: Interactive basemap, CTX/HiRISE mosaics; useful for geo-locating finds.
+
+  moon_trek:
+    base: https://trek.nasa.gov/moon/
+    auth: none
+    notes: Interactive lunar basemap; geo-locating finds.
+
+  apollo_lpi_panoramas:
+    base: https://www.lpi.usra.edu/resources/apollopanoramas/
+    auth: none
+    notes: Apollo surface 35mm stills and panoramas (High/Medium/Low res).
+
+  apollo_sese:
+    base: https://apollo.sese.asu.edu/
+    auth: none
+    notes: Apollo image archive (orbital + surface).
+
+  project_apollo_archive:
+    base: https://www.flickr.com/photos/projectapolloarchive/
+    auth: none
+    notes: Scans of original Apollo Hasselblad film magazines.
+
+  jaxa_kaguya:
+    base: https://data.darts.isas.jaxa.jp/pub/pds3/
+    auth: none
+    notes: Kaguya (SELENE) TC/MI terrain and multiband imagery.
+
+  # -- hard-to-find archives (downloadable via scripts/download_archive.py) --
+  ctx_edr:
+    volume: https://pds-imaging.jpl.nasa.gov/data/mro/mro-m-ctx-2-edr-l0-v1.0/
+    mode: [browse, edr]
+    auth: none
+    notes: MRO Context Camera, global 6 m/px coverage of Mars. Browse = small
+      JPEGs; EDR .IMG files are multi-GB (use --max-size-mb).
+
+  moc_edr:
+    volume: https://pds-imaging.jpl.nasa.gov/data/mgs/mgs-m-moc-2-edr-narrowangle-v1.0/
+    mode: [browse, edr]
+    auth: none
+    notes: MGS MOC narrow-angle 1997-2006, 1.5-12 m/px. Pre-HiRISE archive for
+      change detection across eras.
+
+  viking1:
+    volume: https://pds-imaging.jpl.nasa.gov/data/viking1/v1-visual-v02/
+    mode: [browse, edr]
+    auth: none
+    notes: Viking Orbiter 1 (1976-80) visual imaging.
+
+  viking2:
+    volume: https://pds-imaging.jpl.nasa.gov/data/viking2/v2-visual-v02/
+    mode: [browse, edr]
+    auth: none
+    notes: Viking Orbiter 2 (1976-80) visual imaging.
+
+  lunar_orbiter:
+    volume: https://pds-imaging.jpl.nasa.gov/data/lunar_orbiter_5/
+    mode: [browse, edr]
+    auth: none
+    notes: Digitized Lunar Orbiter (1966-67) scans, ~60-90 m/px. Path unverified;
+      may have moved. USGS Astrogeology serves georeferenced frames too.
+
+  clementine:
+    volume: https://pds-geosciences.wustl.edu/missions/clementine/
+    mode: [browse, edr]
+    auth: none
+    notes: Clementine (1994) UVVIS/NIR/HIRES. Path unverified.
+
+  m3:
+    volume: https://pds-geosciences.wustl.edu/missions/chandrayaan-1/
+    mode: [browse, edr]
+    auth: none
+    notes: Moon Mineralogy Mapper hyperspectral cubes (85 bands). Read single
+      bands with pipeline/pds.py. Path unverified.
+
+  themis:
+    volume: https://pds-imaging.jpl.nasa.gov/data/odyssey/themis/
+    mode: [browse, edr]
+    auth: none
+    notes: Mars Odyssey THEMIS visible + thermal IR (~100 m/px). Thermal
+      inertia data is invisible in visible light. Path unverified.
+
+  mex_hrsc:
+    volume: https://psa.esa.int/
+    mode: [browse, edr]
+    auth: none
+    notes: Mars Express HRSC stereo (10-20 m/px) via ESA PSA. Search interface,
+      not plain listings; fetch via web UI/API and drop products in data/raw.
+

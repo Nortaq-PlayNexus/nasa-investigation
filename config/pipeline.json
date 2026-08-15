@@ -1,0 +1,15 @@
+{
+  "detect_z": 3.0,
+  "detect_min_size": 12,
+  "detect_scales": "4",
+  "detect_max_scale_pixels": 8000000,
+  "analyze_max_crop": 512,
+  "adjudicate_max_crop": 512,
+  "adjudicate_top": 20,
+  "adjudicate_contrast_bar": 1.5,
+  "adjudicate_area_min": 200,
+  "adjudicate_area_max": 50000,
+  "adjudicate_q": 0.05,
+  "benchmark_seed": 7,
+  "benchmark_sizes": "8,16,24,32,48,64,96,128"
+}
