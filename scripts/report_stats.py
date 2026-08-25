@@ -60,6 +60,18 @@ def main() -> int:
         "findings": len(list(LEADS_DIR.glob("F-*.md"))),
     }
     text = json.dumps(out, indent=2)
+    if "--markdown" in sys.argv:
+        md = ["# HiRISE Conclusions Summary", "",
+              f"- Candidates: **{len(rows)}**", f"- Leads: **{len(lead_rows)}**",
+              f"- Confirmed leads: **{len(conf)}**", f"- Avg contrast: **{round(avg_contrast, 3)}**",
+              f"- Finding reports: **{out['findings']}**", "",
+              "## Verdicts", ""]
+        for k, v in verdicts.most_common():
+            md.append(f"- {k}: {v}")
+        md += ["", "## Top acquisitions", "", "| Acquisition | Candidates |", "|---|---|"]
+        for a in top_acq:
+            md.append(f"| {a['acq']} | {a['count']} |")
+        text = "\n".join(md) + "\n"
     if "--out" in sys.argv:
         i = sys.argv.index("--out") + 1
         Path(sys.argv[i]).write_text(text + "\n", encoding="utf-8")
