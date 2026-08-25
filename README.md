@@ -26,11 +26,12 @@ A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery
 ## Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/report_top.png" width="80%" alt="Anomaly Analysis Report">
+  <a href="report/index.html"><img src="assets/screenshots/report.png" width="80%" alt="Anomaly Analysis Report"></a>
 </p>
 
 <p align="center">
-  <em>Generated HTML report showing pipeline statistics, detection summary, and adjudicated leads</em>
+  <em>Generated HTML report showing pipeline statistics, detection summary, and adjudicated leads.
+  <a href="report/index.html">Open the public Anomaly Analysis Report &rarr;</a></em>
 </p>
 
 ---
@@ -222,6 +223,7 @@ python scripts/check_stereo.py --left pair_a.png --right pair_b.png \
 | `data/anomalies/conclusions/adjudicated.csv` | Cross-band confirmed leads with verdicts |
 | `data/anomalies/audit.jsonl` | Machine-readable audit trail of every run |
 | `findings/` | Only conclusions that survived the full methodology |
+| [`report/index.html`](report/index.html) | **Public** self-contained Anomaly Analysis Report (committed, viewable on GitHub) |
 
 ---
 
