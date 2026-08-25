@@ -201,6 +201,10 @@ section{padding:2.6rem 0}
 .prose code{font-family:var(--mono);background:#0b0f17;border:1px solid var(--border);border-radius:5px;padding:.05rem .35rem;font-size:.85em;color:var(--accent2)}
 .prose blockquote{border-left:3px solid var(--accent);margin:1rem 0;padding:.2rem 1rem;color:var(--muted)}
 .prose hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+.panel-box{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:0 1.3rem 1.3rem;box-shadow:var(--shadow);margin-top:1rem;backdrop-filter:blur(4px)}
+.pb-head{font-family:var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--accent);
+  font-size:.92rem;padding:.9rem 0 .6rem;border-bottom:1px solid var(--border);margin-bottom:.7rem}
 
 /* report table */
 table.sortable{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.82rem}
@@ -652,9 +656,9 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
 
 <section id='methodology'><div class='wrap'>
   <div class='sec-head'><h2>Methodology</h2><span class='hint'>from docs/</span></div>
-  <div class='prose'>{meth_html}</div>
+  <div class='panel-box'><div class='pb-head'>Investigation Methodology</div><div class='prose'>{meth_html}</div></div>
   <div class='sec-head' style='margin-top:2.5rem'><h2>Known Artifacts &mdash; the Checklist</h2></div>
-  <div class='prose'>{art_html}</div>
+  <div class='panel-box'><div class='pb-head'>Known Artifacts — the Checklist</div><div class='prose'>{art_html}</div></div>
 </div></section>
 
 <footer><div class='fwrap'>
