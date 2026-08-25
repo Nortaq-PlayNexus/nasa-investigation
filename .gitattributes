@@ -1,40 +1,8 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# generated site output (built by scripts/build_site.py)
+site/ linguist-generated=true
+site/ -diff
 
-# Explicitly declare text files
-*.py text diff=python
-*.md text diff=markdown
-*.json text
-*.csv text
-*.html text
-*.css text
-*.js text
-*.yaml text
-*.yml text
-*.toml text
-*.cfg text
-*.ini text
-*.txt text
-
-# Declare binary files
-*.png binary
-*.jpg binary
-*.jpeg binary
-*.gif binary
-*.ico binary
-*.jp2 binary
-*.img binary
-*.bin binary
-*.exe binary
-*.spec binary
-*.whl binary
-
-# Linguist overrides
-*.py linguist-language=Python
-*.html linguist-language=HTML
-*.js linguist-language=JavaScript
-*.css linguist-language=CSS
-*.json linguist-language=JSON
-
-# Merge strategies
-*.lock merge=union
+# normalize line endings
+* text=auto eol=lf
+*.py text
+*.md text

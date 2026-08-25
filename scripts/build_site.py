@@ -849,6 +849,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
                   f"<span class='vc'>{v}</span></div>")
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
+<meta name='theme-color' content='#020617'>
 <meta name='description' content='Public NASA HiRISE anomaly investigation facility: acquire, catalog, enhance, detect, analyze, and adjudicate anomalies with statistical rigor.'>
 <meta property='og:title' content='NASA HiRISE Anomaly Investigation — Public Facility'>
 <meta property='og:description' content='Rigorous, reproducible anomaly investigation of public NASA HiRISE Mars & lunar imagery.'>
@@ -1031,6 +1032,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
         )
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
+<meta name='theme-color' content='#020617'>
 <meta property='og:title' content='NASA HiRISE Anomaly Analysis Report'>
 <meta property='og:image' content='{SITE_URL}/assets/og-image.png'>
 <link rel='icon' href='../assets/logo.svg' type='image/svg+xml'>
