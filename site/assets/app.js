@@ -142,4 +142,18 @@
   // explorer loading shimmer (until leads.json resolves)
   var g0=document.getElementById('leadsGrid');
   if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
+
+  // live uplink window countdown
+  (function(){
+    var end=window.UPLINK_END; if(!end)return;
+    var box=document.getElementById('uplink'), clk=document.getElementById('uplinkClock');
+    if(!box||!clk)return;
+    function pad(n){return (n<10?'0':'')+n;}
+    function tick(){var r=end*1000-Date.now();
+      if(r<=0){clk.textContent='WINDOW CLOSED';box.classList.add('closed');return;}
+      r=Math.floor(r/1000);var h=Math.floor(r/3600),m=Math.floor((r%3600)/60),s=r%60;
+      clk.textContent=pad(h)+':'+pad(m)+':'+pad(s);
+      setTimeout(tick,1000);}
+    tick();
+  })();
 })();

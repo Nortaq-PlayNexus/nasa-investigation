@@ -40,6 +40,20 @@ DOCS = ROOT / "docs"
 BRAND = ROOT / "assets" / "branding"
 SITE = ROOT / "site"
 
+# live 6h uplink window (set once by the agent; embedded as absolute epoch so rebuilds keep it)
+_TIMER_PATH = Path(r"C:\Users\natha\AppData\Local\Temp\opencode\timer_end.txt")
+TIMER_END = 0
+try:
+    TIMER_END = int(_TIMER_PATH.read_text().strip())
+except Exception:
+    TIMER_END = 0
+
+
+def timer_html() -> str:
+    if not TIMER_END:
+        return ""
+    return ("<div id='uplink' class='uplink'>UPLINK WINDOW // <span id='uplinkClock'>--:--:--</span> REMAINING</div>")
+
 
 def crop_box(path, x, y, w, h):
     """Return [lx,ty,fw,fh] fractions of `path` to frame the feature at (x,y,w,h)."""
@@ -298,6 +312,12 @@ footer a{color:var(--accent2)}
 footer .src{color:var(--accent)}
 footer .view{color:var(--faint)}
 @media (max-width:640px){.nav-in{position:relative}.nav-links{display:none}.nav-links.open{display:flex;position:absolute;top:100%;right:0;background:#0a0e16;border:1px solid var(--border2);padding:.7rem 1.1rem;flex-direction:column;gap:.7rem;z-index:30}.nav-toggle{display:block}.stats{grid-template-columns:repeat(2,1fr)}.brackets span{display:none}}
+.uplink{position:fixed;left:14px;bottom:14px;z-index:60;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;
+  color:var(--accent);background:rgba(8,11,18,.9);border:1px solid var(--gold);border-left:3px solid var(--red);
+  padding:.4rem .7rem;border-radius:8px;box-shadow:0 0 18px rgba(255,196,48,.18);text-transform:uppercase}
+.uplink #uplinkClock{color:var(--red);font-weight:700}
+.uplink.closed{border-color:var(--red);color:var(--red)}
+.uplink.closed #uplinkClock{color:var(--muted)}
 """
 
 JS = r"""
@@ -444,6 +464,20 @@ JS = r"""
   // explorer loading shimmer (until leads.json resolves)
   var g0=document.getElementById('leadsGrid');
   if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
+
+  // live uplink window countdown
+  (function(){
+    var end=window.UPLINK_END; if(!end)return;
+    var box=document.getElementById('uplink'), clk=document.getElementById('uplinkClock');
+    if(!box||!clk)return;
+    function pad(n){return (n<10?'0':'')+n;}
+    function tick(){var r=end*1000-Date.now();
+      if(r<=0){clk.textContent='WINDOW CLOSED';box.classList.add('closed');return;}
+      r=Math.floor(r/1000);var h=Math.floor(r/3600),m=Math.floor((r%3600)/60),s=r%60;
+      clk.textContent=pad(h)+':'+pad(m)+':'+pad(s);
+      setTimeout(tick,1000);}
+    tick();
+  })();
 })();
 """
 
@@ -792,7 +826,8 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 </div></footer>
 
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
-<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='{leads_ver}';</script>
+{timer_html()}
+<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
 <script src='assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "index.html").write_text(body, encoding="utf-8")
@@ -900,7 +935,8 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 
 <footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License</footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
-<script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';</script>
+{timer_html()}
+<script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
 <script src='../assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "report" / "index.html").write_text(body, encoding="utf-8")
