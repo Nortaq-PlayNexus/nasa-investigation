@@ -40,5 +40,8 @@ jobs:
       - name: Validate conclusions schema
         run: python scripts/validate_conclusions.py --strict
 
+      - name: Audit strip coverage
+        run: python scripts/audit_strips.py
+
       - name: Build site (smoke)
         run: python scripts/build_site.py
