@@ -16,6 +16,9 @@ body{margin:0;font-family:var(--sans);color:var(--text);line-height:1.55;
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
   background:linear-gradient(180deg,var(--bg0),var(--bg1)) fixed;}
 a{color:var(--accent2);text-decoration:none}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.chip:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 a:hover{text-decoration:underline}
 .wrap{max-width:1180px;margin:0 auto;padding:0 1.4rem}
 
