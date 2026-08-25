@@ -26,3 +26,6 @@ showcase/img/
 
 # generated stats
 stats.json
+
+# loop runtime
+.loop/

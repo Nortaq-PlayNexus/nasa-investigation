@@ -16,11 +16,9 @@ Run:  python scripts/build_site.py
 
 from __future__ import annotations
 
-import base64
 import csv
 import html
 import json
-import mimetypes
 import re
 import shutil
 import subprocess
@@ -1136,7 +1134,7 @@ def main() -> None:
 
 def selftest() -> int:
     """Lightweight offline checks for the dossier helpers (no HiRISE data needed)."""
-    import io, tempfile
+    import tempfile
     from PIL import Image
     fails = 0
 

@@ -37,7 +37,6 @@ for p in (ROOT, os.path.join(ROOT, "pipeline"), os.path.join(ROOT, "scripts")):
         sys.path.insert(0, p)
 
 import common  # noqa: E402
-from _common import safe_name  # noqa: E402
 
 # 4K high-quality social card (scripts/social_card_4k.py); fall back to the
 # legacy in-module renderer if the module is unavailable.
@@ -174,7 +173,7 @@ def _open_rgb(path):
 
 def _make_montage(images, out, dry_run, tile_h=220, gap=8, bg=(20, 20, 24)):
     """Compose images side-by-side into one strip. Returns True on success."""
-    from PIL import Image, ImageDraw
+    from PIL import Image
 
     if not images:
         return False

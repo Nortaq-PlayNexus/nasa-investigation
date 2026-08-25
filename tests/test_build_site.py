@@ -1,10 +1,8 @@
-import math
 import sys
 import tempfile
 from collections import Counter
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
