@@ -137,6 +137,9 @@ section{padding:2.6rem 0}
 .finding-card.open .fc-body{max-height:1200px;padding:0 1rem 1rem}
 .fc-body .meta{color:var(--muted);font-size:.82rem}
 .fc-body h4{margin:.8rem 0 .3rem;color:var(--text)}
+.fc-sub{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:.1rem 1rem .55rem;letter-spacing:.03em}
+.f-stamp{font-family:var(--mono);font-size:.58rem;font-weight:700;color:var(--red);border:2px solid var(--red);
+  border-radius:4px;padding:.12rem .42rem;letter-spacing:.05em;transform:rotate(-5deg);margin-left:.4rem;white-space:nowrap}
 
 /* methodology / prose */
 .prose{max-width:900px}

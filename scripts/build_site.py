@@ -179,6 +179,9 @@ section{padding:2.6rem 0}
 .finding-card.open .fc-body{max-height:1200px;padding:0 1rem 1rem}
 .fc-body .meta{color:var(--muted);font-size:.82rem}
 .fc-body h4{margin:.8rem 0 .3rem;color:var(--text)}
+.fc-sub{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:.1rem 1rem .55rem;letter-spacing:.03em}
+.f-stamp{font-family:var(--mono);font-size:.58rem;font-weight:700;color:var(--red);border:2px solid var(--red);
+  border-radius:4px;padding:.12rem .42rem;letter-spacing:.05em;transform:rotate(-5deg);margin-left:.4rem;white-space:nowrap}
 
 /* methodology / prose */
 .prose{max-width:900px}
@@ -420,6 +423,12 @@ def md_to_html(md: str) -> str:
     return "\n".join(out)
 
 
+def finding_meta(txt: str) -> tuple[str, str]:
+    m = re.search(r"Verdict:\s*([A-Za-z-]+)", txt)
+    p = re.search(r"Product ID:\s*(\S+)", txt)
+    return (m.group(1) if m else "", p.group(1) if p else "")
+
+
 # --------------------------------------------------------------------------
 # helpers
 # --------------------------------------------------------------------------
@@ -544,10 +553,12 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
     fcards = ""
     for f in findings:
         txt = f.read_text(encoding="utf-8")
-        # split header block + body
+        v, p = finding_meta(txt)
+        stamp = "<span class='f-stamp'>CONFIRMED LEAD</span>" if v.startswith("CONFIRMED") else ""
+        sub = f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
         fcards += (
-            f"<div class='finding-card'><div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>"
-            f"<span class='ft'>+</span></div><div class='fc-body prose'>{md_to_html(txt)}</div></div>"
+            f"<div class='finding-card'><div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>{stamp}"
+            f"<span class='ft'>+</span></div>{sub}<div class='fc-body prose'>{md_to_html(txt)}</div></div>"
         )
     chips = "".join(
         f"<span class='chip' data-v='{v}'>{v}</span>" for v in
@@ -684,11 +695,16 @@ def build_report(rows, leads, si, summary_md) -> None:
             f"<td>{r.get('area_px','')}</td></tr>"
         )
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
-    fhtml = "".join(
-        f"<div class='finding-card'><div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>"
-        f"<span class='ft'>+</span></div><div class='fc-body prose'>{md_to_html(f.read_text(encoding='utf-8'))}</div></div>"
-        for f in findings
-    )
+    fhtml = ""
+    for f in findings:
+        txt = f.read_text(encoding="utf-8")
+        v, p = finding_meta(txt)
+        stamp = "<span class='f-stamp'>CONFIRMED LEAD</span>" if v.startswith("CONFIRMED") else ""
+        sub = f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
+        fhtml += (
+            f"<div class='finding-card'><div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>{stamp}"
+            f"<span class='ft'>+</span></div>{sub}<div class='fc-body prose'>{md_to_html(txt)}</div></div>"
+        )
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta property='og:title' content='NASA HiRISE Anomaly Analysis Report'>
