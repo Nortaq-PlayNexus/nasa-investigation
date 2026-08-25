@@ -432,12 +432,12 @@ JS = r"""
       +'<div class="db-cap">TARGET LOCK // '+r.image+'</div>'+ctx+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
-  function openDossier(img){var r=LEADMAP[img];if(!r)return;
-    lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
-    lb.classList.add('open');}
+function openDossier(img){var r=LEADMAP[img];if(!r)return;
+  lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
+  lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(img));}
   window.openDossier=openDossier;
   window.openLightbox=function(src,cap){openDossier(cap&&cap.indexOf('//')<0?cap:'');};
-  function closeLb(){lb.classList.remove('open');}lb.addEventListener('click',closeLb);
+  function closeLb(){lb.classList.remove('open');history.replaceState(null,'',location.pathname+location.search);}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
   // leads explorer (initialised after leads.json loads)
@@ -498,8 +498,9 @@ JS = r"""
   function boot(){var url='assets/leads.json'+(window.LEADS_VER?('?v='+window.LEADS_VER):'');
     fetch(url).then(function(r){return r.json();}).then(function(d){
       LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});DIVERSE=diverseOrder(LEADS);
-      initExplorer();
-    }).catch(function(e){console.error('leads load failed',e);
+        initExplorer();
+        var h=location.hash||'';if(h.indexOf('dossier=')>=0){var img=decodeURIComponent(h.split('dossier=')[1]);if(LEADMAP[img]){openDossier(img);}}
+        }).catch(function(e){console.error('leads load failed',e);
       var g=document.getElementById('leadsGrid');if(g)g.innerHTML='<div class="ph">candidate feed offline</div>';});
   }
   if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
