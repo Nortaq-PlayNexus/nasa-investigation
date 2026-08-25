@@ -303,6 +303,7 @@ footer .view{color:var(--faint)}
 JS = r"""
 (function(){
   var LEADS = [];
+  var DIVERSE = [];
   var SB = window.STRIP_BASE || 'results/strips/';
   function stripUrl(n){return n ? SB + n : '';}
   // count-up
@@ -381,12 +382,13 @@ JS = r"""
         +'<div class="body"><div class="name">'+r.image+'</div>'
         +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
         +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
-    function render(){var rows=LEADS.filter(function(r){
+    function baseRows(){if(state.q===''&&state.vs.size===0&&state.minC===0&&state.sort==='score')return DIVERSE;return LEADS;}
+    function render(){var rows=baseRows().filter(function(r){
       if(state.vs.size&&!state.vs.has(r.verdict))return false;
       if(+r.contrast<state.minC)return false;
       if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
       return true;});
-      rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
+      if(rows!==DIVERSE)rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
       var note=document.getElementById('leadNote');
       var cap=Math.min(rows.length,200);
       note.textContent='Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.';
@@ -401,9 +403,18 @@ JS = r"""
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
   }
+  function diverseOrder(arr){
+    var m={},keys=[];
+    arr.forEach(function(r){if(!m[r.image]){m[r.image]=[];keys.push(r.image);}m[r.image].push(r);});
+    keys.forEach(function(k){m[k].sort(function(a,b){return +b.score-+a.score;});});
+    var out=[],i=0,rem=true;
+    while(rem){rem=false;for(var j=0;j<keys.length;j++){var g=m[keys[j]];if(i<g.length){out.push(g[i]);rem=true;}}i++;}
+    return out;
+  }
   function boot(){var url='assets/leads.json'+(window.LEADS_VER?('?v='+window.LEADS_VER):'');
     fetch(url).then(function(r){return r.json();}).then(function(d){
-      LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});initExplorer();
+      LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});DIVERSE=diverseOrder(LEADS);
+      initExplorer();
     }).catch(function(e){console.error('leads load failed',e);
       var g=document.getElementById('leadsGrid');if(g)g.innerHTML='<div class="ph">candidate feed offline</div>';});
   }
