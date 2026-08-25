@@ -59,14 +59,19 @@
       +'<li>Seek independent pass, different solar angle</li>'
       +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
       +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
-      +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>';
-    return '<div class="dossier-board"><div class="db-img">'+strip+'</div>'
+        +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>'
+        +'<button id="copyLink" class="btn" style="margin-top:.6rem;width:100%">Copy shareable link</button>';
+        return '<div class="dossier-board"><div class="db-img">'+strip+'</div>'
       +'<div class="db-cap">TARGET LOCK // '+r.image+'</div>'+ctx+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
-function openDossier(img){var r=LEADMAP[img];if(!r)return;
+ function openDossier(img){var r=LEADMAP[img];if(!r)return;
   lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
-  lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(img));}
+  lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(img));
+  var cb=lbBox.querySelector('#copyLink');
+  if(cb){cb.addEventListener('click',function(e){e.stopPropagation();
+    navigator.clipboard.writeText(location.href).then(function(){cb.textContent='Link copied';setTimeout(function(){cb.textContent='Copy shareable link';},1500);});
+  });}}
   window.openDossier=openDossier;
   window.openLightbox=function(src,cap){openDossier(cap&&cap.indexOf('//')<0?cap:'');};
   function closeLb(){lb.classList.remove('open');history.replaceState(null,'',location.pathname+location.search);}lb.addEventListener('click',closeLb);
