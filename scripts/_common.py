@@ -9,15 +9,18 @@ USER_AGENT = {"User-Agent": "nasa-investigation/1.0"}
 
 
 def make_http(url, timeout=120):
+    """Open a URL with the project User-Agent; returns the urllib response."""
     return urllib.request.urlopen(urllib.request.Request(url, headers=USER_AGENT), timeout=timeout)
 
 
 def fetch_json(url, timeout=180):
+    """GET a URL and parse the response body as JSON."""
     with make_http(url, timeout) as r:
         return json.load(r)
 
 
 def file_sha256(path, block=1 << 16):
+    """Return the hex SHA-256 of a file, read in `block`-sized chunks."""
     h = hashlib.sha256()
     with open(path, "rb") as f:
         while True:
@@ -29,11 +32,13 @@ def file_sha256(path, block=1 << 16):
 
 
 def safe_name(s):
+    """Sanitize an arbitrary string into a safe filesystem name (max 120 chars)."""
     cleaned = "".join(c if c.isalnum() or c in "-_." else "_" for c in s).strip("._") or "item"
     return cleaned[:120]
 
 
 def log(msg, logpath=None):
+    """Print `msg`; if `logpath` is given, also append it to that file."""
     print(msg, flush=True)
     if logpath:
         with open(logpath, "a", encoding="utf-8") as f:
