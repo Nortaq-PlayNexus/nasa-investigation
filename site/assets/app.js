@@ -1,6 +1,8 @@
 
 (function(){
-  var LEADS = window.LEADS || [];
+  var LEADS = [];
+  var SB = window.STRIP_BASE || 'results/strips/';
+  function stripUrl(n){return n ? SB + n : '';}
   // count-up
   function animateCount(el){var t=+el.dataset.count,dur=1300,t0=performance.now();
     function step(now){var p=Math.min(1,(now-t0)/dur);el.textContent=Math.round(t*(1-Math.pow(1-p,3))).toLocaleString();
@@ -19,9 +21,17 @@
 
   // lightbox / dossier
   var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
-  var LEADMAP={};LEADS.forEach(function(r){LEADMAP[r.image]=r;});
+  var LEADMAP={};
+  function cropDiv(r){
+    var s=stripUrl(r.strip);
+    if(!s||!r.crop) return '<div class="ph">no strip</div>';
+    var c=r.crop, fw=c[2], fh=c[3];
+    var bx = fw>=1?0:(c[0]/(1-fw)*100);
+    var by = fh>=1?0:(c[1]/(1-fh)*100);
+    return '<div class="crop" style="background-image:url('+s+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%"></div>';
+  }
   function dossierHTML(r){
-    var strip=r.strip?'<img src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
+    var strip=cropDiv(r);
     var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
     var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
     var view='https://www.uahirise.org/'+prod.toLowerCase();
@@ -55,24 +65,25 @@
   function closeLb(){lb.classList.remove('open');}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
-  // leads explorer
-  var grid=document.getElementById('leadsGrid');
-  if(grid){
+  // leads explorer (initialised after leads.json loads)
+  function initExplorer(){
+    var grid=document.getElementById('leadsGrid');
+    if(!grid)return;
     var state={q:'',minC:0,vs:new Set(),sort:'score'};
     function verdictColor(v){return v;}
     function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
       var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
-      var strip=r.strip?'<img loading="lazy" src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
-      return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'" data-cap="'+r.image+' — score '+r.score+' / contrast '+r.contrast+'">'
+      var strip=cropDiv(r);
+      return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'">'
         +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
         +'<div class="body"><div class="name">'+r.image+'</div>'
         +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
         +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
     function render(){var rows=LEADS.filter(function(r){
-        if(state.vs.size&&!state.vs.has(r.verdict))return false;
-        if(+r.contrast<state.minC)return false;
-        if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
-        return true;});
+      if(state.vs.size&&!state.vs.has(r.verdict))return false;
+      if(+r.contrast<state.minC)return false;
+      if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
+      return true;});
       rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
       var note=document.getElementById('leadNote');
       var cap=Math.min(rows.length,200);
@@ -88,6 +99,13 @@
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
   }
+  function boot(){var url='assets/leads.json'+(window.LEADS_VER?('?v='+window.LEADS_VER):'');
+    fetch(url).then(function(r){return r.json();}).then(function(d){
+      LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});initExplorer();
+    }).catch(function(e){console.error('leads load failed',e);
+      var g=document.getElementById('leadsGrid');if(g)g.innerHTML='<div class="ph">candidate feed offline</div>';});
+  }
+  if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
 
   // findings toggle
   document.querySelectorAll('.finding-card').forEach(function(c){

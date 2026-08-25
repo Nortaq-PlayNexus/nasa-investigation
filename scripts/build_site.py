@@ -23,7 +23,14 @@ import json
 import mimetypes
 import re
 import shutil
+from collections import defaultdict
 from pathlib import Path
+
+try:
+    from PIL import Image
+    _HAVE_PIL = True
+except Exception:
+    _HAVE_PIL = False
 
 ROOT = Path(__file__).resolve().parents[1]
 CONC = ROOT / "data" / "anomalies" / "conclusions"
@@ -32,6 +39,47 @@ LEADS_DIR = CONC / "leads"
 DOCS = ROOT / "docs"
 BRAND = ROOT / "assets" / "branding"
 SITE = ROOT / "site"
+
+
+def crop_box(path, x, y, w, h):
+    """Return [lx,ty,fw,fh] fractions of `path` to frame the feature at (x,y,w,h)."""
+    if not _HAVE_PIL or not path or not Path(path).exists():
+        return None
+    try:
+        with Image.open(path) as im:
+            W, H = im.size
+    except Exception:
+        return None
+    try:
+        x, y, w, h = (int(float(v)) for v in (x, y, w, h))
+    except Exception:
+        return None
+    if W <= 0 or H <= 0 or w <= 0 or h <= 0:
+        return None
+    cx = x + w / 2.0
+    cy = y + h / 2.0
+    Z = max(w, h) * 7.0
+    Z = max(Z, 40.0)
+    Z = min(Z, min(W, H))
+    if Z >= min(W, H):
+        return [0.0, 0.0, 1.0, 1.0]
+    left = max(0.0, min(W - Z, cx - Z / 2.0))
+    top = max(0.0, min(H - Z, cy - Z / 2.0))
+    return [left / W, top / H, Z / W, Z / H]
+
+
+def crop_style(url, crop):
+    """CSS background-crop string to frame a sub-rectangle of the image."""
+    if not url or not crop:
+        return None
+    fw, fh = crop[2], crop[3]
+    bx = 0.0 if fw >= 1 else crop[0] / (1 - fw) * 100.0
+    by = 0.0 if fh >= 1 else crop[1] / (1 - fh) * 100.0
+    return (
+        "background-image:url(%s);background-repeat:no-repeat;"
+        "background-size:%.2f%% %.2f%%;background-position:%.2f%% %.2f%%"
+        % (url, 100.0 / fw, 100.0 / fh, bx, by)
+    )
 
 REPO = "Nortaq-PlayNexus/nasa-investigation"
 BASE = f"https://github.com/{REPO}"
@@ -160,6 +208,7 @@ section{padding:2.6rem 0}
 .lead:hover{transform:translateY(-3px);border-color:var(--accent)}
 .lead .thumb{aspect-ratio:16/9;background:#05070a;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .lead .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.lead .thumb .crop{position:absolute;inset:0;background-color:#05070a;background-size:cover}
 .lead .thumb .ph{color:var(--faint);font-size:.75rem}
 .lead .stamp{position:absolute;top:9px;left:9px;transform:rotate(-7deg);
   border:2px solid var(--red);color:var(--red);font-family:var(--mono);font-size:.58rem;font-weight:700;
@@ -226,6 +275,7 @@ table.sortable tr:nth-child(even){background:rgba(255,255,255,.025)}
 .db-img{background:#05070a;border:2px solid var(--border2);border-radius:10px;overflow:hidden;aspect-ratio:16/9;
   display:flex;align-items:center;justify-content:center}
 .db-img img{width:100%;height:100%;object-fit:cover;display:block}
+.db-img .crop{position:absolute;inset:0;background-color:#05070a;background-size:cover}
 .db-cap{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.08em}
 .dossier-info{font-family:var(--mono);font-size:.8rem;color:var(--text)}
 .dossier-info h3{margin:.1rem 0 .6rem;font-size:1rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);
@@ -251,7 +301,9 @@ footer .view{color:var(--faint)}
 
 JS = r"""
 (function(){
-  var LEADS = window.LEADS || [];
+  var LEADS = [];
+  var SB = window.STRIP_BASE || 'results/strips/';
+  function stripUrl(n){return n ? SB + n : '';}
   // count-up
   function animateCount(el){var t=+el.dataset.count,dur=1300,t0=performance.now();
     function step(now){var p=Math.min(1,(now-t0)/dur);el.textContent=Math.round(t*(1-Math.pow(1-p,3))).toLocaleString();
@@ -270,9 +322,17 @@ JS = r"""
 
   // lightbox / dossier
   var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
-  var LEADMAP={};LEADS.forEach(function(r){LEADMAP[r.image]=r;});
+  var LEADMAP={};
+  function cropDiv(r){
+    var s=stripUrl(r.strip);
+    if(!s||!r.crop) return '<div class="ph">no strip</div>';
+    var c=r.crop, fw=c[2], fh=c[3];
+    var bx = fw>=1?0:(c[0]/(1-fw)*100);
+    var by = fh>=1?0:(c[1]/(1-fh)*100);
+    return '<div class="crop" style="background-image:url('+s+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%"></div>';
+  }
   function dossierHTML(r){
-    var strip=r.strip?'<img src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
+    var strip=cropDiv(r);
     var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
     var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
     var view='https://www.uahirise.org/'+prod.toLowerCase();
@@ -306,24 +366,25 @@ JS = r"""
   function closeLb(){lb.classList.remove('open');}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
-  // leads explorer
-  var grid=document.getElementById('leadsGrid');
-  if(grid){
+  // leads explorer (initialised after leads.json loads)
+  function initExplorer(){
+    var grid=document.getElementById('leadsGrid');
+    if(!grid)return;
     var state={q:'',minC:0,vs:new Set(),sort:'score'};
     function verdictColor(v){return v;}
     function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
       var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
-      var strip=r.strip?'<img loading="lazy" src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
-      return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'" data-cap="'+r.image+' — score '+r.score+' / contrast '+r.contrast+'">'
+      var strip=cropDiv(r);
+      return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'">'
         +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
         +'<div class="body"><div class="name">'+r.image+'</div>'
         +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
         +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
     function render(){var rows=LEADS.filter(function(r){
-        if(state.vs.size&&!state.vs.has(r.verdict))return false;
-        if(+r.contrast<state.minC)return false;
-        if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
-        return true;});
+      if(state.vs.size&&!state.vs.has(r.verdict))return false;
+      if(+r.contrast<state.minC)return false;
+      if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
+      return true;});
       rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
       var note=document.getElementById('leadNote');
       var cap=Math.min(rows.length,200);
@@ -339,6 +400,13 @@ JS = r"""
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
   }
+  function boot(){var url='assets/leads.json'+(window.LEADS_VER?('?v='+window.LEADS_VER):'');
+    fetch(url).then(function(r){return r.json();}).then(function(d){
+      LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});initExplorer();
+    }).catch(function(e){console.error('leads load failed',e);
+      var g=document.getElementById('leadsGrid');if(g)g.innerHTML='<div class="ph">candidate feed offline</div>';});
+  }
+  if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
 
   // findings toggle
   document.querySelectorAll('.finding-card').forEach(function(c){
@@ -499,6 +567,31 @@ def acq_of(image: str) -> str:
     return m.group(1) if m else (image or "").split(".")[0]
 
 
+def diverse_preview(top, n=60, max_per_image=2):
+    """Spread preview cards across distinct source images for visual variety."""
+    groups = defaultdict(list)
+    for r in top:
+        groups[r["image"]].append(r)
+    for k in groups:
+        groups[k].sort(key=lambda r: -num(r.get("score")))
+    order = sorted(groups.values(), key=lambda g: -num(g[0].get("score")))
+    out, counts, idxs = [], defaultdict(int), [0] * len(order)
+    while len(out) < n:
+        added = False
+        for i, g in enumerate(order):
+            if len(out) >= n:
+                break
+            img = g[0]["image"]
+            if idxs[i] < len(g) and counts[img] < max_per_image:
+                out.append(g[idxs[i]])
+                idxs[i] += 1
+                counts[img] += 1
+                added = True
+        if not added:
+            break
+    return out
+
+
 def dedupe(rows: list[dict]) -> list[dict]:
     """Collapse the same physical feature that is reported once per band variant /
     enhancement of one acquisition. Key = (acquisition, x, y); keep the strongest
@@ -527,7 +620,14 @@ def build_shared() -> None:
         shutil.copy2(BRAND / "social-preview.png", a / "og-image.png")
 
 
-def lead_json(rows, si, base="results/strips/") -> str:
+def build_leads_data(rows, si) -> str:
+    payload = lead_json(rows, si)
+    ver = _ver(payload)
+    (SITE / "assets" / "leads.json").write_text(payload, encoding="utf-8")
+    return ver
+
+
+def lead_json(rows, si) -> str:
     out = []
     for r in rows:
         img = r.get("image", "")
@@ -553,12 +653,13 @@ def lead_json(rows, si, base="results/strips/") -> str:
             "solar_elevation_deg": r.get("solar_elevation_deg", ""),
             "solar_azimuth_deg": r.get("solar_azimuth_deg", ""),
             "inferred_height_m": r.get("inferred_height_m", ""),
-            "strip": (base + strip.name) if strip else "",
+            "strip": strip.name if strip else "",
+            "crop": crop_box(strip, r.get("x"), r.get("y"), r.get("w"), r.get("h")),
         })
     return json.dumps(out, ensure_ascii=False).replace("</", "<\\/")
 
 
-def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
+def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver: str) -> None:
     counts = verdict_counts(rows)
     dist = " &middot; ".join(f"{html.escape(k)}: {v}" for k, v in sorted(counts.items()))
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
@@ -669,21 +770,26 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
 </div></footer>
 
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
-<script>{lead_json(rows, si)}</script>
+<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='{leads_ver}';</script>
 <script src='assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "index.html").write_text(body, encoding="utf-8")
 
 
-def build_report(rows, leads, si, summary_md) -> None:
+def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     counts = verdict_counts(rows)
     dist = " &middot; ".join(f"{html.escape(k)}: {v}" for k, v in sorted(counts.items()))
     top = dedupe(top_leads(rows))
-    # top-lead cards (server rendered, first 60)
+    # top-lead cards (server rendered) — zoomed target-lock crop per feature, spread across source images
     cards = []
-    for i, r in enumerate(top[:60]):
+    for i, r in enumerate(diverse_preview([r for r in top if si.get(r["image"])], 60)):
         strip = si.get(r["image"])
-        img = f"<img loading='lazy' src='../results/strips/{strip.name}' alt='{html.escape(r['image'])}'>" if strip else "<div class='ph'>no strip</div>"
+        if strip:
+            crop = crop_box(strip, r.get("x"), r.get("y"), r.get("w"), r.get("h"))
+            cs = crop_style(f"../results/strips/{strip.name}", crop)
+            img = f"<div class='crop' style='{cs}'></div>" if cs else "<div class='ph'>no strip</div>"
+        else:
+            img = "<div class='ph'>no strip</div>"
         flags = (r["flags"].split(",") if r.get("flags") else [])
         fh = "".join(f"<li>{html.escape(f)}</li>" for f in flags) or "<li>none</li>"
         cards.append(
@@ -771,7 +877,7 @@ def build_report(rows, leads, si, summary_md) -> None:
 
 <footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License</footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
-<script>{lead_json(rows, si, '../results/strips/')}</script>
+<script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';</script>
 <script src='../assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "report" / "index.html").write_text(body, encoding="utf-8")
@@ -816,8 +922,9 @@ def main() -> None:
     rows_d = dedupe(rows)
     leads_d = dedupe(leads)
     top = dedupe(top_leads(rows))
-    build_index(rows_d, leads_d, top, si, summary_md, meth, art)
-    build_report(rows_d, leads_d, si, summary_md)
+    leads_ver = build_leads_data(rows_d, si)
+    build_index(rows_d, leads_d, top, si, summary_md, meth, art, leads_ver)
+    build_report(rows_d, leads_d, si, summary_md, leads_ver)
     build_results()
 
     size = sum(f.stat().st_size for f in SITE.rglob("*") if f.is_file())
