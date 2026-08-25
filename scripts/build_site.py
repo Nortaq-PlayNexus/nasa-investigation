@@ -64,6 +64,7 @@ def _git_rev() -> str:
 
 BUILD_TS = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
 BUILD_REV = _git_rev()
+BUILD_EPOCH = int(time.time())
 
 
 def crop_box(path, x, y, w, h):
@@ -563,6 +564,16 @@ JS = r"""
   var g0=document.getElementById('leadsGrid');
   if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
 
+  // live data-freshness indicator
+  (function(){
+    var ep=window.BUILD_EPOCH, el=document.getElementById('ago');
+    if(!ep||!el)return;
+    function upd(){var s=Math.floor(Date.now()/1000)-ep;
+      var t=s<60?s+'s':s<3600?Math.floor(s/60)+'m':Math.floor(s/3600)+'h';
+      el.textContent='('+t+' ago)';}
+    upd();setInterval(upd,30000);
+  })();
+
   // live uplink window countdown
   (function(){
     var end=window.UPLINK_END; if(!end)return;
@@ -952,14 +963,14 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
   <span>Public facility &middot; Data: NASA/JPL HiRISE PDS (public domain) &middot; MIT License</span>
   <span class='src'>SOURCE &nbsp;{BASE}</span>
   <span class='view'>VIEW &nbsp; {SITE_URL}/report/</span>
-  <span class='sync'>LAST SYNC &nbsp; {BUILD_TS} &middot; {BUILD_REV}</span>
+  <span class='sync'>LAST SYNC &nbsp; {BUILD_TS} &middot; {BUILD_REV} &middot; <span id='ago'></span></span>
   <a href='../'>Home</a>
 </div></footer>
 
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 <button id='toTop' class='to-top' aria-label='Back to top'>&#8593;</button>
 {timer_html()}
-<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
+<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};window.BUILD_EPOCH={BUILD_EPOCH};</script>
 <script src='assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "index.html").write_text(body, encoding="utf-8")
@@ -1094,11 +1105,11 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
   <div class='findings'>{fhtml}</div>
 </div></section>
 
-<footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License &middot; <span class='sync'>LAST SYNC {BUILD_TS} &middot; {BUILD_REV}</span></footer>
+<footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License &middot; <span class='sync'>LAST SYNC {BUILD_TS} &middot; {BUILD_REV} &middot; <span id='ago'></span></span></footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 <button id='toTop' class='to-top' aria-label='Back to top'>&#8593;</button>
 {timer_html()}
-<script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
+<script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};window.BUILD_EPOCH={BUILD_EPOCH};</script>
 <script src='../assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "report" / "index.html").write_text(body, encoding="utf-8")

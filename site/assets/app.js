@@ -192,6 +192,16 @@
   var g0=document.getElementById('leadsGrid');
   if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
 
+  // live data-freshness indicator
+  (function(){
+    var ep=window.BUILD_EPOCH, el=document.getElementById('ago');
+    if(!ep||!el)return;
+    function upd(){var s=Math.floor(Date.now()/1000)-ep;
+      var t=s<60?s+'s':s<3600?Math.floor(s/60)+'m':Math.floor(s/3600)+'h';
+      el.textContent='('+t+' ago)';}
+    upd();setInterval(upd,30000);
+  })();
+
   // live uplink window countdown
   (function(){
     var end=window.UPLINK_END; if(!end)return;
