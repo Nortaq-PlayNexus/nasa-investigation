@@ -439,7 +439,8 @@ JS = r"""
       if(rows!==DIVERSE)rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
       var note=document.getElementById('leadNote');
       var cap=Math.min(rows.length,200);
-      note.textContent='Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.';
+      note.textContent = rows.length ? ('Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.')
+        : 'No candidates match the current filters — press Reset.';
       grid.innerHTML=rows.slice(0,200).map(card).join('');
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
         el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});});}
@@ -447,6 +448,12 @@ JS = r"""
     q.addEventListener('input',function(){state.q=q.value;render();});
     mc.addEventListener('input',function(){state.minC=+mc.value;document.getElementById('minCval').textContent=mc.value;render();});
     sort.addEventListener('change',function(){state.sort=sort.value;render();});
+    var resetBtn=document.getElementById('reset');
+    if(resetBtn){resetBtn.addEventListener('click',function(){
+      q.value='';mc.value=0;document.getElementById('minCval').textContent='0';
+      sort.value='score';state.q='';state.minC=0;state.sort='score';state.vs.clear();
+      nl.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
+      render();});}
     document.querySelectorAll('.chip').forEach(function(ch){ch.addEventListener('click',function(){var v=ch.dataset.v;
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
@@ -842,6 +849,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
       <option value='area_px'>sort: area</option>
       <option value='w'>sort: width</option>
     </select>
+    <button id='reset' class='btn' style='padding:.4rem .8rem'>Reset</button>
   </div>
   <div class='chips'>{chips}</div>
   <div id='leadNote' class='count-note'></div>
