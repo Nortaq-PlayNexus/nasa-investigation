@@ -225,3 +225,6 @@ footer .view{color:var(--faint)}
 .vfill{display:block;height:100%;background:var(--accent)}
 .vfill.v-conf{background:var(--red)}
 .vc{color:var(--accent);text-align:left}
+.tchip{border:1px solid var(--border2);border-radius:20px;padding:.3rem .8rem;font-family:var(--mono);font-size:.78rem;
+  color:var(--text);background:rgba(255,255,255,.03);letter-spacing:.04em}
+.tchip b{color:var(--accent)}

@@ -23,7 +23,7 @@ import json
 import mimetypes
 import re
 import shutil
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 try:
@@ -329,6 +329,9 @@ footer .view{color:var(--faint)}
 .vfill{display:block;height:100%;background:var(--accent)}
 .vfill.v-conf{background:var(--red)}
 .vc{color:var(--accent);text-align:left}
+.tchip{border:1px solid var(--border2);border-radius:20px;padding:.3rem .8rem;font-family:var(--mono);font-size:.78rem;
+  color:var(--text);background:rgba(255,255,255,.03);letter-spacing:.04em}
+.tchip b{color:var(--accent)}
 """
 
 JS = r"""
@@ -743,6 +746,10 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
         f"<span class='chip' data-v='{v}'>{v}</span>" for v in
         ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
     )
+    ac = Counter(acq_of(r.get("image", "")) for r in rows)
+    target_chips = "".join(
+        f"<span class='tchip'>{html.escape(k)} <b>{v}</b></span>" for k, v in ac.most_common(14)
+    )
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta name='description' content='Public NASA HiRISE anomaly investigation facility: acquire, catalog, enhance, detect, analyze, and adjudicate anomalies with statistical rigor.'>
@@ -796,6 +803,8 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     <a class='tile' href='#methodology'><span class='badge'>Docs</span><h3>Methodology</h3><p>The falsifiable, debunk-first investigation process.</p></a>
     <a class='tile' href='results/SUMMARY.md'><span class='badge'>Summary</span><h3>Adjudication Conclusion</h3><p>Funnel, verdict distribution, stress test, and bottom line.</p></a>
   </div>
+  <div class='sec-head'><h2>Active targets</h2><span class='hint'>highest-volume acquisitions under investigation</span></div>
+  <div class='chips'>{target_chips}</div>
 </div></section>
 
 <section id='explorer'><div class='wrap'>
