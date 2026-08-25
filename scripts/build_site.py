@@ -225,8 +225,12 @@ table.sortable tr:nth-child(even){background:rgba(255,255,255,.025)}
 .src-chip a{color:var(--accent2)}
 @media(max-width:720px){.dossier{grid-template-columns:1fr}}
 
-footer{border-top:1px solid var(--border);color:var(--faint);font-size:.82rem;text-align:center;padding:2rem 1rem;margin-top:2rem}
-footer a{color:var(--muted)}
+footer{border-top:3px solid var(--red);color:var(--muted);font-size:.78rem;text-align:left;
+  padding:1.3rem 1.4rem 2.2rem;margin-top:2rem;background:#080a10;font-family:var(--mono)}
+footer .fwrap{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:.5rem 2rem;align-items:center}
+footer a{color:var(--accent2)}
+footer .src{color:var(--accent)}
+footer .view{color:var(--faint)}
 @media (max-width:640px){.nav-links{display:none}.stats{grid-template-columns:repeat(2,1fr)}.brackets span{display:none}}
 """
 
@@ -634,11 +638,12 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
   <div class='prose'>{art_html}</div>
 </div></section>
 
-<footer>
-  Public facility &middot; Data: NASA/JPL HiRISE PDS (public domain) &middot;
-  <a href='{BASE}'>Source</a> &middot; MIT License &middot;
-  <a href='report/'>Analysis Report</a>
-</footer>
+<footer><div class='fwrap'>
+  <span>Public facility &middot; Data: NASA/JPL HiRISE PDS (public domain) &middot; MIT License</span>
+  <span class='src'>SOURCE &nbsp;{BASE}</span>
+  <span class='view'>VIEW &nbsp; {SITE_URL}/report/</span>
+  <a href='../'>Home</a>
+</div></footer>
 
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 <script>{lead_json(rows, si)}</script>
