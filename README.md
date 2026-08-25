@@ -7,6 +7,7 @@
 *Acquire → Catalog → Enhance → Detect → Analyze → Adjudicate*
 
 [![CI](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml/badge.svg)](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml)
+[![Pages](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/pages.yml/badge.svg)](https://nortaq-playnexus.github.io/nasa-investigation/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)]()
@@ -26,12 +27,12 @@ A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery
 ## Screenshots
 
 <p align="center">
-  <a href="report/index.html"><img src="assets/screenshots/report.png" width="80%" alt="Anomaly Analysis Report"></a>
+  <a href="https://nortaq-playnexus.github.io/nasa-investigation/report/"><img src="assets/screenshots/report.png" width="80%" alt="Anomaly Analysis Report"></a>
 </p>
 
 <p align="center">
   <em>Generated HTML report showing pipeline statistics, detection summary, and adjudicated leads.
-  <a href="report/index.html">Open the public Anomaly Analysis Report &rarr;</a></em>
+  <a href="https://nortaq-playnexus.github.io/nasa-investigation/report/">Open the public Anomaly Analysis Report &rarr;</a></em>
 </p>
 
 ---
@@ -223,7 +224,8 @@ python scripts/check_stereo.py --left pair_a.png --right pair_b.png \
 | `data/anomalies/conclusions/adjudicated.csv` | Cross-band confirmed leads with verdicts |
 | `data/anomalies/audit.jsonl` | Machine-readable audit trail of every run |
 | `findings/` | Only conclusions that survived the full methodology |
-| [`report/index.html`](report/index.html) | **Public** self-contained Anomaly Analysis Report (committed, viewable on GitHub) |
+| [`site/report/`](https://nortaq-playnexus.github.io/nasa-investigation/report/) | **Public** self-contained Anomaly Analysis Report, published via GitHub Pages |
+| [`site/results/`](https://nortaq-playnexus.github.io/nasa-investigation/results/) | Public adjudication data: `adjudicated.csv`, `leads.csv`, `SUMMARY.md`, finding reports, evidence strips |
 
 ---
 
