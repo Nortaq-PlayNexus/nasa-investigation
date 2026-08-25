@@ -347,6 +347,10 @@ footer .sync{color:var(--accent);font-family:var(--mono);letter-spacing:.06em}
 .uplink #uplinkClock{color:var(--red);font-weight:700}
 .uplink.closed{border-color:var(--red);color:var(--red)}
 .uplink.closed #uplinkClock{color:var(--muted)}
+.to-top{position:fixed;right:14px;bottom:14px;z-index:60;width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--border2);background:rgba(8,11,18,.9);color:var(--accent);font-size:1.1rem;cursor:pointer;
+  display:none;box-shadow:0 0 16px rgba(255,196,48,.15)}
+.to-top.show{display:block}
 .vbars{display:flex;flex-direction:column;gap:.5rem;max-width:760px}
 .vrow{display:grid;grid-template-columns:170px 1fr 56px;gap:.7rem;align-items:center;font-family:var(--mono);font-size:.78rem}
 .vl{color:var(--muted);text-align:right;letter-spacing:.04em}
@@ -524,6 +528,13 @@ JS = r"""
   var nt=document.querySelector('.nav-toggle'), nl=document.querySelector('.nav-links');
   if(nt&&nl){nt.addEventListener('click',function(){nl.classList.toggle('open');});
     nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');});});}
+
+  // back-to-top
+  var toTop=document.getElementById('toTop');
+  if(toTop){
+    window.addEventListener('scroll',function(){toTop.classList.toggle('show',window.scrollY>600);},{passive:true});
+    toTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+  }
 
   // explorer loading shimmer (until leads.json resolves)
   var g0=document.getElementById('leadsGrid');
@@ -922,6 +933,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 </div></footer>
 
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
+<button id='toTop' class='to-top' aria-label='Back to top'>&#8593;</button>
 {timer_html()}
 <script>window.STRIP_BASE='results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
 <script src='assets/app.js?v={JS_VER}'></script>
@@ -1046,6 +1058,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 
 <footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License &middot; <span class='sync'>LAST SYNC {BUILD_TS} &middot; {BUILD_REV}</span></footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
+<button id='toTop' class='to-top' aria-label='Back to top'>&#8593;</button>
 {timer_html()}
 <script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
 <script src='../assets/app.js?v={JS_VER}'></script>

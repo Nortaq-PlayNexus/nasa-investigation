@@ -164,6 +164,13 @@
   if(nt&&nl){nt.addEventListener('click',function(){nl.classList.toggle('open');});
     nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');});});}
 
+  // back-to-top
+  var toTop=document.getElementById('toTop');
+  if(toTop){
+    window.addEventListener('scroll',function(){toTop.classList.toggle('show',window.scrollY>600);},{passive:true});
+    toTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+  }
+
   // explorer loading shimmer (until leads.json resolves)
   var g0=document.getElementById('leadsGrid');
   if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
