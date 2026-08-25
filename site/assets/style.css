@@ -249,3 +249,6 @@ footer .sync{color:var(--accent);font-family:var(--mono);letter-spacing:.06em}
 .tchip{border:1px solid var(--border2);border-radius:20px;padding:.3rem .8rem;font-family:var(--mono);font-size:.78rem;
   color:var(--text);background:rgba(255,255,255,.03);letter-spacing:.04em}
 .tchip b{color:var(--accent)}
+html.reveal-on section{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+html.reveal-on section.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){html.reveal-on section{opacity:1!important;transform:none!important;transition:none!important}}

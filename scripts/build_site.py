@@ -364,6 +364,9 @@ footer .sync{color:var(--accent);font-family:var(--mono);letter-spacing:.06em}
 .tchip{border:1px solid var(--border2);border-radius:20px;padding:.3rem .8rem;font-family:var(--mono);font-size:.78rem;
   color:var(--text);background:rgba(255,255,255,.03);letter-spacing:.04em}
 .tchip b{color:var(--accent)}
+html.reveal-on section{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+html.reveal-on section.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){html.reveal-on section{opacity:1!important;transform:none!important;transition:none!important}}
 """
 
 JS = r"""
@@ -537,6 +540,17 @@ JS = r"""
   var nt=document.querySelector('.nav-toggle'), nl=document.querySelector('.nav-links');
   if(nt&&nl){nt.addEventListener('click',function(){nl.classList.toggle('open');});
     nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');});});}
+
+  // scroll reveal
+  (function(){
+    var rs=document.querySelectorAll('section');
+    if(!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches){
+      rs.forEach(function(s){s.classList.add('in');});return;
+    }
+    var ro=new IntersectionObserver(function(es){es.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('in');ro.unobserve(e.target);}});},{rootMargin:'0px 0px -8% 0px'});
+    rs.forEach(function(s){ro.observe(s);});
+  })();
 
   // back-to-top
   var toTop=document.getElementById('toTop');
@@ -842,7 +856,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 <meta property='og:type' content='website'>
 <link rel='icon' href='assets/logo.svg' type='image/svg+xml'>
 <title>NASA HiRISE Anomaly Investigation — Public Facility</title>
-<link rel='stylesheet' href='assets/style.css?v={CSS_VER}'></head><body>
+<link rel='stylesheet' href='assets/style.css?v={CSS_VER}'><script>document.documentElement.classList.add('reveal-on')</script></head><body>
 <div class='toprule'></div>
 <div class='ticker'><span>Classified // Anomaly Dossier &mdash; Public Facility</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
@@ -1021,7 +1035,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 <meta property='og:image' content='{SITE_URL}/assets/og-image.png'>
 <link rel='icon' href='../assets/logo.svg' type='image/svg+xml'>
 <title>NASA HiRISE — Anomaly Analysis Report</title>
-<link rel='stylesheet' href='../assets/style.css?v={CSS_VER}'></head><body>
+<link rel='stylesheet' href='../assets/style.css?v={CSS_VER}'><script>document.documentElement.classList.add('reveal-on')</script></head><body>
 <div class='toprule'></div>
 <div class='ticker'><span>Classified // Anomaly Dossier &mdash; Adjudication</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
