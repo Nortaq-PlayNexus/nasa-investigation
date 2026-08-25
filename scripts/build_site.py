@@ -1163,7 +1163,16 @@ def selftest() -> int:
 
 
 if __name__ == "__main__":
+    import argparse
     import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
+
+    _ap = argparse.ArgumentParser(description="Build the public HiRISE anomaly dossier site.")
+    _ap.add_argument("--selftest", action="store_true", help="run offline helper checks and exit")
+    _ap.add_argument("--version", action="store_true", help="print version and exit")
+    _a = _ap.parse_args()
+    if _a.version:
+        print("build_site 1.4.0")
+        sys.exit(0)
+    if _a.selftest:
         raise SystemExit(selftest())
     main()
