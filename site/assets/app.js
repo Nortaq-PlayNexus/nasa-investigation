@@ -76,7 +76,7 @@
   function initExplorer(){
     var grid=document.getElementById('leadsGrid');
     if(!grid)return;
-    var state={q:'',minC:0,vs:new Set(),sort:'score'};
+    var state={q:'',minC:0,vs:new Set(),sort:'score',limit:200};
     function verdictColor(v){return v;}
     function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
       var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
@@ -94,10 +94,12 @@
       return true;});
       if(rows!==DIVERSE)rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
       var note=document.getElementById('leadNote');
-      var cap=Math.min(rows.length,200);
+      var cap=Math.min(rows.length,state.limit);
       note.textContent = rows.length ? ('Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.')
         : 'No candidates match the current filters — press Reset.';
-      grid.innerHTML=rows.slice(0,200).map(card).join('');
+      grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
+      var lm=document.getElementById('loadMore');
+      if(lm)lm.style.display=(state.limit<rows.length)?'inline-block':'none';
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
         el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});});}
     var q=document.getElementById('q'),mc=document.getElementById('minC'),sort=document.getElementById('sort');
@@ -107,9 +109,12 @@
     var resetBtn=document.getElementById('reset');
     if(resetBtn){resetBtn.addEventListener('click',function(){
       q.value='';mc.value=0;document.getElementById('minCval').textContent='0';
-      sort.value='score';state.q='';state.minC=0;state.sort='score';state.vs.clear();
+      sort.value='score';state.q='';state.minC=0;state.sort='score';state.vs.clear();state.limit=200;
       nl.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
       render();});}
+    var lmBtn=document.getElementById('loadMore');
+    if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
+      lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
     document.querySelectorAll('.chip').forEach(function(ch){ch.addEventListener('click',function(){var v=ch.dataset.v;
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
