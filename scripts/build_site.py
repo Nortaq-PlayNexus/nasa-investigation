@@ -173,6 +173,10 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
 .hero .reticle:before{left:50%;top:-34px;bottom:-34px;width:1px;transform:translateX(-.5px)}
 .hero .reticle:after{top:50%;left:-34px;right:-34px;height:1px;transform:translateY(-.5px)}
 .hero .reticle .ring2{position:absolute;inset:64px;border:1px dashed rgba(255,196,48,.12);border-radius:50%}
+.hero .reticle .sweep{position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg, rgba(255,196,48,0) 0deg, rgba(255,196,48,0) 300deg, rgba(255,196,48,.28) 358deg, rgba(255,196,48,.05) 360deg);
+  animation:retspin 7s linear infinite;mix-blend-mode:screen}
+@keyframes retspin{to{transform:rotate(360deg)}}
 .hero .tag{color:var(--red);font-family:var(--mono);font-weight:700;letter-spacing:.24em;text-transform:uppercase;font-size:.78rem}
 .hero h1{font-size:clamp(2.1rem,5vw,3.4rem);margin:.6rem 0 .4rem;letter-spacing:-.5px;line-height:1.05}
 .hero h1 .grad{background:linear-gradient(120deg,#fff,#ffd866 55%,var(--red));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -318,6 +322,13 @@ footer .view{color:var(--faint)}
 .uplink #uplinkClock{color:var(--red);font-weight:700}
 .uplink.closed{border-color:var(--red);color:var(--red)}
 .uplink.closed #uplinkClock{color:var(--muted)}
+.vbars{display:flex;flex-direction:column;gap:.5rem;max-width:760px}
+.vrow{display:grid;grid-template-columns:170px 1fr 56px;gap:.7rem;align-items:center;font-family:var(--mono);font-size:.78rem}
+.vl{color:var(--muted);text-align:right;letter-spacing:.04em}
+.vbar{background:rgba(255,255,255,.05);height:13px;border-radius:7px;overflow:hidden}
+.vfill{display:block;height:100%;background:var(--accent)}
+.vfill.v-conf{background:var(--red)}
+.vc{color:var(--accent);text-align:left}
 """
 
 JS = r"""
@@ -756,7 +767,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
   <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
 </div></nav>
 
-<header class='hero'><div class='reticle'><div class='ring2'></div></div><div class='wrap'>
+<header class='hero'><div class='reticle'><div class='ring2'></div><div class='sweep'></div></div><div class='wrap'>
   <div class='tag'>Anomaly Dossier // Public Facility</div>
   <h1>NASA HiRISE <span class='grad'>Anomaly Investigation</span></h1>
   <p class='lead'>A rigorous, reproducible pipeline for analyzing public NASA HiRISE imagery of Mars &amp; the Moon &mdash;
@@ -837,6 +848,15 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     counts = verdict_counts(rows)
     dist = " &middot; ".join(f"{html.escape(k)}: {v}" for k, v in sorted(counts.items()))
     top = dedupe(top_leads(rows))
+    # verdict distribution bars
+    total = len(rows) or 1
+    vbars = ""
+    for k, v in sorted(counts.items(), key=lambda kv: -kv[1]):
+        pct = v / total * 100.0
+        cls = "v-conf" if k.startswith("CONFIRMED") else "v-other"
+        vbars += (f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
+                  f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
+                  f"<span class='vc'>{v}</span></div>")
     # top-lead cards (server rendered) — zoomed target-lock crop per feature, spread across source images
     cards = []
     for i, r in enumerate(diverse_preview([r for r in top if si.get(r["image"])], 60)):
@@ -896,7 +916,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
   <div class='nav-links'><a href='../#overview'>Home</a><a href='../#explorer'>Explorer</a><a href='../#findings'>Findings</a><a href='{BASE}'>Source</a></div>
   <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
 </div></nav>
-<header class='hero'><div class='reticle'><div class='ring2'></div></div><div class='wrap'>
+<header class='hero'><div class='reticle'><div class='ring2'></div><div class='sweep'></div></div><div class='wrap'>
   <div class='tag'>Adjudication // Dossier</div>
   <h1>Anomaly <span class='grad'>Analysis Report</span></h1>
   <p class='lead'>{len(rows)} candidates adjudicated &middot; {len(leads)} leads &middot; {len(findings)} finding reports.</p>
@@ -908,6 +928,11 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
   </div>
   <p style='color:var(--muted)'>Verdict distribution: {dist}</p>
 </div></header>
+
+<section><div class='wrap'>
+  <div class='sec-head'><h2>Signal breakdown</h2><span class='hint'>{len(rows)} candidates adjudicated</span></div>
+  <div class='vbars'>{vbars}</div>
+</div></section>
 
 <section><div class='wrap'>
   <div class='sec-head'><h2>Top leads preview</h2><span class='hint'>{min(60,len(top))} of {len(top)} with strips &mdash; click to enlarge</span></div>

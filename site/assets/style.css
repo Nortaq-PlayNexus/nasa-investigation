@@ -69,6 +69,10 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
 .hero .reticle:before{left:50%;top:-34px;bottom:-34px;width:1px;transform:translateX(-.5px)}
 .hero .reticle:after{top:50%;left:-34px;right:-34px;height:1px;transform:translateY(-.5px)}
 .hero .reticle .ring2{position:absolute;inset:64px;border:1px dashed rgba(255,196,48,.12);border-radius:50%}
+.hero .reticle .sweep{position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg, rgba(255,196,48,0) 0deg, rgba(255,196,48,0) 300deg, rgba(255,196,48,.28) 358deg, rgba(255,196,48,.05) 360deg);
+  animation:retspin 7s linear infinite;mix-blend-mode:screen}
+@keyframes retspin{to{transform:rotate(360deg)}}
 .hero .tag{color:var(--red);font-family:var(--mono);font-weight:700;letter-spacing:.24em;text-transform:uppercase;font-size:.78rem}
 .hero h1{font-size:clamp(2.1rem,5vw,3.4rem);margin:.6rem 0 .4rem;letter-spacing:-.5px;line-height:1.05}
 .hero h1 .grad{background:linear-gradient(120deg,#fff,#ffd866 55%,var(--red));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -214,3 +218,10 @@ footer .view{color:var(--faint)}
 .uplink #uplinkClock{color:var(--red);font-weight:700}
 .uplink.closed{border-color:var(--red);color:var(--red)}
 .uplink.closed #uplinkClock{color:var(--muted)}
+.vbars{display:flex;flex-direction:column;gap:.5rem;max-width:760px}
+.vrow{display:grid;grid-template-columns:170px 1fr 56px;gap:.7rem;align-items:center;font-family:var(--mono);font-size:.78rem}
+.vl{color:var(--muted);text-align:right;letter-spacing:.04em}
+.vbar{background:rgba(255,255,255,.05);height:13px;border-radius:7px;overflow:hidden}
+.vfill{display:block;height:100%;background:var(--accent)}
+.vfill.v-conf{background:var(--red)}
+.vc{color:var(--accent);text-align:left}
