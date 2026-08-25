@@ -2,10 +2,9 @@ import argparse
 import glob
 import os
 
+import common
 import numpy as np
 from PIL import Image
-
-import common
 
 
 def sigma_clip_stack(frames, clip=3.0):
@@ -63,7 +62,7 @@ def main():
         try:
             frames.append(common.load_gray(f))
         except Exception as e:
-            print("skip {} ({})".format(f, e))
+            print(f"skip {f} ({e})")
     if len(frames) < 2:
         print("need at least 2 readable frames")
         return
@@ -87,8 +86,8 @@ def main():
     for i, f in enumerate(frames):
         diff = np.abs(f - stack)
         Image.fromarray(np.clip(diff, 0, 255).astype(np.uint8)).save(
-            os.path.join(a.out, "diff_{:03d}.png".format(i)))
-    print("stacked {} frames -> {}".format(len(frames), a.out))
+            os.path.join(a.out, f"diff_{i:03d}.png"))
+    print(f"stacked {len(frames)} frames -> {a.out}")
 
 
 if __name__ == "__main__":

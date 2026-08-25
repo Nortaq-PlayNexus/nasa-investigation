@@ -1,7 +1,7 @@
 __pycache__/
 *.pyc
+*.pyo
 .python-version
-
 data/raw/
 data/processed/
 data/catalog/*.csv
@@ -9,3 +9,17 @@ data/catalog/*.json
 data/anomalies/
 data/downloads.log
 *.part
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.loop/
+.freebuff/
+.venv/
+venv/
+*.exe
+*.spec.bak
+__pypackages__/
+.env
+showcase/img/

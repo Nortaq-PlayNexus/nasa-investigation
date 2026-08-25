@@ -10,16 +10,14 @@ Use after detect.py to calibrate how much weight any candidate can carry.
 """
 
 import argparse
-import csv
 import os
 import random
 import sys
 
-import numpy as np
-from PIL import Image
-
 import common
 import detect
+import numpy as np
+from PIL import Image
 
 
 def synthetic_scene(shape, seed=1):
@@ -120,33 +118,45 @@ def place_blobs(shape, sizes, seed, margin=60):
     return blobs
 
 
-def run_bench(arr, sizes, scales, z, min_size, seed, out_dir, scene_name):
+def run_bench(arr, sizes, scales, z, min_size, seed, out_dir, scene_name,
+              max_scale_pixels=8_000_000):
+    """Inject blobs into `arr`, run the detector, report recall + clean FP count.
+
+    Writes temporary scene PNGs into out_dir and removes them before returning,
+    so direct callers (tests) do not leak files.
+    """
     blobs = place_blobs(arr.shape, sizes, seed)
     injected = inject_blobs(arr, blobs)
     tmp = os.path.join(out_dir, "_bench_%s.png" % scene_name)
-    Image.fromarray(injected.astype(np.uint8)).save(tmp)
-
-    det = detect.analyze(tmp, scales, z, min_size, 8_000_000)
-    matched = [False] * len(blobs)
-    for box in det:
-        for ti, t in enumerate(blobs):
-            if not matched[ti] and hit(box, t):
-                matched[ti] = True
-
-    recall = {}
-    for size in sizes:
-        n = sum(1 for b in blobs if b[2] == size)
-        hit_n = sum(1 for i, b in enumerate(blobs) if b[2] == size and matched[i])
-        recall[size] = (hit_n, n)
-
-    neg = len(detect.analyze(tmp, scales, z, min_size, 8_000_000)) if False else None
     clean_tmp = os.path.join(out_dir, "_clean_%s.png" % scene_name)
-    Image.fromarray(arr.astype(np.uint8)).save(clean_tmp)
-    neg = len(detect.analyze(clean_tmp, scales, z, min_size, 8_000_000))
-    return recall, neg, len(det)
+    try:
+        Image.fromarray(injected.astype(np.uint8)).save(tmp)
+
+        det = detect.analyze(tmp, scales, z, min_size, max_scale_pixels)
+        matched = [False] * len(blobs)
+        for box in det:
+            for ti, t in enumerate(blobs):
+                if not matched[ti] and hit(box, t):
+                    matched[ti] = True
+
+        recall = {}
+        for size in sizes:
+            n = sum(1 for b in blobs if b[2] == size)
+            hit_n = sum(1 for i, b in enumerate(blobs) if b[2] == size and matched[i])
+            recall[size] = (hit_n, n)
+
+        Image.fromarray(arr.astype(np.uint8)).save(clean_tmp)
+        neg = len(detect.analyze(clean_tmp, scales, z, min_size, max_scale_pixels))
+        return recall, neg, len(det)
+    finally:
+        for f in (tmp, clean_tmp):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
 
-def main():
+def main(argv=None):
     cfg = common.load_config()
     p = argparse.ArgumentParser(description="Measure detector sensitivity with injected blobs")
     p.add_argument("--image", default=None,
@@ -156,11 +166,14 @@ def main():
     p.add_argument("--z", type=float, default=common.option_default(cfg, "detect_z", 3.0))
     p.add_argument("--min-size", type=int,
                    default=common.option_default(cfg, "detect_min_size", 12))
+    p.add_argument("--max-scale-pixels", type=int,
+                   default=common.option_default(cfg, "detect_max_scale_pixels", 8_000_000),
+                   help="skip a detector scale if it would process more pixels than this")
     p.add_argument("--sizes", default=common.option_default(cfg, "benchmark_sizes", "8,16,24,32,48,64,96,128"))
     p.add_argument("--seed", type=int, default=common.option_default(cfg, "benchmark_seed", 7))
-    a = p.parse_args()
+    a = p.parse_args(argv)
     common.set_seed(a.seed)
-    common.set_audit(os.path.join(a.out, "..", "audit.jsonl"))
+    common.set_audit(common.audit_path_for(a.out))
     start = common.time.time()
 
     scales = [int(s) for s in a.scales.split(",")]
@@ -176,7 +189,7 @@ def main():
         a.image = "synthetic textured scene (control)"
 
     recall, neg, n_det = run_bench(arr, sizes, scales, a.z, a.min_size, a.seed,
-                                   a.out, scene_name)
+                                   a.out, scene_name, a.max_scale_pixels)
 
     lines = []
     lines.append("# Detector sensitivity calibration\n")
@@ -208,13 +221,6 @@ def main():
                  "recall_hit": "", "recall_total": "", "recall_pct": ""})
     common.atomic_csv_write(os.path.join(a.out, "benchmark_%s.csv" % scene_name), rows,
                             ["scene", "blob_size_px", "recall_hit", "recall_total", "recall_pct"])
-
-    for f in os.listdir(a.out):
-        if f.startswith("_bench_") or f.startswith("_clean_"):
-            try:
-                os.remove(os.path.join(a.out, f))
-            except OSError:
-                pass
 
     print("scene:", scene_name, "| injected boxes fired:", n_det, "| clean FPs:", neg)
     for size in sizes:

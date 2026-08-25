@@ -191,7 +191,7 @@ def parse_label(path_or_text):
     path_or_text: file path, bytes, or str.
     """
     if isinstance(path_or_text, (bytes, str)) and "\n" not in path_or_text and "\r" not in path_or_text and os.path.exists(str(path_or_text)):
-        with open(path_or_text, "r", encoding="utf-8", errors="replace") as f:
+        with open(path_or_text, encoding="utf-8", errors="replace") as f:
             text = f.read()
         is_attached = _label_attached(text)
     elif isinstance(path_or_text, bytes):
@@ -420,7 +420,7 @@ def read_image(label_path, band=None, dtype_float=True):
     type when no band is requested. When dtype_float is True the array is
     float32 with missing constants mapped to NaN.
     """
-    with open(label_path, "r", encoding="utf-8", errors="replace") as f:
+    with open(label_path, encoding="utf-8", errors="replace") as f:
         text = f.read()
     if is_pds4_text(text):
         return _read_pds4(label_path, band, dtype_float)
@@ -442,32 +442,30 @@ def read_image(label_path, band=None, dtype_float=True):
     itemsize = dtype.itemsize
 
     bands = geom["bands"] or 1
-    line_stride = (geom["samples"] + prefix + suffix) * itemsize
-    total = line_stride * geom["lines"]
+    lines, samples = geom["lines"], geom["samples"]
+    expected = _cube_bytes(lines, samples, bands, prefix, suffix, itemsize,
+                           geom["storage"])
 
     with open(path, "rb") as f:
         f.seek(offset)
-        raw = f.read(total)
-
-    if prefix or suffix:
-        arr = np.frombuffer(raw, dtype=dtype).reshape(geom["lines"], geom["samples"] + prefix + suffix)
-        arr = arr[:, prefix:prefix + geom["samples"]]
-    else:
-        arr = np.frombuffer(raw, dtype=dtype).reshape(geom["lines"], geom["samples"])
+        raw = f.read(expected)
+    if len(raw) < expected:
+        raise ValueError("data truncated in %s: have %d bytes, label declares %d"
+                         % (path, len(raw), expected))
+    arr = _decode_cube(raw, dtype, lines, samples, bands, prefix, suffix,
+                       geom["storage"])
+    if bands == 1:
+        # Single-band products keep the classic 2-D (lines, samples) shape
+        # regardless of storage type.
+        arr = arr.reshape(lines, samples)
 
     if geom["mask"]:
         amask = _bit_mask_value(geom["mask"])
         shift = _shift_for_mask(amask)
-        if shift:
-            arr = (arr & amask) >> shift
-        else:
-            arr = arr & amask
-
-    if bands > 1:
-        arr = _deinterleave(arr, geom["storage"], bands, geom["lines"], geom["samples"])
+        arr = ((arr & amask) >> shift) if shift else (arr & amask)
 
     missing = _to_float(flat.get("MISSING_CONSTANT") or flat.get("MISSING_MULTIPLIER"))
-    arr = arr.copy()
+    arr = arr.copy()  # frombuffer views are read-only; downstream may mutate
     if dtype_float:
         out = arr.astype(np.float32)
         if missing is not None:
@@ -499,38 +497,81 @@ def read_image(label_path, band=None, dtype_float=True):
     return arr
 
 
-def _deinterleave(arr, storage, bands, lines, samples):
-    if storage == "BAND_SEQUENTIAL":
-        return arr.reshape(bands, lines, samples)
+def _cube_bytes(lines, samples, bands, prefix, suffix, itemsize, storage):
+    """Total byte size of the image data for a given band layout.
+
+    BAND_SEQUENTIAL stores whole planes one after another, so the line
+    prefix/suffix pads every line of every band. In the interleaved layouts
+    one physical record holds all bands of a line (or pixel), so the
+    prefix/suffix applies once per record.
+    """
     if storage == "SAMPLE_INTERLEAVED":
-        return arr.reshape(lines, samples, bands)
+        row = samples * bands + prefix + suffix
+        return row * itemsize * lines
     if storage == "LINE_INTERLEAVED":
-        return arr.reshape(lines, bands, samples)
-    return arr.reshape(lines, samples, bands)
+        row = samples * bands + prefix + suffix
+        return row * itemsize * lines
+    # BAND_SEQUENTIAL (PDS default)
+    row = samples + prefix + suffix
+    return row * itemsize * lines * bands
+
+
+def _decode_cube(raw, dtype, lines, samples, bands, prefix, suffix, storage):
+    """Raw image bytes -> band-laid-out array with prefix/suffix stripped.
+
+    Returns (bands, lines, samples) for BAND_SEQUENTIAL,
+            (lines, bands, samples) for LINE_INTERLEAVED,
+            (lines, samples, bands) for SAMPLE_INTERLEAVED.
+    """
+    buf = np.frombuffer(raw, dtype=dtype)
+    if storage == "SAMPLE_INTERLEAVED":
+        row = samples * bands + prefix + suffix
+        grid = buf[:row * lines].reshape(lines, row)
+        return grid[:, prefix:prefix + samples * bands].reshape(lines, samples, bands)
+    if storage == "LINE_INTERLEAVED":
+        row = samples * bands + prefix + suffix
+        grid = buf[:row * lines].reshape(lines, row)
+        return grid[:, prefix:prefix + samples * bands].reshape(lines, bands, samples)
+    # BAND_SEQUENTIAL (PDS default)
+    row = samples + prefix + suffix
+    grid = buf[:row * lines * bands].reshape(lines * bands, row)
+    return grid[:, prefix:prefix + samples].reshape(bands, lines, samples)
 
 
 def read_band(label_path, band, dtype_float=True):
-    """Read a single band without loading the whole cube (BSQ)."""
-    with open(label_path, "r", encoding="utf-8", errors="replace") as f:
+    """Read a single band without loading the whole cube (BSQ only).
+
+    For interleaved layouts the full cube is decoded and the band sliced out.
+    """
+    with open(label_path, encoding="utf-8", errors="replace") as f:
         text = f.read()
     data = _parse_pds3(text)
     data["__attached__"] = _label_attached(text)
     geom = _image_block(data)
     if not geom["bands"] or geom["bands"] == 1:
         return read_image(label_path, dtype_float=dtype_float)
+    if not 0 <= int(band) < geom["bands"]:
+        raise ValueError("band %r out of range (product has %d bands)"
+                         % (band, geom["bands"]))
     if geom["storage"] != "BAND_SEQUENTIAL":
         return read_image(label_path, band=band, dtype_float=dtype_float)
     flat = label_flat(data)
     path, offset = _data_file_and_offset(data, 0, label_path)
     dtype = _dtype_from_pds3(geom["sample_type"], geom["bits"])
+    prefix = _to_int(label_in(data, "IMAGE", "LINE_PREFIX_BYTES")) or 0
+    suffix = _to_int(label_in(data, "IMAGE", "LINE_SUFFIX_BYTES")) or 0
     itemsize = dtype.itemsize
-    line_stride = geom["samples"] * itemsize
-    plane = line_stride * geom["lines"]
+    row = geom["samples"] + prefix + suffix
+    plane = row * itemsize * geom["lines"]
     start = offset + band * plane
     with open(path, "rb") as f:
         f.seek(start)
         raw = f.read(plane)
-    arr = np.frombuffer(raw, dtype=dtype).reshape(geom["lines"], geom["samples"])
+    if len(raw) < plane:
+        raise ValueError("data truncated in %s: have %d bytes, label declares %d"
+                         % (path, len(raw), plane))
+    arr = np.frombuffer(raw, dtype=dtype).reshape(geom["lines"], row)
+    arr = arr[:, prefix:prefix + geom["samples"]]
     if geom["mask"]:
         amask = _bit_mask_value(geom["mask"])
         shift = _shift_for_mask(amask)
@@ -663,7 +704,7 @@ def _read_pds4(label_path, band=None, dtype_float=True):
 
 def image_geometry(label_path):
     """Best-effort (lines, samples, bands) for a label, without reading data."""
-    with open(label_path, "r", encoding="utf-8", errors="replace") as f:
+    with open(label_path, encoding="utf-8", errors="replace") as f:
         text = f.read()
     if is_pds4_text(text):
         tree = ET.fromstring(text)

@@ -27,18 +27,26 @@ All offline (numpy/PIL). Outputs:
 
 import argparse
 import csv
+import datetime
 import html
 import os
 import re
 import sys
 
-import numpy as np
-from PIL import Image, ImageFilter
-
 import analyze
 import common
 import detect
 import metadata as meta_mod
+import numpy as np
+from PIL import Image, ImageFilter
+
+try:
+    from scipy import ndimage as _ndimage
+
+    HAS_SCIPY = True
+except ImportError:
+    _ndimage = None
+    HAS_SCIPY = False
 
 
 def load_gray(path):
@@ -76,6 +84,12 @@ def median_persist(crop, fx, fy, fw, fh, radius=2):
     keep most of their contrast (persistence near 1); isolated hot pixels,
     streaks and compression speckle are removed and drop toward 0.
     """
+    crop = np.asarray(crop, dtype=np.float32)
+    if np.isnan(crop).any():
+        # PDS missing values arrive as NaN; replace with the local median so
+        # the uint8 cast and the background statistics stay meaningful.
+        fill = float(np.nanmedian(crop)) if np.isfinite(crop).any() else 0.0
+        crop = np.where(np.isnan(crop), fill, crop)
     fg = crop[fy:fy + fh, fx:fx + fw]
     mask = np.ones(crop.shape, dtype=bool)
     mask[fy:fy + fh, fx:fx + fw] = False
@@ -93,6 +107,44 @@ def median_persist(crop, fx, fy, fw, fh, radius=2):
     return round(min(1.0, max(0.0, persist)), 3), round(float(bg.std()), 2)
 
 
+def _erode8(mask):
+    """Binary erosion with a 3x3 structuring element (pure numpy)."""
+    m = np.asarray(mask, dtype=bool)
+    er = m.copy()
+    er[1:, :] &= m[:-1, :]
+    er[:-1, :] &= m[1:, :]
+    er[:, 1:] &= m[:, :-1]
+    er[:, :-1] &= m[:, 1:]
+    er[1:, 1:] &= m[:-1, :-1]
+    er[1:, :-1] &= m[:-1, 1:]
+    er[:-1, 1:] &= m[1:, :-1]
+    er[:-1, :-1] &= m[1:, 1:]
+    return er
+
+
+def _dilate8(mask):
+    """Binary dilation with a 3x3 structuring element (pure numpy)."""
+    m = np.asarray(mask, dtype=bool)
+    dl = np.zeros_like(m)
+    dl |= m
+    dl[1:, :] |= m[:-1, :]
+    dl[:-1, :] |= m[1:, :]
+    dl[:, 1:] |= m[:, :-1]
+    dl[:, :-1] |= m[:, 1:]
+    dl[1:, 1:] |= m[:-1, :-1]
+    dl[1:, :-1] |= m[:-1, 1:]
+    dl[:-1, 1:] |= m[1:, :-1]
+    dl[:-1, :-1] |= m[1:, 1:]
+    return dl
+
+
+def _binary_opening(mask):
+    """Erosion then dilation; scipy when available, pure numpy otherwise."""
+    if HAS_SCIPY:
+        return _ndimage.binary_opening(mask, np.ones((3, 3), dtype=bool))
+    return _dilate8(_erode8(mask))
+
+
 def roundness(crop, fx, fy, fw, fh):
     """Compactness of the bright/dark core within the flagged region."""
     region = crop[fy:fy + fh, fx:fx + fw]
@@ -101,13 +153,11 @@ def roundness(crop, fx, fy, fw, fh):
     mask = np.abs(m) > 1.5 * s
     if mask.sum() < 9:
         return 0.0, 0.0, 0.0
-    er = np.ones((3, 3), dtype=bool)
-    from scipy import ndimage
-    core = ndimage.binary_opening(mask, er).astype(int)
+    core = _binary_opening(mask)
     if core.sum() < 9:
         return 0.0, 0.0, 0.0
     area = float(core.sum())
-    per = float(core.sum() - ndimage.binary_erosion(core, er).sum())
+    per = float(core.sum() - _erode8(core).sum())
     compact = 4.0 * np.pi * area / (per * per + 1e-6)
     return round(min(1.0, compact), 3), round(area, 1), round(per, 1)
 
@@ -245,7 +295,7 @@ def recommend(verdict):
     return "Discard. Below the reliability floor set by the negative-control baseline."
 
 
-def main():
+def main(argv=None):
     cfg = common.load_config()
     p = argparse.ArgumentParser(description="Adjudicate candidates toward conclusions")
     p.add_argument("--candidates", default="data/anomalies/candidates.csv")
@@ -264,8 +314,8 @@ def main():
                    help="false-discovery-rate level for the top-lead claim")
     p.add_argument("--metadata", default="data/catalog/catalog.csv",
                    help="catalog CSV with per-product solar geometry and pixel scale")
-    a = p.parse_args()
-    common.set_audit(os.path.join(a.out, "..", "audit.jsonl"))
+    a = p.parse_args(argv)
+    common.set_audit(common.audit_path_for(a.out))
 
     start = common.time.time()
     with open(a.candidates, newline="", encoding="utf-8") as f:
@@ -302,7 +352,6 @@ def main():
         if not common.validate_box(x, y, w, h, W, H):
             skipped += 1
             continue
-        x, y, w, h = int(e["x"]), int(e["y"]), int(e["w"]), int(e["h"])
         margin = int(0.5 * max(w, h))
         x0, y0 = max(0, x - margin), max(0, y - margin)
         x1, y1 = min(W, x + w + margin), min(H, y + h + margin)
@@ -360,6 +409,10 @@ def main():
             "matches_coord": e["matches"], "agrees": agrees, "disagrees": disagrees,
             "near_edge": e["near_edge"], "persistence": persist, "compactness": compact,
             "bg_std": bg_std, "smooth": smooth,
+            # new rigor metrics carried through from analyze.py
+            "grid_energy": e.get("grid_energy", ""),
+            "edge_sharpness": e.get("edge_sharpness", ""),
+            "contrast_stability": e.get("contrast_stability", ""),
             "interest": e["score"],
             "score": score, "verdict": v, "confidence": conf,
             "flags": e["flags"], "recommendation": recommend(v),
@@ -411,6 +464,7 @@ def main():
     fields = ["image", "x", "y", "w", "h", "contrast", "area_px", "aspect", "polarity",
               "evidence_class", "matches_coord", "agrees", "disagrees", "near_edge",
               "persistence", "compactness", "bg_std", "smooth",
+              "grid_energy", "edge_sharpness", "contrast_stability",
               "interest", "score", "verdict", "confidence",
               "flags", "recommendation", "path", "baseline_fp", "fdr_q",
               "solar_elevation_deg", "solar_azimuth_deg", "pixel_scale_m", "size_m",
@@ -460,26 +514,26 @@ def main():
                ", ".join("%.2f->%d" % s for s in stress))
 
     # Generate visual evidence (enhancement strips) for the top leads.
+    # Reuses arr_cache — those images are already in memory.
     strips_dir = os.path.join(a.out, "strips")
     os.makedirs(strips_dir, exist_ok=True)
-    strip_cache = {}
-    for r in top_leads:
+    for li, r in enumerate(top_leads):
         path = r["path"]
-        if path not in strip_cache:
-            try:
-                strip_cache[path] = load_gray(path)
-            except Exception:
-                strip_cache[path] = None
-        arr = strip_cache[path]
+        arr = arr_cache.get(path)
         if arr is None:
-            continue
+            try:
+                arr = load_gray(path)
+                arr_cache[path] = arr
+            except Exception:
+                arr_cache[path] = None
+                continue
         try:
             crop, _ = analyze.analyze_candidate(
                 {"x": int(r["x"]), "y": int(r["y"]), "w": int(r["w"]), "h": int(r["h"]),
                  "fill": 0.5}, arr, a.max_crop)
             strip = analyze.make_strip(analyze.enhance_variants(crop))
-            name = "T%03d_%s" % (top_leads.index(r), re.sub(r"[^A-Za-z0-9_.-]", "_",
-                                                             r["image"])[:50])
+            name = "T%03d_%s" % (li, re.sub(r"[^A-Za-z0-9_.-]", "_",
+                                            r["image"])[:50])
             strip.save(os.path.join(strips_dir, name + ".jpg"), quality=92)
             r["_strip"] = name + ".jpg"
         except Exception:
@@ -514,7 +568,7 @@ def write_report(out, rows, leads, top_leads):
     cards = []
     for r in top_leads[:60]:
         flags = r["flags"].split(",") if r["flags"] else []
-        flag_html = "".join("<li>{}</li>".format(html.escape(f)) for f in flags) or "<li>none</li>"
+        flag_html = "".join(f"<li>{html.escape(f)}</li>" for f in flags) or "<li>none</li>"
         img = ("<p><img src='strips/%s' alt='strip'></p>" % r["_strip"]) if r.get("_strip") else ""
         cards.append(
             "<div class='card'><h3>{} <span class='cls'>{}</span></h3>"
@@ -556,8 +610,7 @@ def write_report(out, rows, leads, top_leads):
         "<a href='leads.csv'>leads.csv</a> &middot; "
         "<a href='SUMMARY.md'>SUMMARY.md</a></p>"
         "<div class='grid'>{}</div></body></html>").format(len(rows), len(leads), dist, "".join(cards))
-    with open(os.path.join(out, "report.html"), "w", encoding="utf-8") as f:
-        f.write(body)
+    common.atomic_text_write(os.path.join(out, "report.html"), body)
 
 
 def write_lead_reports(leads_dir, leads):
@@ -606,7 +659,7 @@ def write_lead_reports(leads_dir, leads):
             "## Conclusion\n"
             "- Verdict: %s (confidence %s)\n"
             "- Recommended next steps: %s\n") % (
-            os.path.basename(fn), __import__("datetime").date.today().isoformat(),
+            os.path.basename(fn), datetime.date.today().isoformat(),
             r["evidence_class"], r["image"], r["path"],
             r["x"], r["y"], r["w"], r["h"], r["agrees"], r["disagrees"],
             r.get("solar_elevation_deg") or "n/a", r.get("solar_azimuth_deg") or "n/a",
@@ -618,8 +671,7 @@ def write_lead_reports(leads_dir, leads):
             r.get("_strip", ""),
             r["score"], r["interest"], flags,
             r["verdict"], r["confidence"], r["recommendation"])
-        with open(fn, "w", encoding="utf-8") as f:
-            f.write(body)
+        common.atomic_text_write(fn, body)
 
 
 def write_summary(out, rows, leads, top_leads, stress, fdr_ok, q,
@@ -716,8 +768,7 @@ def write_summary(out, rows, leads, top_leads, stress, fdr_ok, q,
         "the EDR original, checking a global mosaic/Trek, and finding the feature in "
         "an independent acquisition at a different lighting before writing a finding "
         "to `findings/`.\n")
-    with open(os.path.join(out, "SUMMARY.md"), "w", encoding="utf-8") as f:
-        f.write(body)
+    common.atomic_text_write(os.path.join(out, "SUMMARY.md"), body)
 
 
 if __name__ == "__main__":

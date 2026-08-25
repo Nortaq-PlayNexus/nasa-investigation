@@ -6,7 +6,7 @@ import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _common import download, download_many, log, safe_name
+from _common import download_many, log, safe_name
 
 HREF = re.compile(r'<a href="([^"]+)">.*?</a>(.*?)\n', re.I)
 SIZE_CELL = re.compile(r'indexcolsize[^>]*>([^<]*)</td>', re.I)
@@ -78,12 +78,12 @@ def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
         seen.add(url)
         dirs_visited += 1
         if dirs_visited > max_dirs:
-            log("stopped after {} directories".format(dirs_visited), logpath)
+            log(f"stopped after {dirs_visited} directories", logpath)
             break
         try:
             entries = list_dir(url)
         except Exception as e:
-            log("list error {}: {}".format(url, e), logpath)
+            log(f"list error {url}: {e}", logpath)
             continue
         for full, size in entries:
             if len(tasks) >= maxcount:
@@ -93,10 +93,10 @@ def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
             if not is_dir and rx.search(name):
                 if max_size is not None:
                     if size is None or size <= 0:
-                        log("skip (unknown size) {}".format(full), logpath)
+                        log(f"skip (unknown size) {full}", logpath)
                         continue
                     if size > max_size:
-                        log("skip ({} bytes) {}".format(size, full), logpath)
+                        log(f"skip ({size} bytes) {full}", logpath)
                         continue
                 dest = os.path.join(out, safe_name(name) + suffix)
                 tasks.append((full, dest, None))
@@ -105,7 +105,7 @@ def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
             if is_dir and rel_depth < depth:
                 todo.append(full)
     if not tasks:
-        log("no matching files found under {}".format(volume), logpath)
+        log(f"no matching files found under {volume}", logpath)
         return 0
     results = download_many(tasks[:maxcount], workers=workers,
                             manifest=manifest, source=source)
@@ -113,7 +113,7 @@ def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
     for url, dest, status in results:
         if status == "downloaded":
             count += 1
-        log("{} {}".format(status, dest), logpath)
+        log(f"{status} {dest}", logpath)
     return count
 
 
@@ -132,7 +132,7 @@ def main():
     max_size = int(a.max_size_mb * 1024 * 1024) if a.max_size_mb else None
     n = crawl(a.volume, a.pattern, a.depth, a.max, a.out, max_size=max_size,
               max_dirs=a.max_dirs, workers=a.workers, manifest=a.manifest)
-    print("downloaded {}".format(n))
+    print(f"downloaded {n}")
 
 
 if __name__ == "__main__":

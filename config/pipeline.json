@@ -1,4 +1,12 @@
 {
+  "source_policy": "hirise_extras_only",
+  "extras_base": "https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/",
+  "extras_exemplar_dtm": "ESP_013948_1410_ESP_013236_1410",
+  "extras_exemplar_dir": "DTM/ESP/ORB_013900_013999/ESP_013948_1410_ESP_013236_1410",
+  "extras_require_variant_set": true,
+  "extras_compare_enabled": true,
+  "extras_compare_max_shift_frac": 0.15,
+  "extras_variant_roles": ["red", "color", "ortho_red", "ortho_color", "dtm", "fom"],
   "detect_z": 3.0,
   "detect_min_size": 12,
   "detect_scales": "4",

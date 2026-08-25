@@ -17,7 +17,7 @@ def main():
     p.add_argument("--out", default="data/raw/moon/lroc")
     a = p.parse_args()
     n = crawl(a.volume, a.pattern, a.depth, a.max, a.out, max_size=int(a.max_size_mb * 1024 * 1024) if a.max_size_mb else None, max_dirs=a.max_dirs)
-    print("downloaded {}".format(n))
+    print(f"downloaded {n}")
 
 
 if __name__ == "__main__":

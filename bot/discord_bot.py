@@ -36,8 +36,8 @@ from PIL import Image, ImageDraw
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "pipeline"))
 
-import detect
 import analyze
+import detect
 
 MAX_PIXELS = int(os.environ.get("ANOMALY_MAX_PIXELS", "4_000_000"))
 MAX_BYTES = int(os.environ.get("ANOMALY_MAX_BYTES", str(25 * 1024 * 1024)))
@@ -147,7 +147,7 @@ def make_discord_bot():
         async def handle_upload(self, message):
             async with self._sem:
                 attach = message.attachments[0]
-                if attach.content_type not in ALLOWED_TYPES and not attach.filename.lower().split(".")[-1] in (
+                if attach.content_type not in ALLOWED_TYPES and attach.filename.lower().split(".")[-1] not in (
                         "png", "jpg", "jpeg", "webp", "tif", "tiff"):
                     await message.channel.send("That file doesn't look like a "
                                                "supported image type. " + HELP)

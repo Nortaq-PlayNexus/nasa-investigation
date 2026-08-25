@@ -1,14 +1,14 @@
 import argparse
 import os
 
-import numpy as np
-from PIL import Image, ImageFilter, ImageOps
-
 import common
+import numpy as np
 import stack
+from PIL import Image, ImageFilter, ImageOps
 
 
 def load_array(path):
+    """Load any supported image as a numpy array via common.load_image."""
     arr = common.load_image(path)
     if arr.dtype == np.float32 or arr.dtype == np.float64:
         return arr
@@ -16,10 +16,12 @@ def load_array(path):
 
 
 def is_16bit(arr):
+    """True when the array carries more than 8 bits per sample."""
     return arr.dtype in (np.float32, np.float64, np.uint16, np.int16)
 
 
 def stretch(arr, lo=1, hi=99):
+    """Per-channel percentile contrast stretch to the full 0-255 range."""
     out = arr.astype(np.float32)
     was2d = out.ndim == 2
     if was2d:
@@ -56,7 +58,7 @@ def to_uint16(arr):
     return np.clip((a - lo) * (65535.0 / span), 0, 65535).astype(np.uint16)
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Enhance imagery: contrast stretch, denoise, sharpen, upscale")
     p.add_argument("--dir", required=True)
     p.add_argument("--out", required=True)
@@ -70,7 +72,7 @@ def main():
                    help="column-median destripe before enhancement (HiRISE-style CCD striping)")
     p.add_argument("--native16", action="store_true",
                    help="also write a 16-bit PNG alongside the 8-bit preview")
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     exts = tuple(a.exts.split(","))
     os.makedirs(a.out, exist_ok=True)
@@ -86,17 +88,17 @@ def main():
         try:
             w0, h0 = common.image_dims(path)
         except Exception as e:
-            print("skip {} ({})".format(base, e))
+            print(f"skip {base} ({e})")
             continue
         if w0 * h0 > a.max_pixels:
-            print("skip {} ({}x{} px, over {} pixel limit)".format(base, w0, h0, a.max_pixels))
+            print(f"skip {base} ({w0}x{h0} px, over {a.max_pixels} pixel limit)")
             continue
         destdir = os.path.join(a.out, rel)
         os.makedirs(destdir, exist_ok=True)
         stem = os.path.splitext(base)[0]
         dest = os.path.join(destdir, stem + "_enh.png")
         if a.skip_existing and os.path.exists(dest):
-            print("skip {} (already enhanced)".format(base))
+            print(f"skip {base} (already enhanced)")
             continue
         try:
             raw = load_array(path)
@@ -104,7 +106,7 @@ def main():
                 raw = stack.destripe(raw)
             arr = stretch(raw)
         except Exception as e:
-            print("skip {} ({})".format(base, e))
+            print(f"skip {base} ({e})")
             continue
         im = Image.fromarray(arr.astype(np.uint8))
         if a.deep:
@@ -126,7 +128,7 @@ def main():
         if a.native16 and is_16bit(raw):
             Image.fromarray(to_uint16(raw)).save(os.path.join(destdir, stem + "_enh16.png"))
         count += 1
-    print("enhanced {} files -> {}".format(count, a.out))
+    print(f"enhanced {count} files -> {a.out}")
 
 
 if __name__ == "__main__":

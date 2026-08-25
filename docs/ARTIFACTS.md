@@ -6,10 +6,10 @@ checked and why they don't apply.
 
 ## Sensor / camera
 - **Cosmic ray hits**: bright single pixels / short streaks, random orientation; common in orbital CCDs. Verify by checking neighbors and the same spot in a second frame.
-- **Hot pixels / bad columns**: reproducible, fixed position across frames — identical across multiple images of the same scene = sensor, not object.
+- **Hot pixels / bad columns**: reproducible, fixed position across frames — identical across multiple images of the same scene = sensor, not object. (`analyze.py` flags narrow columns that stay bright/dark beyond the flagged box as `column_smear`.)
 - **Column/row defects and dead bands**: fixed stripes.
 - **Calibration / zero-area strips**: detector edges, trailing-edge dark areas often wrongly read as "craters" or "objects".
-- **Blooming / smear**: charge spill along a column from a bright source.
+- **Blooming / smear**: charge spill along a column from a bright source. (Same automated `column_smear` check applies.)
 - **Dust or debris on optics**: out-of-focus donuts or smears that repeat in the same position of every frame regardless of target.
 
 ## Compression & processing
@@ -21,7 +21,7 @@ checked and why they don't apply.
 
 ## Optics & lighting
 - **Lens flare / internal reflections**: arcs, glows, secondary ghosts; follow the Sun direction.
-- **Vignetting**: dark corners mistaken for clouds/shadow.
+- **Vignetting**: dark corners mistaken for clouds/shadow. (`analyze.py` flags candidates whose box sits near an image corner as `corner`.)
 - **Shadow geometry**: long shadows from terrain; an object's own shadow. Check solar azimuth and incidence angles.
 - **Foreshortening** at limb/oblique angles: features look elongated/compressed.
 

@@ -1,226 +1,321 @@
-# NASA Moon & Mars anomaly investigation
+<div align="center">
 
-An organized, reproducible pipeline for acquiring, cataloging, enhancing and
-analyzing **public NASA imagery** of the Moon and Mars to surface candidate
-anomalies for structured human review.
+# 🔬 NASA HiRISE Investigation
 
-All data is public-domain U.S. government planetary science. The process is
-deliberately rigorous: almost every "anomaly" in planetary imagery turns out to
-be a sensor, compression, or lighting artifact, so the pipeline is built to
-document, control, and debunk before anything is ever recorded as a finding.
-See `docs/METHODOLOGY.md` for the full protocol.
+**Exclusive Anomaly Detection Pipeline for Mars & Lunar Imagery**
 
-## Layout
+*Acquire → Catalog → Enhance → Detect → Analyze → Adjudicate*
 
-```
-nasa-investigation/
-  config/
-    sources.yaml            source registry (URLs, auth, notes)
-    pipeline.json           central thresholds (detector, adjudication, FDR, benchmark)
-  docs/
-    SOURCES.md               all data sources & access methods
-    MISSIONS.md              mission/instrument + resolution reference
-    METHODOLOGY.md           the investigation protocol
-    ARTIFACTS.md             known false-anomaly catalog (must-check list)
-  scripts/
-    download_nasa_library.py  images.nasa.gov search (image/video/audio)
-    download_rover.py         Perseverance/Curiosity/others raw imagery
-    download_hirise.py        MRO HiRISE catalog + full-res fetch
-    download_lroc.py          LRO LROC NAC/WAC via PDS crawl
-    download_pds.py           generic parallel PDS HTTP crawler (+ provenance manifest)
-    download_archive.py       curated hard-to-find archives (CTX/MOC/Viking/LO/Clementine/M3/THEMIS)
-    sources.py                registry behind download_archive.py
-    build_catalog.py          index everything with hashes + solar geometry + immutable snapshot
-    verify_downloads.py       integrity + duplicate check
-    check_stereo.py           stereo-parallax check of a candidate (3D or flat?)
-    run_pipeline.py           orchestrate the whole flow (+ --selftest)
-  pipeline/
-    common.py                 hardened infra: audit, hashing, atomic writes, config, stats
-    pds.py                    native PDS3/PDS4 + .IMG EDR reader (endianness, bit masks, BIL/BIP)
-    metadata.py               solar/geometry metadata from product labels (px scale, sun vector)
-    photometry.py             Lambert/Lommel-Seeliger normalization, shadow-direction scoring
-    stereo.py                 block-matching disparity, relief, anaglyphs
-    changedet.py              phase-correlation registration + change/residual maps
-    enhance.py                stretch, denoise, sharpen, upscale, --native16
-    stack.py                  sigma-clipped stacking + column destriping
-    detect.py                 multi-scale local-contrast anomaly flagging (box or annulus)
-    mark.py                   draw anomaly boxes onto copies of the images
-    analyze.py                AI analysis: enhance, measure, artifact-check, rank, investigate
-    triage.py                 HTML review page with zoomed, boxed thumbnails
-    benchmark.py              injected-blob sensitivity calibration + negative controls
-    adjudicate.py             cross-band confirmation, persistence, shape, sun-shadow, verdicts, leads
-  bot/
-    discord_bot.py            Discord bot: upload an image -> pipeline verdict (optional)
-  tests/
-    test_pipeline.py          stdlib unit tests (common, detect, benchmark, adjudicate, pds, ...)
-  data/                       raw/, processed/, catalog/, anomalies/
-    anomalies/marked/         images with anomaly boxes drawn on them
-    anomalies/analysis/       per-candidate enhancement strips + evaluation report
-    anomalies/benchmark/      sensitivity calibration report
-    anomalies/conclusions/    adjudicated verdicts, top leads, per-lead reports
-    anomalies/audit.jsonl     machine-readable audit trail of every run
-  findings/                   structured reports (only after methodology satisfied)
-```
+[![CI](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml/badge.svg)](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)]()
 
-## Quickstart
+</div>
 
-From the project root:
+---
+
+## What Is This?
+
+A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery** to surface candidate anomalies for structured human review. Built on the principle that nearly all "anomalies" in planetary imagery are known sensor/compression/viewing artifacts — the system is designed to **document, control, and debunk** before anything is ever recorded as a finding.
+
+**Key design principle:** EXTRAS-only data acquisition from a single sanctioned source (`https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/`), comparing complete variant sets (B&W ↔ filtered ↔ ortho ↔ DTM) pixel-for-pixel to separate terrain from processing artifacts.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshots/report_top.png" width="80%" alt="Anomaly Analysis Report">
+</p>
+
+<p align="center">
+  <em>Generated HTML report showing pipeline statistics, detection summary, and adjudicated leads</em>
+</p>
+
+---
+
+## Features
+
+- 🔍 **Multi-scale anomaly detection** — local-contrast flagging with box and annulus methods
+- 🎯 **Cross-band confirmation** — pixel-level verification across B&W, filtered, and orthorectified variants
+- 📊 **Statistical rigor** — Benjamini-Hochberg FDR control, negative-control baselines, stress testing
+- 🛡️ **Artifact debunking** — systematic checklist against known sensor, compression, and optics artifacts
+- 🗺️ **Native PDS ingestion** — reads `.IMG` EDRs directly with PDS3/PDS4 label parsing
+- 📐 **3D stereo confirmation** — block-matching disparity maps with height estimation
+- 🌗 **Solar geometry scoring** — shadow direction vs. solar azimuth alignment
+- 🧪 **Benchmark calibration** — injected-blob sensitivity measurement with recall curves
+- 📱 **Full-stack dashboard** — drag-drop analysis, live stats, searchable leads table
+- 🤖 **Discord bot** — upload an image, get a pipeline verdict
+- 📦 **Standalone EXE** — PyInstaller single-file builds, no installation required
+
+---
+
+## Technology Stack
 
 ```
+Core Pipeline     Python 3.9+ / NumPy / Pillow
+Image Analysis    SciPy (optional) / OpenCV (optional)
+Web Dashboard     FastAPI + Uvicorn / Vanilla HTML/CSS/JS
+Discord Bot       discord.py 2.x
+Build System      PyInstaller / pip / pyproject.toml
+Testing           unittest + pytest (69+ test cases)
+Linting           ruff (100 char line length)
+CI/CD             GitHub Actions (Linux + Windows, Python 3.9/3.11/3.12)
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  Download    │───▶│   Catalog    │───▶│   Verify     │
+│  (EXTRAS)    │    │  + Hash      │    │  Integrity   │
+└─────────────┘    └──────────────┘    └──────────────┘
+                                                │
+┌─────────────┐    ┌──────────────┐    ┌────────▼──────┐
+│   Detect    │◀───│   Enhance    │◀───│  Native PDS   │
+│  Flagging   │    │  Stretch     │    │  Reader       │
+└──────┬──────┘    └──────────────┘    └───────────────┘
+       │
+┌──────▼──────┐    ┌──────────────┐    ┌──────────────┐
+│   Analyze   │───▶│  Adjudicate  │───▶│  Conclusions │
+│  Measure    │    │  Cross-band  │    │  Leads       │
+└─────────────┘    └──────────────┘    └──────────────┘
+```
+
+---
+
+## Installation
+
+### From Source
+
+```bash
+git clone https://github.com/Nortaq-PlayNexus/nasa-investigation.git
+cd nasa-investigation
 pip install -r requirements.txt
+```
 
-python scripts/download_nasa_library.py --query "apollo" --max 100 --out data/raw
+### Development
+
+```bash
+pip install -e .[dev]
+python -m pytest tests/test_pipeline.py -v
+```
+
+### Standalone EXE
+
+```bash
+pip install -e .[dev]
+python scripts/build_app.py              # Pipeline CLI
+python scripts/build_app.py --fullstack  # Full dashboard + pipeline
+```
+
+---
+
+## Quick Start
+
+### Full Pipeline
+
+```bash
+python scripts/run_pipeline.py --query "moon" --max 50
+```
+
+### Individual Steps
+
+```bash
+# 1. Download EXTRAS imagery
+python scripts/download_hirise_extras.py --query "crater" --max 30 --out data/raw
+
+# 2. Build catalog with solar geometry
 python scripts/build_catalog.py
+
+# 3. Verify integrity
 python scripts/verify_downloads.py
 
-python pipeline/enhance.py  --dir data/raw --out data/processed
-python pipeline/detect.py   --dir data/processed --out data/anomalies
-python pipeline/mark.py     --candidates data/anomalies/candidates.csv --out data/anomalies/marked
-python pipeline/analyze.py  --candidates data/anomalies/candidates.csv --out data/anomalies/analysis
-python pipeline/triage.py   --candidates data/anomalies/candidates.csv --out data/anomalies/triage
-python pipeline/benchmark.py --out data/anomalies/benchmark
-python pipeline/adjudicate.py --candidates data/anomalies/candidates.csv --evaluated data/anomalies/analysis/evaluated.csv --out data/anomalies/conclusions
+# 4. Enhance images
+python pipeline/enhance.py --dir data/raw --out data/processed
+
+# 5. Detect anomalies
+python pipeline/detect.py --dir data/processed --out data/anomalies
+
+# 6. Mark candidates
+python pipeline/mark.py --candidates data/anomalies/candidates.csv --out data/anomalies/marked
+
+# 7. Analyze candidates
+python pipeline/analyze.py --candidates data/anomalies/candidates.csv --out data/anomalies/analysis
+
+# 8. Adjudicate leads
+python pipeline/adjudicate.py --candidates data/anomalies/candidates.csv \
+    --evaluated data/anomalies/analysis/evaluated.csv \
+    --out data/anomalies/conclusions
 ```
 
-or run it all at once:
+### Self-Test
 
-```
-python scripts/run_pipeline.py --query "moon"
-```
-
-More specific acquisition:
-
-```
-python scripts/download_rover.py  --rover perseverance --sol 1000 --num 50
-python scripts/download_hirise.py --update-catalog
-python scripts/download_hirise.py --list --search "crater" --catalog data/catalog/hirise_catalog.json
-python scripts/download_hirise.py --fetch PSP_005800_2210
-python scripts/download_lroc.py   --max 30
-python scripts/download_pds.py --volume https://pds-imaging.jpl.nasa.gov/data/lro/lroc/edr/ --pattern "NAC.*\\.IMG$" --max 10 --out data/raw/moon/lroc
-
-# hard-to-find archives
-python scripts/download_archive.py --list
-python scripts/download_archive.py --source ctx   --mode browse --max 40 --out data/raw/mars/ctx
-python scripts/download_archive.py --source themis --mode edr --max-size-mb 250
+```bash
+python scripts/run_pipeline.py --selftest
 ```
 
-After any acquisition: `build_catalog.py` (record hashes + solar geometry) then
-`build_catalog.py --snapshot` to freeze `data/raw`. Before trusting old data,
-run `build_catalog.py --check-immutable`.
+---
 
-## Discord bot
+## Configuration
 
-Upload a Moon/Mars image to the bot and it runs the pipeline on it and replies
-with a marked-up image and a plain-language verdict for the top candidates.
-Preliminary, single-image findings only — never a confirmation.
+| File | Purpose |
+|------|---------|
+| `config/pipeline.json` | Detector thresholds, adjudication gates, benchmark parameters |
+| `config/sources.yaml` | EXTRAS-only source policy, variant taxonomy |
+| `.env` | API tokens (Discord, LLM) — never commit |
 
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DISCORD_TOKEN` | No | Discord bot token |
+| `AI_LLM_KEY` | No | OpenRouter API key for vision LLM analysis |
+| `AI_LLM_ENDPOINT` | No | LLM API endpoint (default: OpenRouter) |
+| `AI_LLM_MODEL` | No | Vision model (default: llama-3.2-90b-vision) |
+
+---
+
+## Usage
+
+### Full-Stack Dashboard
+
+```bash
+python scripts/build_app.py --fullstack
+dist/nasa-fullstack/nasa-fullstack.exe
+# Opens http://127.0.0.1:8000
 ```
-pip install -r requirements-extras.txt     # brings discord.py
-$env:DISCORD_TOKEN = "<bot token from Discord Developer Portal>"
+
+Features: drag-drop instant analysis, live stats, searchable leads table, pipeline controls, showcase gallery.
+
+### Discord Bot
+
+```bash
+pip install -r requirements-extras.txt
+$env:DISCORD_TOKEN = "<your-token>"
 python bot/discord_bot.py
 ```
 
-Standalone test without Discord:
+Upload a Moon/Mars image → pipeline verdict with marked-up image and plain-language assessment.
 
-```
-python bot/discord_bot.py --analyze data/processed/some_image.png
-```
+### 3D Stereo Confirmation
 
-Guards: only raster attachments, ~25 MB cap, downscaled to 4 Mpix, one analysis
-at a time, pipeline runs off the event loop, honest disclaimer on every reply.
-
-## 3D confirmation of a candidate
-
-```
+```bash
 python scripts/check_stereo.py --left pair_a.png --right pair_b.png \
     --candidates data/anomalies/candidates.csv --box 0 \
     --altitude-km 300 --baseline-km 1.2 --out data/anomalies/stereo
 ```
 
-Block-matching disparity across a stereo pair: real topography shifts against
-the surrounding ground (implied height reported in meters); a 2D albedo/shadow
-patch is flat in disparity. Outputs `disparity.png` + `anaglyph.png`.
+---
 
-## Native PDS ingestion
+## Output Files
 
-`pipeline/pds.py` reads `.IMG` EDRs directly — no pre-conversion needed. It
-handles PDS3 labels and PDS4 XML, MSB/LSB signed/unsigned ints and IEEE real,
-sample bit masks (e.g. 12-bit data packed in 16-bit), BSQ/BIL/BIP band layouts,
-line prefix/suffix, LUTs, and attached/detached labels. Missing values become
-NaN. `pipeline/metadata.py` then extracts solar elevation/azimuth, pixel scale,
-spacecraft altitude, incidence/emission/phase angles from the label, which
-drives the photometric shadow check and physical-size estimates.
+| File | Description |
+|------|-------------|
+| `data/catalog/catalog.csv` | Every file with mission, dimensions, SHA-256, solar geometry |
+| `data/anomalies/candidates.csv` | Detected regions (x, y, w, h, fill, score) |
+| `data/anomalies/marked/` | Images with anomaly boxes drawn |
+| `data/anomalies/analysis/` | Enhanced crops, measurements, artifact verdicts, HTML report |
+| `data/anomalies/conclusions/adjudicated.csv` | Cross-band confirmed leads with verdicts |
+| `data/anomalies/audit.jsonl` | Machine-readable audit trail of every run |
+| `findings/` | Only conclusions that survived the full methodology |
 
-## Reading the outputs
+---
 
-- `data/catalog/catalog.csv` — every file with mission, dimensions, sha256, and solar/geometry metadata parsed from the label; `data/catalog/immutable.json` is the ingest-time hash snapshot for `--check-immutable`.
-- `data/raw/manifest.jsonl` — provenance record (URL, sha256, bytes, timestamp, source) for every verified download.
-- `data/anomalies/candidates.csv` — regions flagged by `detect.py` (x, y, w, h, fill, score). Coordinates are in the pixels of the enhanced image.
-- `data/anomalies/marked/` — `marked_*.png` copies of every image with the candidate boxes drawn on them.
-- `data/anomalies/analysis/` — AI analysis of every candidate: enhanced crop strips (stretch/residual/upscale), measured features, artifact-checklist verdict, evidence class and interest score, cross-frame confirmation, and an HTML investigation report (`analysis/report.html`).
-- `data/anomalies/triage/index.html` — open in a browser: thumbnail per image with boxes overlaid.
-- `data/anomalies/benchmark/benchmark_synthetic.md` — injected-blob sensitivity calibration (recall per blob size) plus the negative-control FP count on the clean scene; `benchmark_*.csv` per scene.
-- `data/anomalies/conclusions/adjudicated.csv` — every candidate with its adjudication: cross-band agreement, denoising persistence, shape compactness, local terrain texture, adjudicated score and verdict (`EXPLAINED-ARTIFACT` / `TERRAIN` / `CONFIRMED-LEAD` / `PROMISING` / `WEAK` / `NOISE`).
-- `data/anomalies/conclusions/leads/` — per-lead `F-*.md` reports following the finding template, each with enhancement-strip evidence.
-- `data/anomalies/conclusions/SUMMARY.md` — the bottom-line conclusion funnel.
-- `findings/` — only conclusions that survived the protocol.
+## Pipeline Modules
 
-## AI analysis step
+| Module | Purpose |
+|--------|---------|
+| `pipeline/common.py` | Hardened infrastructure: audit, hashing, atomic writes, stats |
+| `pipeline/pds.py` | Native PDS3/PDS4 + `.IMG` EDR reader |
+| `pipeline/overlay.py` | Text/annotation overlay detection |
+| `pipeline/detect.py` | Multi-scale local-contrast anomaly flagging |
+| `pipeline/analyze.py` | Enhance, measure, artifact-check, rank |
+| `pipeline/adjudicate.py` | Cross-band confirmation, persistence, verdicts |
+| `pipeline/stereo.py` | Block-matching disparity, height estimation |
+| `pipeline/changedet.py` | Phase-correlation registration + change maps |
+| `pipeline/benchmark.py` | Injected-blob calibration + negative controls |
+| `pipeline/extras_compare.py` | B&W vs filtered vs ortho vs DTM comparator |
 
-`analyze.py` runs entirely offline with numpy/PIL:
+---
 
-- **Enhance by any means** — every candidate crop is independently enhanced three ways (percentile stretch, local residual vs. blurred background, unsharpened upscale) and tiled into a review strip.
-- **Evaluate** — physical/image features are measured (contrast vs. local background, polarity, size, aspect, fill, saturation, 8px-grid alignment, edge proximity) and checked against the known-artifact checklist in `docs/ARTIFACTS.md`. Each candidate gets a verdict, an evidence class (1=artifact, 2=weak, 3=seen in related frames) and a 0-100 interest score.
-- **Investigate** — candidates in same-size sibling products of one footprint (e.g. HiRISE band variants) are cross-checked at matching coordinates; features confirmed in 2+ frames are marked class 3.
-- **Optional vision LLM second opinion** — `python pipeline/analyze.py --llm` sends the top-N strips to a vision model. Configure via env: `AI_LLM_KEY`, `AI_LLM_ENDPOINT` (OpenAI-compatible), `AI_LLM_MODEL`.
+## Testing
 
-Remember: none of this is a finding. A candidate becomes a finding only after the full methodology below is satisfied.
+```bash
+# Run full test suite
+python -m pytest tests/test_pipeline.py -v
 
-## Calibration (`benchmark.py`)
+# Run specific test class
+python -m pytest tests/test_pipeline.py::TestDetect -v
 
-Before trusting any candidate, calibrate what the detector can actually see:
+# Run via pipeline selftest
+python scripts/run_pipeline.py --selftest
+```
 
-- Injects Gaussian bright/dark blobs of known size into a controlled synthetic textured scene and into a real image, runs the real detector, and reports recall per blob size.
-- The negative-control run counts false positives on the clean scene; that number is the baseline every candidate must beat.
-- Result on the current data: ~24 px recall floor with 0 FPs on the synthetic scene, but ~279 detections on a clean HiRISE image — i.e. on textured terrain the detector is background-limited and small candidates are unreliable.
+**69+ test cases** covering: overlay detection, border exclusion, z-score p-values, Benjamini-Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, and rigor metrics.
 
-## Adjudication (`adjudicate.py`)
+---
 
-Brings the candidate list toward a conclusion using the confirmation methods the methodology demands:
+## Security
 
-- **Pixel-level cross-band agreement** — for same-size sibling products of one footprint (e.g. HiRISE MIRB/MRGB/RED), verifies the feature actually exists at the same pixels in each sibling with the same polarity and comparable contrast. Confirms "real surface feature" (shared across bands) without overclaiming: shared processing can still imprint common artifacts.
-- **Enhancement persistence** — re-measures contrast after median denoising; hot pixels/compression speckle vanish, extended features survive.
-- **Shape compactness** — separates round/donut-like features from ridges and detector scratches.
-- **Local terrain texture** — a discrete feature in otherwise smooth ground is far more interesting than one inside a crater field.
-- **Solar-geometry shadow check** — with metadata from the product label, each candidate's shadow direction is scored against the solar azimuth, its physical size estimated from pixel scale, and its height implied from shadow length. A shadow that disagrees with the sun marks the candidate down; a physically absurd implied size does too.
-- Outputs a verdict funnel and per-lead reports; `SUMMARY.md` states the honest bottom line. Top leads get enhancement strips in `conclusions/strips/`.
+- **No hardcoded secrets** — all tokens loaded from environment variables
+- **Path traversal protection** — `common.contain_path()` validates all file paths
+- **Atomic writes** — crash-safe file operations with fsync + rename
+- **Audit trail** — every pipeline operation recorded in `audit.jsonl`
+- **Localhost only** — server binds to `127.0.0.1:8000` by default
 
-No adjudication is a finding: cross-band agreement is one acquisition, one processing chain. Confirmation still requires the EDR original, a mosaic/Trek cross-check, and an independent pass at different lighting.
+See [SECURITY.md](SECURITY.md) for the full security policy.
 
-## Control your detector first
+---
 
-Tune `detect.py` (`--z`, `--min-size`, `--scales`) on known-clean images until the
-false-positive rate is near zero, and test it on images with injected synthetic
-blobs to measure sensitivity. Lower `--z` and `--min-size` to surface more
-candidates (and more false positives); add finer scales with `--scales 4,2,1`.
-Details in `docs/METHODOLOGY.md`.
+## Roadmap
 
-## Hardening & statistical controls
+- [ ] Overlay detection hardening
+- [ ] Streaming pipeline (process during download)
+- [ ] Confidence calibration against benchmarks
+- [ ] Multi-mission support (LROC NAC, CTX, Mars Express HRSC)
+- [ ] Automated stereo pair matching
+- [ ] Cross-platform builds (Linux, macOS)
+- [ ] Docker deployment
+- [ ] Interactive map-based anomaly viewer
 
-The pipeline is hardened so a result can be audited and reproduced:
+See [ROADMAP.md](ROADMAP.md) for the full roadmap.
 
-- **Config-driven** — thresholds live in `config/pipeline.json` (detector z/min-size/scales, adjudication contrast bar, area range, FDR q, benchmark sizes/seed). CLI flags override the file.
-- **Audit trail** — every `benchmark` / `analyze` / `adjudicate` run appends a JSONL record to `data/anomalies/audit.jsonl` with the exact command, parameters, SHA-256 of every input/output CSV, verdict counts and run time. Any claimed result can be traced to the exact data it was computed from.
-- **Crash-safe writes** — CSVs/reports are written to a temp file, fsynced, then atomically renamed (`common.atomic_*_write`); a crash never leaves a half-written table.
-- **Deterministic** — a single `common.set_seed` seeds all RNGs; the synthetic benchmark scene is reproducible.
-- **Defensive validation** — `common.validate_box` rejects out-of-bounds/malformed candidate coordinates before analysis; `common.contain_path` guards path traversal.
-- **Multiple-comparison control** — `adjudicate.py` converts each candidate's contrast into a one-sided z-score p-value (`common.z_pvalue`) and corrects the whole tested set with Benjamini-Hochberg (`common.benjamini_hochberg`). At q=0.05, 42/2102 non-artifact candidates survive — the top lead itself is q≈0.16, i.e. it does **not** survive.
-- **Negative-control baselines per image** — benchmark FP counts are attached to every candidate; e.g. ESP_093498_2095_MRGB's 279 candidates exactly match its 279 clean-scene false positives, i.e. that image is at the pipeline's own noise floor.
-- **Stress test** — the top-lead count is reported as the contrast bar tightens (160 → 41 → 6 → 0 across 1.0/1.5/2.0/2.5): the conclusion must not live or die on a single threshold.
-- **Self-test** — `python scripts/run_pipeline.py --selftest` runs the 29-case stdlib test suite in `tests/test_pipeline.py` (z-pvalue, BH-FDR, validation, hashing, atomic writes, detector recall, blob injection, adjudication persistence/verdict/roundness).
+---
 
-## Chain of custody
+## Contributing
 
-`data/raw/` is read-only after download. Every file is hashed into the catalog,
-so any claim can be traced back to an official source URL. Never work from
-social-media reposts — always go to the EDR/PDS original.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Run tests: `python -m pytest tests/test_pipeline.py -v`
+4. Run linter: `ruff check pipeline/ scripts/ app/ bot/`
+5. Submit a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+---
+
+## License
+
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+- **NASA/JPL** — HiRISE PDS data (public domain)
+- **University of Arizona LPL** — HiRISE processing pipeline
+- **Python community** — NumPy, Pillow, SciPy, FastAPI
+
+---
+
+<div align="center">
+
+**Built for rigorous planetary anomaly investigation**
+
+*Document → Control → Debunk → Confirm*
+
+</div>

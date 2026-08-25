@@ -14,9 +14,8 @@ GALLERY_CATEGORIES = {"curiosity": "msl", "opportunity": "mer", "spirit": "mer"}
 def raw_feed(category, num, page, search, newest):
     order = "sol+desc" if newest else "sol+asc"
     search = urllib.parse.quote_plus(search)
-    return ("https://mars.nasa.gov/rss/api/?feed=raw_images&category={cat}&feedtype=json"
-            "&ver=1.2&num={num}&page={page}&order={order}&search={search}&".format(
-                cat=category, num=num, page=page, order=order, search=search))
+    return (f"https://mars.nasa.gov/rss/api/?feed=raw_images&category={category}&feedtype=json"
+            f"&ver=1.2&num={num}&page={page}&order={order}&search={search}&")
 
 
 def gallery_feed(category, num):
@@ -67,19 +66,19 @@ def main():
         name = ph.get("title") or os.path.basename(src).split("?")[0]
         ext = os.path.splitext(os.path.basename(src).split("?")[0])[1] or ".jpg"
         sol = ph.get("sol")
-        soldir = ("sol{:05d}".format(int(sol))) if sol not in ("", None) else "any"
+        soldir = (f"sol{int(sol):05d}") if sol not in ("", None) else "any"
         camdir = (ph.get("camera") or cam or "any")
         dest = os.path.join(a.out, a.rover, soldir, camdir, safe_name(name) + ext)
         try:
             msg = download(src, dest)
         except Exception as e:
-            log("download error {}: {}".format(src, e), logpath)
+            log(f"download error {src}: {e}", logpath)
             continue
         if msg == "downloaded":
             with open(os.path.splitext(dest)[0] + ".meta.json", "w", encoding="utf-8") as f:
                 json.dump({"rover": a.rover, "sol": ph.get("sol", ""), "camera": ph.get("camera", ""),
                            "earth_date": ph.get("earth_date", ""), "src": src}, f, indent=2)
-            log("saved {} <- {}".format(dest, src), logpath)
+            log(f"saved {dest} <- {src}", logpath)
     print("done")
 
 

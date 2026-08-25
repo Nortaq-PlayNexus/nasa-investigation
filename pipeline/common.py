@@ -18,9 +18,26 @@ import random
 import sys
 import time
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    _exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    _bundle = os.path.abspath(sys._MEIPASS)
+    if os.path.exists(os.path.join(_exe_dir, "config", "pipeline.json")) or os.path.exists(os.path.join(_exe_dir, "data")):
+        PROJECT_ROOT = _exe_dir
+    else:
+        PROJECT_ROOT = _bundle
+else:
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_CONFIG = os.path.join(PROJECT_ROOT, "config", "pipeline.json")
 DEFAULT_AUDIT = os.path.join(PROJECT_ROOT, "data", "anomalies", "audit.jsonl")
+
+# Box colors shared by mark.py / triage.py / bot overlays.
+PALETTE = [
+    (255, 40, 40),
+    (255, 190, 40),
+    (60, 230, 120),
+    (70, 170, 255),
+    (255, 90, 210),
+]
 
 _AUDIT_PATH = None
 
@@ -52,6 +69,11 @@ def audit(record):
         log("warn", "audit write failed (%s): %s" % (path, e))
 
 
+def audit_path_for(out_dir):
+    """Audit-trail path for a step writing into out_dir (sibling audit.jsonl)."""
+    return os.path.normpath(os.path.join(out_dir, "..", "audit.jsonl"))
+
+
 # --------------------------------------------------------------------------
 # hashing / atomic writes
 # --------------------------------------------------------------------------
@@ -69,27 +91,46 @@ def sha256_text(text):
 
 
 def atomic_text_write(path, text):
-    """Write text to a temp file, flush to disk, then atomically rename."""
+    """Write text to a temp file, flush to disk, then atomically rename.
+
+    The temp file is removed if anything fails, so a crash never leaves
+    half-written output (or stray .tmp* litter) behind.
+    """
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     tmp = path + ".tmp%d" % os.getpid()
-    with open(tmp, "w", encoding="utf-8") as f:
-        f.write(text)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def atomic_csv_write(path, rows, fieldnames, extras="ignore"):
+    """Atomically write rows as CSV; same crash-safety as atomic_text_write."""
     import csv
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     tmp = path + ".tmp%d" % os.getpid()
-    with open(tmp, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction=extras)
-        w.writeheader()
-        w.writerows(rows)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction=extras)
+            w.writeheader()
+            w.writerows(rows)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 
 # --------------------------------------------------------------------------
@@ -111,8 +152,8 @@ def load_gray(path):
         arr = pds.read_image(path, dtype_float=True)
         return np.nan_to_num(arr).astype(np.float32)
 
+    Image.MAX_IMAGE_PIXELS = None  # orbital EDRs routinely exceed PIL's default cap
     im = Image.open(path)
-    Image.MAX_IMAGE_PIXELS = None
     im.load()
     mode = im.mode
     if mode in ("I;16", "I;16L", "I;16B", "I", "F"):
@@ -137,7 +178,7 @@ def load_image(path):
     if low.endswith((".img", ".lbl", ".xml")):
         import pds
         return pds.read_image(path, dtype_float=True)
-    Image.MAX_IMAGE_PIXELS = None
+    Image.MAX_IMAGE_PIXELS = None  # orbital EDRs routinely exceed PIL's default cap
     try:
         im = Image.open(path)
         if im.mode in ("I;16", "I;16L", "I;16B", "I", "F"):

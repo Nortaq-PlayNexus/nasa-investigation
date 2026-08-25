@@ -2,24 +2,19 @@ import argparse
 import csv
 import os
 
+import common
 from PIL import Image, ImageDraw
 
-PALETTE = [
-    (255, 40, 40),
-    (255, 190, 40),
-    (60, 230, 120),
-    (70, 170, 255),
-    (255, 90, 210),
-]
+PALETTE = common.PALETTE
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Draw anomaly boxes onto copies of the source images")
     p.add_argument("--candidates", required=True)
     p.add_argument("--out", default="data/anomalies/marked")
     p.add_argument("--fill-alpha", type=int, default=55, help="translucency of the box fill")
     p.add_argument("--max-size", type=int, default=40000000, help="skip images above this many pixels")
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     with open(a.candidates, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -38,8 +33,7 @@ def main():
         except Exception:
             continue
         if base.width * base.height > a.max_size:
-            print("skip {} ({}x{} px, too large)".format(
-                os.path.basename(path), base.width, base.height))
+            print(f"skip {os.path.basename(path)} ({base.width}x{base.height} px, too large)")
             continue
         overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
         d = ImageDraw.Draw(overlay)
@@ -60,8 +54,8 @@ def main():
         base.save(dest, optimize=True)
         marked += 1
         total_boxes += len(boxes)
-        print("marked {} ({} boxes) -> {}".format(os.path.basename(path), len(boxes), dest))
-    print("marked {} images, {} boxes -> {}".format(marked, total_boxes, a.out))
+        print(f"marked {os.path.basename(path)} ({len(boxes)} boxes) -> {dest}")
+    print(f"marked {marked} images, {total_boxes} boxes -> {a.out}")
 
 
 if __name__ == "__main__":

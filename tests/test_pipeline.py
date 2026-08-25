@@ -3,7 +3,6 @@
 Run:  python tests/test_pipeline.py   (stdlib unittest, no network)
 """
 
-import math
 import os
 import sys
 import tempfile
@@ -11,12 +10,93 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline"))
 
-import numpy as np
-
 import adjudicate
 import benchmark
 import common
 import detect
+import numpy as np
+import overlay
+
+
+class TestOverlay(unittest.TestCase):
+    """Text/annotation overlay detector: flagged vs clean scenes."""
+
+    def _text_scene(self, size=512):
+        from PIL import ImageDraw, ImageFont
+        rng = np.random.default_rng(4)
+        arr = rng.normal(110.0, 6.0, (size, size)).astype(np.float32)
+        im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+        d = ImageDraw.Draw(im)
+        try:
+            font = ImageFont.load_default(28)
+        except TypeError:
+            font = ImageFont.load_default()
+        d.text((30, 30), "500 METERS", fill=255, font=font)
+        d.text((30, size - 60), "ESP_013948_1410", fill=255, font=font)
+        d.rectangle([size - 160, size - 50, size - 40, size - 38], fill=255)
+        return np.asarray(im, dtype=np.float32)
+
+    def test_text_scene_flagged(self):
+        res = overlay.text_overlay_score(self._text_scene())
+        self.assertTrue(res["flagged"],
+                        msg="annotated scene must be flagged, got %.2f" % res["score"])
+        self.assertGreaterEqual(res["lines"], 1)
+        self.assertTrue(res["boxes"])
+
+    def test_terrain_scene_not_flagged(self):
+        arr = benchmark.synthetic_scene((512, 512), seed=9)
+        res = overlay.text_overlay_score(arr)
+        self.assertFalse(res["flagged"],
+                         msg="clean terrain must not be flagged, got %.2f" % res["score"])
+
+    def test_flat_scene_not_flagged(self):
+        res = overlay.text_overlay_score(np.full((256, 256), 80.0, np.float32))
+        self.assertFalse(res["flagged"])
+
+    def test_box_overlaps_any(self):
+        boxes = [(100, 100, 50, 20)]
+        self.assertTrue(overlay.box_overlaps_any((110, 105, 10, 10), boxes, 0.3))
+        self.assertFalse(overlay.box_overlaps_any((0, 0, 10, 10), boxes, 0.3))
+        self.assertFalse(overlay.box_overlaps_any((160, 100, 10, 10), boxes, 0.3))
+
+
+class TestBorderExclusion(unittest.TestCase):
+    """Edge band suppression in analyze_array."""
+
+    def _scene(self):
+        arr = np.full((400, 400), 40.0, dtype=np.float32)
+        yy, xx = np.mgrid[0:400, 0:400]
+        arr[(xx - 200) ** 2 + (yy - 200) ** 2 <= 18 ** 2] = 220.0  # centre blob
+        arr[4:22, 300:340] = 220.0                                 # edge blob
+        return arr
+
+    def test_edge_blob_dropped_with_border_frac(self):
+        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000,
+                                     border_frac=0.05)
+        self.assertTrue(any(b["x"] < 150 for b in found) is False or
+                        all(b["y"] >= 20 for b in found),
+                        msg="no candidate may sit inside the border band")
+        for b in found:
+            self.assertGreaterEqual(b["y"], 20)
+            self.assertLessEqual(b["y"] + b["h"], 380)
+
+    def test_centre_blob_kept(self):
+        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000,
+                                     border_frac=0.05)
+        self.assertTrue(any(b["x"] <= 200 <= b["x"] + b["w"] and
+                            b["y"] <= 200 <= b["y"] + b["h"] for b in found))
+
+    def test_no_border_frac_keeps_edge(self):
+        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000)
+        self.assertTrue(any(b["y"] < 20 for b in found),
+                        msg="without border_frac the edge blob must still be found")
+
+    def test_exclude_boxes(self):
+        arr = self._scene()
+        found = detect.analyze_array(arr, [1], 3.0, 12, 8_000_000,
+                                     exclude_boxes=[(180, 180, 40, 40)])
+        self.assertFalse(any(b["x"] + b["w"] > 180 and b["x"] < 220 and
+                             b["y"] + b["h"] > 180 and b["y"] < 220 for b in found))
 
 
 class TestZPvalue(unittest.TestCase):
@@ -233,9 +313,6 @@ class TestAdjudicate(unittest.TestCase):
 # stereo, change detection, annulus detector, stacking, geometry scoring.
 # --------------------------------------------------------------------------
 
-import io
-
-from PIL import Image
 
 import changedet
 import metadata
@@ -243,6 +320,7 @@ import pds
 import photometry
 import stack as stackmod
 import stereo
+from PIL import Image, ImageFilter
 
 LABEL_RECORD_BYTES = 4096
 
@@ -538,6 +616,255 @@ class TestCommonIO(unittest.TestCase):
             g = common.load_gray(p)
             self.assertEqual(g.shape, (256, 256))
             self.assertGreater(float(g.max()), 4000.0)
+
+    def test_audit_path_for_normalizes(self):
+        p = common.audit_path_for(os.path.join("data", "anomalies", "conclusions"))
+        self.assertFalse(".." in p.split(os.sep))
+        self.assertTrue(p.endswith("audit.jsonl"))
+
+
+# --------------------------------------------------------------------------
+# Upgrades: multi-band PDS cubes, vectorized shifts, extra artifact checks,
+# scipy-free morphology fallback, benchmark temp-file hygiene.
+# --------------------------------------------------------------------------
+
+import analyze
+
+
+def _cube_label(bands, storage, prefix=0, lines=4, samples=4):
+    label = (
+        "PDS_VERSION_ID = PDS3\n"
+        "RECORD_TYPE = FIXED_LENGTH\n"
+        "RECORD_BYTES = 4096\n"
+        "^IMAGE = 1\n"
+        "\n"
+        "OBJECT = IMAGE\n"
+        "  LINES = %d\n"
+        "  LINE_SAMPLES = %d\n"
+        "  BANDS = %d\n"
+        "  SAMPLE_TYPE = MSB_UNSIGNED_INTEGER\n"
+        "  SAMPLE_BITS = 16\n"
+        "  BAND_STORAGE_TYPE = %s\n"
+        % (lines, samples, bands, storage)
+    )
+    if prefix:
+        label += "  LINE_PREFIX_BYTES = %d\n" % prefix
+    label += "END_OBJECT = IMAGE\nEND\n"
+    return label.encode("ascii")
+
+
+def _cube_bytes_for(b0, b1, storage, prefix):
+    pre = lambda n: np.full(n, 0xEE, dtype=np.uint16)
+    lines = b0.shape[0]
+    if storage == "BAND_SEQUENTIAL":
+        return np.concatenate([np.concatenate([pre(prefix), r])
+                               for band in (b0, b1) for r in band])
+    if storage == "LINE_INTERLEAVED":
+        return np.concatenate([np.concatenate([pre(prefix), b0[i], b1[i]])
+                               for i in range(lines)])
+    row = []
+    for i in range(lines):
+        row.append(pre(prefix))
+        for j in range(b0.shape[1]):
+            row.append(np.array([b0[i, j], b1[i, j]], dtype=np.uint16))
+    return np.concatenate(row)
+
+
+class TestPDSMultiband(unittest.TestCase):
+    def _write_cube(self, td, storage, prefix=0):
+        b0 = np.arange(16, dtype=np.uint16).reshape(4, 4)
+        b1 = (100 + np.arange(16, dtype=np.uint16)).reshape(4, 4)
+        lbl = _cube_label(2, storage, prefix)
+        blob = lbl + b"\x00" * (4096 - len(lbl)) + \
+            _cube_bytes_for(b0, b1, storage, prefix).astype(">u2").tobytes()
+        path = os.path.join(td, "cube.img")
+        with open(path, "wb") as f:
+            f.write(blob)
+        return path, b0, b1
+
+    def test_all_storage_types(self):
+        shapes = {"BAND_SEQUENTIAL": (2, 4, 4),
+                  "LINE_INTERLEAVED": (4, 2, 4),
+                  "SAMPLE_INTERLEAVED": (4, 4, 2)}
+        for storage, want_shape in shapes.items():
+            with tempfile.TemporaryDirectory() as td:
+                path, b0, b1 = self._write_cube(td, storage)
+                arr = pds.read_image(path)
+                self.assertEqual(arr.shape, want_shape, msg=storage)
+                band1 = arr[1] if storage == "BAND_SEQUENTIAL" else (
+                    arr[:, 1, :] if storage == "LINE_INTERLEAVED" else arr[:, :, 1])
+                np.testing.assert_array_equal(band1, b1.astype(np.float32))
+
+    def test_band_selection_and_read_band(self):
+        with tempfile.TemporaryDirectory() as td:
+            path, _, b1 = self._write_cube(td, "BAND_SEQUENTIAL")
+            np.testing.assert_array_equal(
+                pds.read_image(path, band=1), b1.astype(np.float32))
+            np.testing.assert_array_equal(
+                pds.read_band(path, 1), b1.astype(np.float32))
+            with self.assertRaises(ValueError):
+                pds.read_band(path, 5)
+
+    def test_prefix_bytes_skipped_multiband(self):
+        for storage in ("BAND_SEQUENTIAL", "LINE_INTERLEAVED", "SAMPLE_INTERLEAVED"):
+            with tempfile.TemporaryDirectory() as td:
+                path, _, b1 = self._write_cube(td, storage, prefix=2)
+                got = pds.read_image(path, band=1)
+                np.testing.assert_array_equal(got, b1.astype(np.float32),
+                                              err_msg=storage)
+
+    def test_truncated_data_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            path, _, _ = self._write_cube(td, "BAND_SEQUENTIAL")
+            with open(path, "rb") as f:
+                raw = f.read()
+            cut = os.path.join(td, "cut.img")
+            with open(cut, "wb") as f:
+                f.write(raw[:len(raw) - 40])  # drop part of band 2
+            with self.assertRaises(ValueError):
+                pds.read_image(cut)
+
+
+class TestChangedetShift(unittest.TestCase):
+    def _reference_shift(self, arr, dy, dx):
+        h, w = arr.shape
+        out = np.zeros_like(arr)
+        for sy in range(max(0, dy), min(h, h + dy)):
+            for sx in range(max(0, dx), min(w, w + dx)):
+                out[sy, sx] = arr[sy - dy, sx - dx]
+        return out
+
+    def test_matches_reference_all_directions(self):
+        rng = np.random.RandomState(3)
+        arr = rng.rand(20, 24).astype(np.float32)
+        for dy, dx in ((0, 0), (3, 2), (-3, 2), (3, -2), (-3, -2), (25, 0), (0, -30)):
+            np.testing.assert_array_equal(
+                changedet.shift_image(arr, dy, dx),
+                self._reference_shift(arr, dy, dx),
+                err_msg="shift (%d,%d)" % (dy, dx))
+
+
+class TestAnalyzeFlags(unittest.TestCase):
+    def test_corner_flag_near_corner_only(self):
+        arr = np.full((200, 200), 50.0, np.float32)
+        _, feats_near = analyze.analyze_candidate(
+            {"x": 1, "y": 1, "w": 10, "h": 10, "fill": 0.9}, arr, 512)
+        _, feats_mid = analyze.analyze_candidate(
+            {"x": 95, "y": 95, "w": 10, "h": 10, "fill": 0.9}, arr, 512)
+        self.assertTrue(feats_near["in_corner"])
+        self.assertFalse(feats_mid["in_corner"])
+
+    def test_column_smear_flagged(self):
+        arr = np.full((64, 64), 100.0, np.float32)
+        arr[:, 30:32] = 220.0  # bright column through the whole frame
+        feats = analyze.measure(arr, 28, 28, 6, 6)
+        flags = analyze.artifact_flags(dict(
+            feats, area_px=36, aspect=1.0, w=6, h=6, fill=0.33,
+            on_grid8=False, near_edge=False, dark_band=False, sat_frac=0.0))
+        self.assertIn("column_smear", flags)
+
+    def test_discrete_blob_not_smear_flagged(self):
+        arr = np.full((64, 64), 100.0, np.float32)
+        arr[28:34, 28:34] = 180.0  # compact blob inside the box only
+        feats = analyze.measure(arr, 26, 26, 10, 10)
+        self.assertLess(feats["column_smear"], 2.0)
+        flags = analyze.artifact_flags(dict(
+            feats, area_px=100, aspect=1.0, w=10, h=10, fill=0.36,
+            on_grid8=False, near_edge=False, dark_band=False, sat_frac=0.0))
+        self.assertNotIn("column_smear", flags)
+
+    def test_wide_column_not_smear_flagged(self):
+        arr = np.full((64, 64), 100.0, np.float32)
+        arr[:, 20:44] = 200.0  # wide bright band: terrain, not a dead column
+        feats = analyze.measure(arr, 22, 28, 20, 8)
+        flags = analyze.artifact_flags(dict(
+            feats, area_px=160, aspect=2.5, w=20, h=8, fill=1.0,
+            on_grid8=False, near_edge=False, dark_band=False, sat_frac=0.0))
+        self.assertNotIn("column_smear", flags)
+
+
+class TestAdjudicateMorphologyFallback(unittest.TestCase):
+    def test_roundness_without_scipy(self):
+        saved = (adjudicate.HAS_SCIPY, adjudicate._ndimage)
+        adjudicate.HAS_SCIPY = False
+        adjudicate._ndimage = None
+        try:
+            crop = np.full((64, 64), 100.0, dtype=np.float32)
+            yy, xx = np.mgrid[0:64, 0:64]
+            crop[(xx - 32) ** 2 + (yy - 32) ** 2 <= 8 ** 2] += 90.0
+            compact, area, per = adjudicate.roundness(crop, 16, 16, 32, 32)
+            self.assertGreaterEqual(compact, 0.7)
+            self.assertGreater(area, 100.0)
+        finally:
+            adjudicate.HAS_SCIPY, adjudicate._ndimage = saved
+
+    def test_erode_dilate_roundtrip(self):
+        m = np.zeros((16, 16), dtype=bool)
+        m[4:12, 4:12] = True
+        er = adjudicate._erode8(m)
+        self.assertEqual(int(er.sum()), 36)  # 8x8 -> 6x6 under 3x3 erosion
+        dl = adjudicate._dilate8(er)
+        self.assertEqual(int(dl.sum()), 64)  # back to 8x8
+
+
+class TestBenchmarkHygiene(unittest.TestCase):
+    def test_run_bench_leaves_no_temp_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            arr = benchmark.synthetic_scene((300, 300), seed=5)
+            benchmark.run_bench(arr, [24], [4], 3.0, 12, 5, d, "hygiene")
+            leftovers = [f for f in os.listdir(d)
+                         if f.startswith("_bench_") or f.startswith("_clean_")]
+            self.assertEqual(leftovers, [])
+
+
+class TestAnalyzeRigor(unittest.TestCase):
+    """New sophistication metrics: spectral grid-energy, edge sharpness and
+    multi-window contrast stability."""
+
+    def test_grid_energy_separates_periodic_from_noise(self):
+        rng = np.random.default_rng(2)
+        xx = np.arange(128)
+        grid = rng.normal(0, 8, (128, 128)).astype(np.float32)
+        # strong vertical periodic structure -> concentrated spectrum
+        grid += 50.0 * np.abs(np.sin(2 * np.pi * xx[None, :] / 8.0)).astype(np.float32)
+        noise = rng.normal(0, 8, (128, 128)).astype(np.float32)
+        g_grid = analyze.grid_energy(grid)
+        g_noise = analyze.grid_energy(noise)
+        self.assertGreater(g_grid, 0.4, "periodic grid must concentrate spectral power")
+        self.assertLess(g_noise, 0.2, "noise must spread power across the spectrum")
+        self.assertGreater(g_grid, g_noise * 2)
+
+    def test_edge_sharpness_sharp_beats_blurred(self):
+        base = np.full((64, 64), 50.0, np.float32)
+        base[30:40, 30:40] = 200.0  # hard-edged square
+        blurred = np.asarray(
+            Image.fromarray(base.astype(np.uint8)).filter(ImageFilter.GaussianBlur(2)),
+            dtype=np.float32)
+        s_sharp = analyze.edge_sharpness(base, 30, 30, 10, 10)
+        s_blur = analyze.edge_sharpness(blurred, 30, 30, 10, 10)
+        self.assertGreater(s_sharp, s_blur, "a sharp boundary must score higher")
+
+    def test_contrast_stability_extended_beats_hot_pixel(self):
+        disk = np.full((64, 64), 100.0, np.float32)
+        yy, xx = np.mgrid[0:64, 0:64]
+        disk[(xx - 32) ** 2 + (yy - 32) ** 2 <= 8 ** 2] = 190.0
+        hot = np.full((64, 64), 100.0, np.float32)
+        hot[32, 32] = 255.0
+        d = analyze.contrast_stability(disk, 24, 24, 16, 16)
+        h = analyze.contrast_stability(hot, 31, 31, 3, 3)
+        self.assertGreater(d, 0.4, "an extended feature keeps its contrast "
+                           "as the window grows")
+        self.assertGreater(d, h, "a lone hot pixel loses contrast when the "
+                          "window grows")
+
+    def test_metrics_emitted_by_analyze_candidate(self):
+        arr = np.full((200, 200), 60.0, np.float32)
+        arr[90:110, 90:110] = 180.0
+        _, feats = analyze.analyze_candidate(
+            {"x": 90, "y": 90, "w": 20, "h": 20, "fill": 0.8}, arr, 512)
+        for key in ("grid_energy", "edge_sharpness", "contrast_stability"):
+            self.assertIn(key, feats)
+            self.assertIsInstance(feats[key], float)
 
 
 if __name__ == "__main__":

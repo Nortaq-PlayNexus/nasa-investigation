@@ -60,6 +60,11 @@ def main():
     margin = int(0.5 * max(w, h)) + 16
     x0, y0 = max(0, x - margin), max(0, y - margin)
     x1, y1 = min(W, x + w + margin), min(H, y + h + margin)
+    if x1 - x0 < w or y1 - y0 < h or x1 <= x0 or y1 <= y0:
+        print("candidate box (%d,%d %dx%d) does not fit the pair images (%dx%d); "
+              "candidates must come from the same framing as the stereo pair."
+              % (x, y, w, h, W, H))
+        return 1
     crop_l = left[y0:y1, x0:x1]
     crop_r = right[y0:y1, x0:x1]
     fx, fy = x - x0, y - y0
@@ -90,7 +95,7 @@ def main():
         if abs(relief) >= 0.6:
             print("VERDICT: consistent with a real 3D topographic feature (relief %.2f px)." % relief)
         elif abs(relief) < 0.3:
-            print("VERDICT: ~flat disparity — consistent with a 2D albedo/shadow/artifact, NOT elevated." % relief)
+            print("VERDICT: ~flat disparity — consistent with a 2D albedo/shadow/artifact, NOT elevated.")
         else:
             print("VERDICT: weak relief (%.2f px) — inconclusive, re-check with the full-res pair." % relief)
     print("outputs ->", a.out)

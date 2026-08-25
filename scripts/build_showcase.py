@@ -206,6 +206,22 @@ def main() -> None:
     with (CONC / "leads.csv").open(encoding="utf-8-sig", newline="") as fh:
         for row in csv.DictReader(fh):
             leads.append(dict(row))
+    def _f(key, default=0.0):
+        # graceful behind-exists helper for the new rigor metric columns
+        def _get(row):
+            try:
+                v = row.get(key)
+                return float(v) if v not in (None, "") else default
+            except (TypeError, ValueError):
+                return default
+        return _get
+
+    _grid = _f("grid_energy")
+    _edge = _f("edge_sharpness")
+    _stab = _f("contrast_stability")
+    _size_m = _f("size_m")
+    _shadow = _f("shadow_alignment")
+
     for r in leads:
         img = r["image"]
         r["_body"] = body_of(r.get("path", ""), img)
@@ -216,6 +232,11 @@ def main() -> None:
         r["_contrast"] = float(r.get("contrast", 0) or 0)
         r["_score"] = float(r.get("score", 0) or 0)
         r["_area"] = int(r.get("area_px", 0) or 0)
+        r["_grid"] = _grid(r)
+        r["_edge"] = _edge(r)
+        r["_stab"] = _stab(r)
+        r["_size_m"] = _size_m(r)
+        r["_shadow"] = _shadow(r)
 
     # ---- findings ----
     findings = []
@@ -297,6 +318,11 @@ def main() -> None:
                 "confidence": p["confidence"],
                 "interest": max(float(m.get("interest", 0) or 0) for m in grp),
                 "fdr_q": min(float(m.get("fdr_q", 1) or 1) for m in grp),
+                "grid_energy": max(m["_grid"] for m in grp),
+                "edge_sharpness": max(m["_edge"] for m in grp),
+                "contrast_stability": max(m["_stab"] for m in grp),
+                "size_m": max(m["_size_m"] for m in grp),
+                "shadow_alignment": max(m["_shadow"] for m in grp),
                 "flags": flags,
                 "recommendation": p["recommendation"],
                 "_body": p["_body"],
@@ -338,12 +364,27 @@ def main() -> None:
         "sources": len(sources),
     }
 
+    # ---- audit / run history (data/anomalies/audit.jsonl) ----
+    audit = []
+    audit_path = ROOT / "data" / "anomalies" / "audit.jsonl"
+    if audit_path.exists():
+        for line in audit_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                audit.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    audit.sort(key=lambda r: r.get("ts") or "", reverse=True)
+
     payload = {
         "stats": stats,
         "features": features,
         "findings": findings,
         "sources": sources,
         "marked": sorted(MARKED_SET),
+        "audit": audit,
     }
     json_blob = json.dumps(payload, separators=(",", ":")).replace("</", "<\\/")
 
@@ -442,6 +483,39 @@ details.extra .rec{font-size:12px;color:var(--txt);margin-top:6px;line-height:1.
 .more{display:block;margin:16px auto;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px 22px;cursor:pointer;font-size:13px}
 .more:hover{border-color:var(--blue);color:#fff}
 .empty{color:var(--faint);padding:30px;text-align:center;font-family:var(--mono)}
+/* analytics + search history + run timeline */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:10px 0}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.chart h3{font-size:13px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.chart svg{width:100%;height:auto;display:block}
+.chart .cap{font-size:11px;color:var(--faint);margin-top:4px}
+.ax{stroke:var(--line)}
+.gtxt{font:10.5px var(--mono);fill:var(--dim)}
+/* search history */
+.hist{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.hist .lbl{font-size:11.5px;color:var(--faint)}
+.hchip{background:#0d1220;border:1px solid var(--line);color:var(--blue);border-radius:14px;padding:2px 10px;font:12px var(--mono);cursor:pointer}
+.hchip:hover{border-color:var(--blue)}
+.hchip .x{margin-left:6px;color:var(--faint)}
+.hchip .x:hover{color:var(--red)}
+.action{background:#0d1220;color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12.5px}
+.action:hover{border-color:var(--blue);color:#fff}
+.qrow{display:flex;gap:8px}
+.qbtn{background:var(--blue);border:none;color:#04121f;font-weight:700;border-radius:7px;padding:8px 16px;cursor:pointer;font-size:13px}
+.qbtn:hover{filter:brightness(1.1)}
+.sug{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.sug span{font-size:11px;color:var(--faint)}
+.sugg{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:12px;padding:2px 10px;font-size:11.5px;cursor:pointer}
+.sugg:hover{color:var(--blue);border-color:var(--blue)}
+/* run timeline */
+.timeline{list-style:none;margin:8px 0;border-left:2px solid var(--line);padding-left:16px}
+.timeline li{position:relative;margin:14px 0}
+.timeline li::before{content:'';position:absolute;left:-21px;top:3px;width:9px;height:9px;border-radius:50%;background:var(--panel2);border:2px solid var(--blue)}
+.timeline .ev{font-family:var(--mono);font-weight:600;color:#fff}
+.timeline .ts{color:var(--faint);font:11px var(--mono)}
+.timeline .det{color:var(--dim);font-size:12px;margin-top:2px;line-height:1.45}
+.timeline .det b{color:var(--txt);font-weight:600}
+.ev-badge{display:inline-block;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:11px var(--mono);margin-left:8px;color:var(--blue)}
 @media(max-width:700px){h1{font-size:20px}}
 </style>
 </head>
@@ -457,6 +531,19 @@ details.extra .rec{font-size:12px;color:var(--txt);margin-top:6px;line-height:1.
   <div class="legend" id="verdictLegend"></div>
 </header>
 
+<h2>Analytics <span class="n">multi-metric visual analysis of every adjudicated lead</span></h2>
+<div class="sub">Rendered live from the full adjudication set. Hover any chart. The spatial plot shows where anomalies sit <i>within</i> each image (normalised x/y) &mdash; edge and corner clustering is the classic sensor-artifact signature, central diffuse scatter is consistent with real surface features.</div>
+<div class="charts">
+  <div class="chart"><h3>Score distribution</h3><div id="chScore"></div><div class="cap">adjudicated score histogram</div></div>
+  <div class="chart"><h3>Contrast vs score</h3><div id="chScatter"></div><div class="cap">each dot = a distinct feature, sized by area, coloured by verdict</div></div>
+  <div class="chart"><h3>Area distribution (log)</h3><div id="chArea"></div><div class="cap">feature pixel area, log scale</div></div>
+  <div class="chart"><h3>Contrast histogram</h3><div id="chContrast"></div><div class="cap">peak local-sigma contrast</div></div>
+  <div class="chart"><h3>Verdict composition</h3><div id="chDonut"></div><div class="cap">share of each verdict</div></div>
+  <div class="chart"><h3>Polarity &amp; band</h3><div id="chPolar"></div><div class="cap">bright vs dark &middot; band variants present</div></div>
+  <div class="chart"><h3>Spatial position within frame</h3><div id="chSpace"></div><div class="cap">normalised anomaly position (x, y) &mdash; clustering at edges/corners = artifact</div></div>
+  <div class="chart"><h3>Rigor metrics</h3><div id="chRigor"></div><div class="cap">median grid-energy (spectral) &middot; edge sharpness &middot; contrast stability</div></div>
+</div>
+
 <h2>Bottom line <span class="n">from conclusions/SUMMARY.md</span></h2>
 <p class="sub">After two passes (17 PIA press products, then 105 verified raw files), <b>no candidate meets the bar for a finding</b>: cross-band agreement confirms a feature across band variants of <i>one</i> acquisition, but does not prove it is non-artifact. 724 discrete features survive the contrast bar (cross-band confirmed, contrast &ge; 1.50, off-border, 200&ndash;50000 px); the chase found surface features that genuinely persist in the originals &mdash; but every one is ordinary geology (fresh craters / boulders / albedo patches) or a known CCD/compression artifact (LROC streaks, hot pixels, grids). Confirming any top lead requires the EDR original + an independent pass at different lighting. See the 25 chase findings below and <a href="../data/anomalies/conclusions/SUMMARY.md">SUMMARY.md</a>.</p>
 
@@ -467,7 +554,14 @@ details.extra .rec{font-size:12px;color:var(--txt);margin-top:6px;line-height:1.
 <h2>Anomaly catalogue <span class="n">distinct features, band variants merged</span></h2>
 <div class="sub">Every adjudicated anomaly as a single card. The same feature confirmed in band variants (RED / MIRB / MRGB) of one observation is grouped into one card &mdash; band counts are shown as badges and compared in the per-band table. Enhancement strips exist for the top features by score. &ldquo;Source&rdquo; opens the full enhanced product, &ldquo;Boxed&rdquo; the same image with the anomaly region marked.</div>
 <div class="controls">
-  <input type="text" id="q" placeholder="Search product id, observation, coordinates, flags&hellip;" oninput="render()">
+  <div class="qrow">
+    <input type="text" id="q" placeholder="Manual search: product id, observation, coordinates, flags, body, band&hellip;" onkeydown="if(event.key==='Enter'){render();saveSearch()}">
+    <button class="qbtn" onclick="render();saveSearch()">Search</button>
+    <button class="action" onclick="saveSearch()" title="Save the current search to history">&#43; Save search</button>
+    <button class="action" onclick="clearFilters()" title="Reset all filters">Reset</button>
+  </div>
+  <div class="sug" id="suggRow"></div>
+  <div class="hist" id="histRow" style="display:none"><span class="lbl">History:</span><button class="action" onclick="clearHistory()" title="Clear saved searches">clear</button></div>
   <div class="frow">
     <label>Verdict <select id="fVerdict" onchange="render()">
       <option value="">all</option><option>CONFIRMED-LEAD</option><option>PROMISING</option></select></label>
@@ -496,6 +590,10 @@ details.extra .rec{font-size:12px;color:var(--txt);margin-top:6px;line-height:1.
 <h2>Boxed full-resolution images <span class="n">data/anomalies/marked</span></h2>
 <div class="sub">Every source image with the anomalous region boxed. Click for the full-resolution PNG.</div>
 <div class="gal" id="marked"></div>
+
+<h2>Analysis run history <span class="n">data/anomalies/audit.jsonl</span></h2>
+<div class="sub">Every pipeline run (analyze / benchmark / adjudicate / chase) recorded by the audit trail &mdash; newest first &mdash; with its parameters, input/output hashes and duration. This is the provenance behind every claimed number on this page.</div>
+<div id="timeline"></div>
 
 <h2>Data &amp; methodology</h2>
 <table>
@@ -581,7 +679,7 @@ function filtered(){
     if(f.max_contrast<ct)return false;
     if(strip&&!f._strip)return false;
     if(q){
-      const hay=members.map(m=>m.image+" "+m.x+","+m.y+" "+m.w+"x"+m.h+" "+m.flags+" "+m.verdict+" "+m.polarity).join(" ")+" "+f._obs+" "+f.base;
+      const hay=members.map(m=>m.image+" "+m.x+","+m.y+" "+m.w+"x"+m.h+" "+m.flags+" "+m.verdict+" "+m.polarity+" "+m._grid+" "+m._edge+" "+m._stab).join(" ")+" "+f._obs+" "+f.base+" "+f._body+" "+f.bands.join(" ")+" "+(f._size_m||"")+"m";
       if(!hay.toLowerCase().includes(q))return false;
     }
     return true;
@@ -634,6 +732,9 @@ function card(f){
       <span>box w&times;h</span><b style="color:var(--txt)">${f.w}&times;${f.h}</b>
       <span>interest</span><b style="color:var(--txt)">${f.interest}</b>
       <span>fdr q</span><b style="color:var(--txt)">${f.fdr_q}</b>
+      <span>grid-energy</span><b style="color:var(--txt)">${(f.grid_energy!==undefined)?f.grid_energy:"-"}</b>
+      <span>edge sharpness</span><b style="color:var(--txt)">${(f.edge_sharpness!==undefined)?f.edge_sharpness:"-"}</b>
+      <span>contrast stability</span><b style="color:var(--txt)">${(f.contrast_stability!==undefined)?f.contrast_stability:"-"}</b>
     </div>
     <details class="extra"><summary>metrics &amp; flags</summary>
       <div class="rec">${esc(f.recommendation)}</div>
@@ -655,6 +756,51 @@ function card(f){
   $("marked").innerHTML=DATA.marked.map(m=>`<a class="g" href="../data/anomalies/marked/${m}"><img loading="lazy" src="img/marked/${m.replace(".png",".jpg")}"><div class="cap"><b>boxed</b>${m}</div></a>`).join("");
 })();
 
+/* ---------- analytics chart renderers (pure SVG) ---------- */
+const SVGNS="http://www.w3.org/2000/svg";
+function svg(w,h){return `<svg xmlns="${SVGNS}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`}
+function histBins(values,bins){if(!values.length)return[];const lo=Math.min(...values),hi=Math.max(...values);const span=(hi-lo)||1;const out=Array(bins).fill(0);for(const v of values){let i=Math.floor((v-lo)/span*bins);i=Math.min(bins-1,Math.max(0,i));out[i]++}return{out,lo,hi}}
+function renderHist(el,values,bins=24){const{out,lo,hi}=histBins(values,bins);const W=300,H=150,pad=26;const mx=Math.max(1,...out);let s=svg(W,H);s+=`<line x1="${pad}" y1="${H-pad}" x2="${W-4}" y2="${H-pad}" class="ax"/><line x1="${pad}" y1="4" x2="${pad}" y2="${H-pad}" class="ax"/>`;const bw=(W-pad-4)/out.length;out.forEach((c,i)=>{const h=c/mx*(H-pad-12);const x=pad+i*bw;s+=`<rect x="${x+1}" y="${H-pad-h}" width="${Math.max(1,bw-2)}" height="${h}" fill="#4aa3ff" opacity="0.9"><title>${lo+(hi-lo)*i/bins} &ndash; ${lo+(hi-lo)*(i+1)/bins}: ${c}</title></rect>`});if(out.length){const mid=lo+(hi-lo)/2;s+=`<text x="${pad}" y="${H-pad+12}" class="gtxt">${fmt(lo)}</text><text x="${W-4}" y="${H-pad+12}" text-anchor="end" class="gtxt">${fmt(hi)}</text><text x="${pad+6}" y="14" class="gtxt">n=${fmt(values.length)}</text>`}s+="</svg>";el.innerHTML=s}
+function renderScatter(){const F=DATA.features;const pts=F.filter(f=>f.max_score>0||f.max_contrast>0);const X=pts.map(f=>f.max_contrast),Y=pts.map(f=>f.max_score);const xm=Math.max(0.1,...X),ym=Math.max(1,...Y);const W=300,H=220,pad=30;let s=svg(W,H);s+=`<line x1="${pad}" y1="${H-pad}" x2="${W-4}" y2="${H-pad}" class="ax"/><line x1="${pad}" y1="4" x2="${pad}" y2="${H-pad}" class="ax"/>`;const cols={"CONFIRMED-LEAD":"#35c46b","PROMISING":"#e0a83c","TERRAIN":"#7fd4e8","WEAK":"#a68bff","NOISE":"#5b6b8a","EXPLAINED-ARTIFACT":"#e05c5c"};for(const f of pts.sort((a,b)=>b.area-a.area)){const x=pad+(f.max_contrast/xm)*(W-pad-8),y=H-pad-(f.max_score/ym)*(H-pad-18);const r=Math.min(9,1.5+4*Math.sqrt(f.area/5000));s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${cols[f.verdict]||"#8ea0bf"}" opacity="0.75"><title>${esc(f.base)} | contrast ${f.max_contrast}, score ${f.max_score}, area ${f.area} px | ${f.verdict}</title></circle>`}s+=`<text x="${pad}" y="${H-pad+12}" class="gtxt">contrast &#8594;</text><text x="12" y="12" class="gtxt">score &#8594;</text>`;s+="</svg>";$("chScatter").innerHTML=s}
+function renderDonut(){const F=DATA.features,cols={"CONFIRMED-LEAD":"#35c46b","PROMISING":"#e0a83c","TERRAIN":"#7fd4e8","WEAK":"#a68bff","NOISE":"#5b6b8a","EXPLAINED-ARTIFACT":"#e05c5c"};const order=["CONFIRMED-LEAD","PROMISING","TERRAIN","WEAK","NOISE","EXPLAINED-ARTIFACT"];const cnt={};F.forEach(f=>cnt[f.verdict]=(cnt[f.verdict]||0)+1);const tot=F.length||1;let acc=0;const cx=150,cy=150,R=9;let s=svg(320,200);const r=82;let prev=0;const labels=[];for(const k of order){const v=cnt[k]||0;if(!v)continue;const a0=prev,a1=prev+v/tot*Math.PI*2;prev=a1;if(a1<=a0)continue;const large=a1-a0>Math.PI?1:0;const x0=cx+r*Math.cos(a0-Math.PI/2),y0=cy+r*Math.sin(a0-Math.PI/2);const x1=cx+r*Math.cos(a1-Math.PI/2),y1=cy+r*Math.sin(a1-Math.PI/2);s+=`<path d="M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} Z" fill="${cols[k]}" stroke="#0b0e14" stroke-width="1"><title>${k}: ${v} (${Math.round(v/tot*100)}%)</title></path>`}s+=`</svg><div class="cap-area" style="margin-top:4px;font-size:11px;color:var(--dim)">`+order.map(k=>cnt[k]?`<span style="margin-right:10px"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${cols[k]};margin-right:4px"></i>${k}: ${cnt[k]}</span>`:"").join("")+`</div>`;$("chDonut").innerHTML=s}
+function renderPolar(){const F=DATA.features;const pol={bright:0,dark:0};const bands={};F.forEach(f=>{pol[f.polarity]=(pol[f.polarity]||0)+1;f.bands.forEach(b=>bands[b]=(bands[b]||0)+1)});const W=300,H=170,pad=26;const items=Object.entries(pol),mx=Math.max(1,...items.map(i=>i[1]));let s=svg(W,H)+`<text x="${pad}" y="12" class="gtxt">polarity</text>`;items.forEach(([k,v],i)=>{const y=20+i*42;const bw=v/mx*(W-pad-40);s+=`<rect x="${pad}" y="${y}" width="${bw}" height="26" rx="3" fill="${k==="bright"?"#e8c66a":"#6a7fd8"}"><title>${k}: ${v}</title></rect><text x="${pad+4}" y="${y+17}" class="gtxt" style="fill:#0b0e14">${k} ${v}</text>`});if(Object.keys(bands).length){const items2=Object.entries(bands),mx2=Math.max(1,...items2.map(i=>i[1]));s+=(()=>{let t=`<text x="${pad}" y="${135}" class="gtxt">band variants</text>`;items2.forEach(([k,v],i)=>{const y=145+i*26,bw=v/mx2*(W-pad-40);t+=`<rect x="${pad}" y="${y}" width="${bw}" height="18" rx="3" fill="#7fd4e8" opacity="0.8"><title>${k}: ${v}</title></rect><text x="${pad+4}" y="${y+13}" class="gtxt">${k} ${v}</text>`});return t})()}s+="</svg>";$("chPolar").innerHTML=s}
+function renderSpace(){const F=DATA.features,pts=F.filter(f=>f.w>0&&f.h>0);const W=300,H=240,pad=14;let s=svg(W,H);s+=`<rect x="${pad}" y="${pad}" width="${W-2*pad}" height="${H-2*pad}" fill="#0d1220" stroke="var(--line)"/>`;const cols={"CONFIRMED-LEAD":"#35c46b","PROMISING":"#e0a83c","TERRAIN":"#7fd4e8","WEAK":"#a68bff","NOISE":"#5b6b8a"};for(const f of pts){const nx=f.x/(f.w||1),ny=f.y/(f.h||1);if(nx<0||nx>1||ny<0||ny>1)continue;const px=pad+nx*(W-2*pad),py=pad+ny*(H-2*pad);s+=`<circle cx="${px}" cy="${py}" r="2.6" fill="${cols[f.verdict]||"#8ea0bf"}" opacity="0.6"><title>${esc(f.base)} at (${f.x},${f.y})</title></circle>`}s+=`<text x="${pad+4}" y="${H-pad+12}" class="gtxt">normalised x</text><text x="6" y="12" class="gtxt">y</text></svg>`;$("chSpace").innerHTML=s}
+function renderRigor(){const F=DATA.features;const g=F.filter(f=>f.grid_energy!==undefined).map(f=>f.grid_energy);const e=F.filter(f=>f.edge_sharpness!==undefined).map(f=>f.edge_sharpness);const st=F.filter(f=>f.contrast_stability!==undefined).map(f=>f.contrast_stability);const rows=[["grid-energy",g],["edge sharpness",e],["contrast stability",st]];let s=`<table style="font-size:12px"><tr><th>metric</th><th>median</th><th>mean</th></tr>`;for(const[n,v]of rows){if(!v.length){s+=`<tr><td>${n}</td><td colspan="2" style="color:var(--faint)">re-run analyze.py to populate</td></tr>`;continue}const sorted=[...v].sort((a,b)=>a-b);const med=sorted[Math.floor(sorted.length/2)];const mean=v.reduce((a,b)=>a+b,0)/v.length;s+=`<tr><td>${n}</td><td>${fmt(med)}</td><td>${fmt(mean)}</td></tr>`}s+=`</table><div class="cap" style="margin-top:6px">${F.length} features &middot; high grid-energy = periodic sensor/compression structure</div>`;$("chRigor").innerHTML=s}
+function renderAllCharts(){renderHist($("chScore"),DATA.features.map(f=>f.max_score));renderHist($("chContrast"),DATA.features.map(f=>f.max_contrast));renderHist($("chArea"),DATA.features.map(f=>Math.log10(1+f.area)),24);renderScatter();renderDonut();renderPolar();renderSpace();renderRigor()}
+
+/* ---------- search history (localStorage) ---------- */
+const LS_KEY="nasa_inves_history";
+function getHist(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}}
+function setHist(h){try{localStorage.setItem(LS_KEY,JSON.stringify(h.slice(0,24)))}catch(e){}}
+function currentState(){return{q:$("q").value.trim(),verdict:$("fVerdict").value,body:$("fBody").value,band:$("fBand").value,polarity:$("fPolarity").value,score:$("fScore").value,contrast:$("fContrast").value,sort:$("fSort").value,strip:$("fStrip").checked}}
+function saveSearch(){const st=currentState();if(!st.q&&!st.verdict&&!st.body&&!st.band&&!st.polarity&&!st.score&&!st.contrast)return;let h=getHist();h=h.filter(x=>JSON.stringify(x)!==JSON.stringify(st));h.unshift(st);setHist(h);renderHistRow();renderSugg()}
+function applyState(st){$("q").value=st.q||"";$("fVerdict").value=st.verdict||"";$("fBody").value=st.body||"";$("fBand").value=st.band||"";$("fPolarity").value=st.polarity||"";$("fScore").value=st.score||0;$("fContrast").value=st.contrast||0;$("fSort").value=st.sort||"score";$("fStrip").checked=!!st.strip;render();window.scrollTo({top:$("cards").offsetTop-140,behavior:"smooth"})}
+function renderHistRow(){const h=getHist(),el=$("histRow");if(!h.length){el.style.display="none";return}el.style.display="flex";const chips=h.map((st,i)=>`<span class="hchip" onclick="applyState(getHist()[${i}])">${esc(st.q||(st.verdict||st.body||st.band||"search"))}<span class="x" onclick="event.stopPropagation();removeHist(${i})" title="remove">&#10005;</span></span>`).join("");el.innerHTML=`<span class="lbl">History:</span>`+chips+`<button class="action" style="padding:2px 8px" onclick="clearHistory()">clear</button>`}
+function removeHist(i){const h=getHist();h.splice(i,1);setHist(h);renderHistRow()}
+function clearHistory(){setHist([]);renderHistRow()}
+function clearFilters(){$("q").value="";$("fVerdict").value="";$("fBody").value="";$("fBand").value="";$("fPolarity").value="";$("fScore").value=0;$("fContrast").value=0;$("fSort").value="score";$("fStrip").checked=false;render()}
+const SUGG=["CONFIRMED-LEAD","PROMISING","bright","dark","Mars","Moon","streak","hot_pixel","compression","ESP_","moon__NHQ"];
+function renderSugg(){$("suggRow").innerHTML=`<span>Try:</span>`+SUGG.map(t=>`<span class="sugg" onclick="chipsugg('${t}')">${t}</span>`).join("")}
+function chipsugg(t){const q=$("q").value?($("q").value+" "+t):t;$("q").value=q;render();saveSearch()}
+
+/* ---------- run history timeline ---------- */
+(function(){
+  const evCols={"analyze":"#4aa3ff","benchmark":"#35c46b","adjudicate":"#e0a83c","chase_leads":"#a68bff"};
+  const tl=$("timeline");
+  if(!DATA.audit||!DATA.audit.length){tl.innerHTML=`<p class="empty">No audit records found (run the pipeline first).</p>`;return}
+  const items=DATA.audit.map(r=>{
+    const ev=r.event||"run";const det=[];
+    for(const k of ["candidates","evaluated","adjudicated","top_leads","negative_control_fp","n_detections","recall","fdr_q"]){if(r[k]!==undefined&&r[k]!==null){det.push(`<b>${k}</b> ${Array.isArray(r[k])?r[k].join("/"):r[k]}`)}}
+    if(r.seconds!==undefined)det.push(`<b>elapsed</b> ${r.seconds}s`);
+    if(r.cmd)det.push(`<span style="color:var(--faint)">${esc(String(r.cmd).slice(0,140))}</span>`);
+    return `<li><span class="ev">${esc(ev)}</span><span class="ev-badge" style="border-color:${evCols[ev]||'var(--line)'}">${esc(ev)}</span><br><span class="ts">${esc(r.ts||"—")} &middot; ${esc(r.out||"")}</span><div class="det">${det.join(" &middot; ")||"—"}</div></li>`;
+  }).join("");
+  tl.innerHTML=`<ul class="timeline">${items}</ul>`;
+})();
+
+renderAllCharts();
+renderSugg();
+renderHistRow();
 render();
 </script>
 </body>

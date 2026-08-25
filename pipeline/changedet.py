@@ -13,8 +13,7 @@ not handled here.
 """
 
 import numpy as np
-
-from detect import box_blur, mask_components
+from detect import box_blur, component_pixels, mask_components
 
 
 def phase_correlate(a, b):
@@ -39,13 +38,18 @@ def phase_correlate(a, b):
 
 
 def shift_image(img, dy, dx):
-    """Translate an array by integer (dy, dx); out-of-range fills with edge."""
+    """Translate an array by integer (dy, dx); out-of-range fills with zero.
+
+    Vectorized slice copy: dst[r0:r1, c0:c1] = src[r0-dy:r1-dy, c0-dx:c1-dx]
+    over the overlap region only.
+    """
     arr = np.asarray(img)
     out = np.zeros_like(arr)
     h, w = arr.shape
-    for sy in range(max(0, dy), min(h, h + dy)):
-        for sx in range(max(0, dx), min(w, w + dx)):
-            out[sy, sx] = arr[sy - dy, sx - dx]
+    r0, r1 = max(0, dy), min(h, h + dy)
+    c0, c1 = max(0, dx), min(w, w + dx)
+    if r1 > r0 and c1 > c0:
+        out[r0:r1, c0:c1] = arr[r0 - dy:r1 - dy, c0 - dx:c1 - dx]
     return out
 
 
@@ -87,8 +91,7 @@ def changes(base, other, smooth=9, z=3.0, min_size=12):
     mask = field > z
     labels, n = mask_components(mask)
     out = []
-    for lab in range(1, n + 1):
-        ys, xs = np.where(labels == lab)
+    for ys, xs in component_pixels(mask, labels):
         if len(xs) < min_size:
             continue
         y0, y1, x0, x1 = int(ys.min()), int(ys.max()), int(xs.min()), int(xs.max())

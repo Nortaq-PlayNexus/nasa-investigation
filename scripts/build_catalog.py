@@ -8,7 +8,6 @@ analysis is trusted.
 """
 
 import argparse
-import csv
 import hashlib
 import json
 import os
@@ -107,7 +106,7 @@ def process_file(root, path):
     }
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Build a searchable catalog of downloaded imagery with hashes and metadata")
     p.add_argument("--root", default="data/raw")
     p.add_argument("--out", default="data/catalog/catalog.csv")
@@ -116,7 +115,7 @@ def main():
                    help="write data/catalog/immutable.json (sha256 of every file) after cataloging")
     p.add_argument("--check-immutable", action="store_true",
                    help="fail if any file under --root differs from the snapshot")
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     if a.check_immutable:
         snap_path = os.path.join(os.path.dirname(a.out), "immutable.json")
@@ -134,7 +133,7 @@ def main():
             elif sha256(full) != h:
                 print("TAMPERED/CHANGED", rel)
                 bad += 1
-        print("immutability check: {} changed/missing of {}".format(bad, len(snap)))
+        print(f"immutability check: {bad} changed/missing of {len(snap)}")
         return 0 if bad == 0 else 1
 
     files = []
@@ -160,7 +159,7 @@ def main():
         print("snapshot written ->", snap_path)
 
     geo = sum(1 for r in rows if r.get("solar_azimuth"))
-    print("cataloged {} files ({} with solar geometry) -> {}".format(len(rows), geo, a.out))
+    print(f"cataloged {len(rows)} files ({geo} with solar geometry) -> {a.out}")
 
 
 if __name__ == "__main__":

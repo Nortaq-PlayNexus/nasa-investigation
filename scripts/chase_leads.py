@@ -18,7 +18,6 @@ import datetime
 import hashlib
 import os
 import re
-import sys
 
 import numpy as np
 from PIL import Image

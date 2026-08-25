@@ -1,5 +1,58 @@
+# ── EXTRAS-ONLY POLICY ───────────────────────────────────────────────────
+# This investigation is LOCKED to the HiRISE PDS EXTRAS archive.
+# Every image MUST come from https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/
+# and MUST be consumed as a complete variant set (B&W vs filtered vs ortho
+# vs DTM-shaded) via scripts/download_hirise_extras.py. Single-variant
+# fetches are rejected — comparison across renderings of the SAME terrain
+# is the debunk path. See docs/EXTRAS.md for the full taxonomy & contract.
+#
+# All other sources below are DEPRECATED and blocked when --enforce-extras
+# is active. They are retained only as documentation of what NOT to use.
+extras_policy:
+  enforced: true
+  base: https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/
+  downloader: scripts/download_hirise_extras.py
+  comparator: pipeline/extras_compare.py
+  exemplar_dtm: ESP_013948_1410_ESP_013236_1410
+  exemplar_dir: DTM/ESP/ORB_013900_013999/ESP_013948_1410_ESP_013236_1410
+  require_variant_set: true   # every footprint must ship B&W + filtered siblings
+  notes: >
+    EXTRAS is the only sanctioned source. A feature that appears in only one
+    rendering (e.g. filtered color but not B&W RED) is a processing artifact
+    until proven otherwise by cross-variant persistence and an independent
+    acquisition at different lighting.
+
 sources:
-  nasa_image_library:
+  hirise_extras:
+    base: https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/
+    rdr: /PDS/EXTRAS/RDR/ESP/
+    dtm: /PDS/EXTRAS/DTM/ESP/
+    anaglyph: /PDS/EXTRAS/ANAGLYPH/
+    auth: none
+    variants:
+      rdr:
+        RED: "B&W panchromatic (550-850 nm, single band, least processing, highest fidelity — the baseline)"
+        IRB: "Enhanced color (IR + RED + BG, stretched/filtered)"
+        MIRB: "Map-projected IRB variant"
+        MRGB: "Map-projected RGB variant"
+        RGB: "RGB composite"
+        COLOR: "Quicklook color composite"
+        NOMAP: "Non-map-projected (detector geometry preserved)"
+        browse: ".browse.jpg full, .abrowse.jpg binned, .thumb.jpg thumbnail"
+      dtm:
+        DTEEC: "DTM elevation (areoid, equirectangular, 1 m post)"
+        DTFEC: "Figure-of-Merit map (stereo correlation quality, JP2)"
+        ORTHO_RED: "Orthorectified B&W (RED, geometrically corrected)"
+        ORTHO_IRB: "Orthorectified color (IRB, geometrically corrected)"
+        derivatives: ".ab/.br shaded relief, .ca/.cb colorized, .ct contour, .sa/.sb slope, .st stereo, .th thumb"
+      comparison_contract: "Every footprint's siblings share the same terrain; B&W RED is the baseline. Filtered/ortho/DTM variants should diverge only photometrically for real terrain."
+    notes: >
+      Canonically accessed via scripts/download_hirise_extras.py which groups
+      siblings into VariantSets (data/raw/mars/hirise_extras/<footprint>/) and
+      writes _variant_manifest.json. Compared by pipeline/extras_compare.py.
+
+  # ── DEPRECATED — blocked under EXTRAS-only enforcement ─────────────────
+  deprecated_nasa_image_library:
     base: https://images-api.nasa.gov
     search: /search
     params:

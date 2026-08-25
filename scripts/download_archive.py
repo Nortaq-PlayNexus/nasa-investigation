@@ -12,8 +12,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from download_pds import crawl
 import sources
+from download_pds import crawl
 
 
 def main():
@@ -54,7 +54,7 @@ def main():
     n = crawl(volume, pattern, depth, a.max, out, max_size=max_size,
               max_dirs=max_dirs, workers=a.workers, manifest=a.manifest,
               source=a.source)
-    print("downloaded {} -> {}".format(n, out))
+    print(f"downloaded {n} -> {out}")
 
 
 if __name__ == "__main__":

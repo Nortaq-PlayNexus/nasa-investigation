@@ -12,8 +12,6 @@ vectorized with running sums so it stays usable on candidate-sized crops.
 
 import numpy as np
 
-from detect import box_blur
-
 
 def _box_sum(arr, k):
     """Sum over k x k windows at every pixel (cumsum trick)."""

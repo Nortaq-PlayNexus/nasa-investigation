@@ -2,6 +2,7 @@ import argparse
 import csv
 import hashlib
 import os
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -26,13 +27,13 @@ def check_file(args):
     return ("OK", full, r)
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Verify integrity of downloaded files against the catalog")
     p.add_argument("--root", default="data/raw")
     p.add_argument("--catalog", default="data/catalog/catalog.csv")
     p.add_argument("--out", default="data/catalog/verify_report.txt")
     p.add_argument("--workers", type=int, default=8)
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     report = []
     ok = bad = missing = 0
@@ -47,23 +48,25 @@ def main():
                     byhash.setdefault(r["sha256"], []).append(full)
                 elif status == "MISSING":
                     missing += 1
-                    report.append("MISSING {}".format(full))
+                    report.append(f"MISSING {full}")
                 else:
                     bad += 1
-                    report.append("{} {}".format(status, full))
+                    report.append(f"{status} {full}")
         for h, files in byhash.items():
             if len(files) > 1:
                 report.append("DUPLICATE {}: {}".format(h, ", ".join(files)))
     else:
-        report.append("no catalog found at {}".format(a.catalog))
+        report.append(f"no catalog found at {a.catalog}")
 
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     with open(a.out, "w", encoding="utf-8") as f:
         f.write("\n".join(report) + "\n")
     dup_groups = sum(1 for v in byhash.values() if len(v) > 1)
-    print("ok={} bad={} missing={} duplicate_groups={}".format(ok, bad, missing, dup_groups))
+    print(f"ok={ok} bad={bad} missing={missing} duplicate_groups={dup_groups}")
     print("report ->", a.out)
+    # Nonzero exit so pipeline/CI steps can fail loudly on integrity problems.
+    return 0 if (bad == 0 and missing == 0) else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

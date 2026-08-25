@@ -35,14 +35,14 @@ def main():
         try:
             msg = download(url, dest)
         except Exception as e:
-            log("download error {}: {}".format(url, e), os.path.join(a.out, "downloads.log"))
+            log(f"download error {url}: {e}", os.path.join(a.out, "downloads.log"))
             return
-        log("{} {}".format(msg, dest), os.path.join(a.out, "downloads.log"))
+        log(f"{msg} {dest}", os.path.join(a.out, "downloads.log"))
         return
 
     max_size = int(a.max_size_mb * 1024 * 1024) if a.max_size_mb else None
     n = crawl(a.volume, a.pattern, a.depth, a.max, a.out, max_size=max_size)
-    print("downloaded {}".format(n))
+    print(f"downloaded {n}")
 
 
 if __name__ == "__main__":

@@ -16,8 +16,6 @@ import math
 
 import numpy as np
 
-import metadata
-
 DEG = math.pi / 180.0
 
 

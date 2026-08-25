@@ -1,12 +1,11 @@
 import argparse
-import csv
 import os
 import re
-
-import numpy as np
-from PIL import Image
+import sys
 
 import common
+import numpy as np
+from PIL import Image
 
 try:
     from scipy.ndimage import label as _scipy_label
@@ -16,6 +15,7 @@ except ImportError:
     HAS_SCIPY = False
 
 def box_blur(arr, size):
+    """Mean over a size x size box at every pixel (running-sum / cumsum trick)."""
     pad = size // 2
     arr = np.asarray(arr, dtype=np.float32)
     if pad == 0:
@@ -33,6 +33,12 @@ def box_blur(arr, size):
 
 
 def mask_components(mask):
+    """Connected-component labeling (8-connectivity) of a boolean mask.
+
+    Uses scipy.ndimage.label when available; otherwise a pure-Python
+    flood fill so the detector still runs without optional dependencies.
+    Returns (labels int array, component count).
+    """
     if HAS_SCIPY:
         labels, n = _scipy_label(mask.astype(np.uint8))
         return labels, int(n)
@@ -68,6 +74,11 @@ def _overlap_frac(a, b):
 
 
 def dedupe(found):
+    """Drop boxes overlapping >50% (relative to the smaller box) an earlier one.
+
+    Multi-scale detection flags the same feature at several downsamples;
+    the coarsest scale (sorted first) wins.
+    """
     kept = []
     for box in sorted(found, key=lambda b: b["scale"]):
         if any(_overlap_frac(box, k) > 0.5 for k in kept):
@@ -77,6 +88,7 @@ def dedupe(found):
 
 
 def component_pixels(mask, labels):
+    """Foreground (ys, xs) pixel index arrays, grouped by component label."""
     ys_all, xs_all = np.where(mask)
     if len(ys_all) == 0:
         return []
@@ -89,6 +101,7 @@ def component_pixels(mask, labels):
 
 
 def analyze(path, scales, z, min_size, max_scale_pixels):
+    """Load the image at `path` and flag anomaly regions; see analyze_array."""
     arr = common.load_gray(path)
     return analyze_array(arr, scales, z, min_size, max_scale_pixels, path=path)
 
@@ -138,12 +151,16 @@ def local_contrast_field(arr, rin=5, rout=15):
 
 
 def analyze_array(arr, scales, z, min_size, max_scale_pixels, method="box",
-                  rin=5, rout=15, path=""):
+                  rin=5, rout=15, path="", border_frac=0.0, exclude_boxes=None):
     """Run the local-contrast detector on a loaded array.
 
     method:
       box     absolute deviation from a box blur (default, matches original)
       annulus local contrast vs. an annular ring background
+    border_frac: fraction of each dimension kept clear along image borders
+      (calibration strips, dark trailing bands and vignetting live there).
+    exclude_boxes: overlay regions [(x, y, w, h), ...] whose candidates are
+      dropped (text labels, scale bars).
     Returns a list of candidate dicts in the original (downscale-scaled)
     coordinate space.
     """
@@ -179,7 +196,18 @@ def analyze_array(arr, scales, z, min_size, max_scale_pixels, method="box",
                 "w": (x1 - x0 + 1) * scale, "h": (y1 - y0 + 1) * scale,
                 "fill": round(fill, 3), "score": round(score, 2),
             })
-    return dedupe(found)
+    found = dedupe(found)
+    if border_frac > 0:
+        bx, by = int(w0 * border_frac), int(h0 * border_frac)
+        found = [b for b in found
+                 if b["x"] >= bx and b["y"] >= by
+                 and b["x"] + b["w"] <= w0 - bx and b["y"] + b["h"] <= h0 - by]
+    if exclude_boxes:
+        import overlay
+        found = [b for b in found
+                 if not overlay.box_overlaps_any(
+                     (b["x"], b["y"], b["w"], b["h"]), exclude_boxes, 0.3)]
+    return found
 
 
 def sun_shadow_sanity(arr, x, y, w, h, solar_azimuth_deg, solar_elevation_deg,
@@ -213,7 +241,7 @@ def sun_shadow_sanity(arr, x, y, w, h, solar_azimuth_deg, solar_elevation_deg,
     }
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Flag local contrast anomalies and emit a candidates CSV")
     p.add_argument("--dir", required=True)
     p.add_argument("--out", required=True)
@@ -227,10 +255,20 @@ def main():
     p.add_argument("--rin", type=int, default=5, help="annulus inner radius (pixels)")
     p.add_argument("--rout", type=int, default=15, help="annulus outer radius (pixels)")
     p.add_argument("--exts", default=".png")
+    p.add_argument("--border-frac", type=float, default=0.04,
+                   help="fraction of each dimension kept clear along image "
+                        "borders (0 disables); edges host calibration strips, "
+                        "dark bands and vignetting, not anomalies")
+    p.add_argument("--overlay-threshold", type=float, default=0.5,
+                   help="text/annotation overlay confidence that marks an "
+                        "image as annotated (0 disables overlay skipping)")
+    p.add_argument("--keep-overlays", action="store_true",
+                   help="do not skip images with text overlays (still masks "
+                        "the overlay regions from detection)")
     p.add_argument("--exclude-patterns", default="",
                    help="comma-separated regexes; any image whose basename matches any "
                         "pattern is skipped (e.g. annotated press graphics, infographics)")
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     scales = sorted({int(s) for s in a.scales.split(",") if s.strip()})
     exts = tuple(a.exts.split(","))
@@ -238,6 +276,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     candidates = []
     scanned = 0
+    skipped_overlays = 0
     files = []
     for root, dirs, names in os.walk(a.dir):
         for n in names:
@@ -246,30 +285,49 @@ def main():
     for path in sorted(files):
         base = os.path.basename(path)
         if any(pat.search(base) for pat in exclude):
-            print("exclude {} (annotated/press graphic)".format(base))
+            print(f"exclude {base} (annotated/press graphic)")
             continue
         try:
-            if a.method == "annulus":
-                arr = common.load_gray(path)
-                found = analyze_array(arr, scales, a.z, a.min_size,
-                                      a.max_scale_pixels, method="annulus",
-                                      rin=a.rin, rout=a.rout, path=path)
-            else:
-                found = analyze(path, scales, a.z, a.min_size, a.max_scale_pixels)
+            arr = common.load_gray(path)
+            ov = {"boxes": [], "flagged": False, "score": 0.0}
+            if a.overlay_threshold > 0:
+                import overlay
+                ov = overlay.text_overlay_score(arr)
+                if ov["flagged"] and not a.keep_overlays:
+                    skipped_overlays += 1
+                    print(f"skip {base} (text/annotation overlay, "
+                          f"confidence {ov['score']:.2f}, {ov['lines']} line(s))")
+                    continue
+            found = analyze_array(arr, scales, a.z, a.min_size,
+                                  a.max_scale_pixels,
+                                  method=a.method, rin=a.rin, rout=a.rout,
+                                  path=path, border_frac=a.border_frac,
+                                  exclude_boxes=ov["boxes"])
         except Exception as e:
-            print("skip {} ({})".format(path, e))
+            print(f"skip {path} ({e})")
             continue
         scanned += 1
         candidates.extend(found)
-        print("{}: {} candidates".format(os.path.basename(path), len(found)))
+        print(f"{base}: {len(found)} candidates"
+              + (f" [{len(ov['boxes'])} overlay region(s) masked]" if ov["boxes"] else ""))
 
     for box in candidates:
         box.pop("scale", None)
-    with open(os.path.join(a.out, "candidates.csv"), "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["image", "path", "x", "y", "w", "h", "fill", "score"])
-        w.writeheader()
-        w.writerows(candidates)
-    print("scanned {} images, {} candidate regions -> {}".format(scanned, len(candidates), a.out))
+    common.atomic_csv_write(
+        os.path.join(a.out, "candidates.csv"), candidates,
+        ["image", "path", "x", "y", "w", "h", "fill", "score"])
+    print(f"scanned {scanned} images, {len(candidates)} candidate regions "
+          f"({skipped_overlays} skipped as text overlays) -> {a.out}")
+    common.audit({
+        "event": "detect",
+        "cmd": " ".join(sys.argv),
+        "images": scanned,
+        "candidates": len(candidates),
+        "skipped_overlays": skipped_overlays,
+        "border_frac": a.border_frac,
+        "overlay_threshold": a.overlay_threshold,
+        "out": os.path.abspath(a.out),
+    })
 
 
 if __name__ == "__main__":
