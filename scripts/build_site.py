@@ -150,9 +150,13 @@ section{padding:2.6rem 0}
 .lead{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
   cursor:pointer;transition:.15s;display:flex;flex-direction:column;box-shadow:var(--shadow)}
 .lead:hover{transform:translateY(-3px);border-color:var(--accent)}
-.lead .thumb{aspect-ratio:16/9;background:#05070a;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.lead .thumb{aspect-ratio:16/9;background:#05070a;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .lead .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .lead .thumb .ph{color:var(--faint);font-size:.75rem}
+.lead .stamp{position:absolute;top:9px;left:9px;transform:rotate(-7deg);
+  border:2px solid var(--red);color:var(--red);font-family:var(--mono);font-size:.58rem;font-weight:700;
+  padding:.16rem .42rem;border-radius:4px;letter-spacing:.05em;background:rgba(3,5,9,.45);pointer-events:none;white-space:nowrap}
+.lead .corner-ref{position:absolute;right:8px;bottom:6px;font-family:var(--mono);font-size:.6rem;color:var(--muted);background:rgba(3,5,9,.5);padding:.05rem .35rem;border-radius:4px;pointer-events:none}
 .lead .body{padding:.7rem .8rem;font-size:.82rem}
 .lead .body .name{font-family:var(--mono);font-size:.74rem;color:var(--text);word-break:break-all}
 .lead .body .row{display:flex;justify-content:space-between;color:var(--muted);margin-top:.25rem}
@@ -238,9 +242,11 @@ JS = r"""
   if(grid){
     var state={q:'',minC:0,vs:new Set(),sort:'score'};
     function verdictColor(v){return v;}
-    function card(r){var strip=r.strip?'<img loading="lazy" src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
+    function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
+      var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
+      var strip=r.strip?'<img loading="lazy" src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
       return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'" data-cap="'+r.image+' — score '+r.score+' / contrast '+r.contrast+'">'
-        +'<div class="thumb">'+strip+'</div>'
+        +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
         +'<div class="body"><div class="name">'+r.image+'</div>'
         +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
         +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
@@ -595,7 +601,8 @@ def build_report(rows, leads, si, summary_md) -> None:
         fh = "".join(f"<li>{html.escape(f)}</li>" for f in flags) or "<li>none</li>"
         cards.append(
             f"<div class='lead' onclick=\"openLightbox('../results/strips/{strip.name if strip else ''}','{html.escape(r['image'])}')\">"
-            f"<div class='thumb'>{img}</div><div class='body'>"
+            f"<div class='thumb'>{img}{('<div class=stamp>CONFIRMED LEAD</div>' if r['verdict'].startswith('CONFIRMED') else '')}"
+            f"<div class='corner-ref'>x{r.get('x')} y{r.get('y')}</div></div><div class='body'>"
             f"<div class='name'>{i+1}. {html.escape(r['image'])}</div>"
             f"<div class='row'><span class='pill p-{r['verdict']}'>{r['verdict']}</span><span>{round(num(r['score']))}</span></div>"
             f"<div class='row'><span>contrast {round(num(r['contrast']),2)}</span><span>{r['w']}x{r['h']}</span></div>"

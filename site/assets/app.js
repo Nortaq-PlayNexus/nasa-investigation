@@ -28,9 +28,11 @@
   if(grid){
     var state={q:'',minC:0,vs:new Set(),sort:'score'};
     function verdictColor(v){return v;}
-    function card(r){var strip=r.strip?'<img loading="lazy" src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
+    function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
+      var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
+      var strip=r.strip?'<img loading="lazy" src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
       return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'" data-cap="'+r.image+' — score '+r.score+' / contrast '+r.contrast+'">'
-        +'<div class="thumb">'+strip+'</div>'
+        +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
         +'<div class="body"><div class="name">'+r.image+'</div>'
         +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
         +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
