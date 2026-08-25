@@ -799,6 +799,14 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     target_chips = "".join(
         f"<span class='tchip'>{html.escape(k)} <b>{v}</b></span>" for k, v in ac.most_common(14)
     )
+    total = len(rows) or 1
+    vbars = ""
+    for k, v in sorted(counts.items(), key=lambda kv: -kv[1]):
+        pct = v / total * 100.0
+        cls = "v-conf" if k.startswith("CONFIRMED") else "v-other"
+        vbars += (f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
+                  f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
+                  f"<span class='vc'>{v}</span></div>")
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta name='description' content='Public NASA HiRISE anomaly investigation facility: acquire, catalog, enhance, detect, analyze, and adjudicate anomalies with statistical rigor.'>
@@ -854,6 +862,8 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
   </div>
   <div class='sec-head'><h2>Active targets</h2><span class='hint'>highest-volume acquisitions under investigation</span></div>
   <div class='chips'>{target_chips}</div>
+  <div class='sec-head'><h2>Signal breakdown</h2><span class='hint'>{len(rows)} candidates adjudicated</span></div>
+  <div class='vbars'>{vbars}</div>
 </div></section>
 
 <section id='explorer'><div class='wrap'>
