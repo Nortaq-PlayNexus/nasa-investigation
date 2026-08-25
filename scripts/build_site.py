@@ -103,7 +103,13 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
 .btn.primary:hover{filter:brightness(1.06)}
 
 /* hero */
-.hero{position:relative;padding:4.2rem 0 3rem;text-align:center}
+.hero{position:relative;padding:4.2rem 0 3rem;text-align:center;overflow:hidden}
+.hero .reticle{position:absolute;left:50%;top:44%;width:360px;height:360px;transform:translate(-50%,-50%);
+  border:1px solid rgba(255,196,48,.16);border-radius:50%;pointer-events:none;opacity:.55}
+.hero .reticle:before,.hero .reticle:after{content:"";position:absolute;background:rgba(255,196,48,.16)}
+.hero .reticle:before{left:50%;top:-34px;bottom:-34px;width:1px;transform:translateX(-.5px)}
+.hero .reticle:after{top:50%;left:-34px;right:-34px;height:1px;transform:translateY(-.5px)}
+.hero .reticle .ring2{position:absolute;inset:64px;border:1px dashed rgba(255,196,48,.12);border-radius:50%}
 .hero .tag{color:var(--red);font-family:var(--mono);font-weight:700;letter-spacing:.24em;text-transform:uppercase;font-size:.78rem}
 .hero h1{font-size:clamp(2.1rem,5vw,3.4rem);margin:.6rem 0 .4rem;letter-spacing:-.5px;line-height:1.05}
 .hero h1 .grad{background:linear-gradient(120deg,#fff,#ffd866 55%,var(--red));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -119,6 +125,8 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
 .stat:nth-child(4):before{background:var(--purple)}
 .stat b{display:block;font-size:2rem;font-variant-numeric:tabular-nums;line-height:1;color:var(--text)}
 .stat span{color:var(--accent);font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
+.stat:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
 
 /* sections */
 section{padding:2.6rem 0}
@@ -587,7 +595,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
   </div>
 </div></nav>
 
-<header class='hero'><div class='wrap'>
+<header class='hero'><div class='reticle'><div class='ring2'></div></div><div class='wrap'>
   <div class='tag'>Anomaly Dossier // Public Facility</div>
   <h1>NASA HiRISE <span class='grad'>Anomaly Investigation</span></h1>
   <p class='lead'>A rigorous, reproducible pipeline for analyzing public NASA HiRISE imagery of Mars &amp; the Moon &mdash;
@@ -720,7 +728,7 @@ def build_report(rows, leads, si, summary_md) -> None:
   <a class='brand' href='../'><img src='../assets/logo.svg' alt='logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
   <div class='nav-links'><a href='../#overview'>Home</a><a href='../#explorer'>Explorer</a><a href='../#findings'>Findings</a><a href='{BASE}'>Source</a></div>
 </div></nav>
-<header class='hero'><div class='wrap'>
+<header class='hero'><div class='reticle'><div class='ring2'></div></div><div class='wrap'>
   <div class='tag'>Adjudication // Dossier</div>
   <h1>Anomaly <span class='grad'>Analysis Report</span></h1>
   <p class='lead'>{len(rows)} candidates adjudicated &middot; {len(leads)} leads &middot; {len(findings)} finding reports.</p>
