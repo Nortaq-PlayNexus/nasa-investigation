@@ -1,29 +1,32 @@
 import math
 import sys
+import tempfile
 from collections import Counter
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 import build_site as bs  # noqa: E402
 
 
-def test_crop_box_centers_feature(tmp_path):
-    from PIL import Image
-
+def test_crop_box_centers_feature():
     im = Image.new("RGB", (200, 100), (10, 10, 10))
     for xx in range(90, 110):
         for yy in range(40, 60):
             im.putpixel((xx, yy), (240, 240, 240))
-    p = tmp_path / "strip.jpg"
+    p = Path(tempfile.NamedTemporaryFile(suffix=".jpg", delete=False).name)
     im.save(p)
-    cb = bs.crop_box(p, 100, 50, 20, 20)
-    assert cb is not None
-    assert all(0.0 <= v <= 1.0 for v in cb)
-    assert cb[2] > 0 and cb[3] > 0
-    assert abs((cb[0] + cb[2] / 2) - 0.5) < 0.05
+    try:
+        cb = bs.crop_box(p, 100, 50, 20, 20)
+        assert cb is not None
+        assert all(0.0 <= v <= 1.0 for v in cb)
+        assert cb[2] > 0 and cb[3] > 0
+        assert abs((cb[0] + cb[2] / 2) - 0.5) < 0.05
+    finally:
+        p.unlink(missing_ok=True)
 
 
 def test_crop_box_missing_file():
