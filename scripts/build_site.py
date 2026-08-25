@@ -954,6 +954,14 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
         vbars += (f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
                   f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
                   f"<span class='vc'>{v}</span></div>")
+    # top-acquisition leaderboard
+    total = len(rows) or 1
+    acq = Counter(acq_of(r.get("image", "")) for r in rows)
+    acq_bars = "".join(
+        f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
+        f"<span class='vbar'><span class='vfill v-other' style='width:{v/total*100:.1f}%'></span></span>"
+        f"<span class='vc'>{v}</span></div>" for k, v in acq.most_common(12)
+    )
     # top-lead cards (server rendered) — zoomed target-lock crop per feature, spread across source images
     cards = []
     for i, r in enumerate(diverse_preview([r for r in top if si.get(r["image"])], 60)):
@@ -1044,6 +1052,11 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     <th data-key='xy'>xy</th><th data-key='class'>class</th><th data-key='verdict'>verdict</th>
     <th data-key='contrast'>contrast</th><th data-key='xb'>X-band</th><th data-key='area'>area</th></tr></thead>
     <tbody>{''.join(trs)}</tbody></table>
+</div></section>
+
+<section><div class='wrap'>
+  <div class='sec-head'><h2>Top acquisitions</h2><span class='hint'>most-investigated frames</span></div>
+  <div class='vbars'>{acq_bars}</div>
 </div></section>
 
 <section><div class='wrap'>
