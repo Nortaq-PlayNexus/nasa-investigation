@@ -278,6 +278,16 @@ JS = r"""
 })();
 """
 
+import hashlib
+
+
+def _ver(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()[:10]
+
+
+CSS_VER = _ver(CSS)
+JS_VER = _ver(JS)
+
 # --------------------------------------------------------------------------
 # markdown -> html (lightweight)
 # --------------------------------------------------------------------------
@@ -478,7 +488,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
 <meta property='og:type' content='website'>
 <link rel='icon' href='assets/logo.svg' type='image/svg+xml'>
 <title>NASA HiRISE Anomaly Investigation — Public Facility</title>
-<link rel='stylesheet' href='assets/style.css'></head><body>
+<link rel='stylesheet' href='assets/style.css?v={CSS_VER}'></head><body>
 <div class='toprule'></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <canvas id='stars'></canvas><div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
@@ -561,7 +571,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
 
 <div class='lb' id='lb'><span class='x'>&times;</span><img id='lbImg' src='' alt=''><div class='cap' id='lbCap'></div></div>
 <script>{lead_json(rows, si)}</script>
-<script src='assets/app.js'></script>
+<script src='assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "index.html").write_text(body, encoding="utf-8")
 
@@ -608,7 +618,7 @@ def build_report(rows, leads, si, summary_md) -> None:
 <meta property='og:image' content='{SITE_URL}/assets/og-image.png'>
 <link rel='icon' href='../assets/logo.svg' type='image/svg+xml'>
 <title>NASA HiRISE — Anomaly Analysis Report</title>
-<link rel='stylesheet' href='../assets/style.css'></head><body>
+<link rel='stylesheet' href='../assets/style.css?v={CSS_VER}'></head><body>
 <div class='toprule'></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
@@ -655,7 +665,7 @@ def build_report(rows, leads, si, summary_md) -> None:
 
 <footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License</footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><img id='lbImg' src='' alt=''><div class='cap' id='lbCap'></div></div>
-<script src='../assets/app.js'></script>
+<script src='../assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "report" / "index.html").write_text(body, encoding="utf-8")
 
