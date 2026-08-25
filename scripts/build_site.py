@@ -23,6 +23,8 @@ import json
 import mimetypes
 import re
 import shutil
+import subprocess
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -53,6 +55,17 @@ def timer_html() -> str:
     if not TIMER_END:
         return ""
     return ("<div id='uplink' class='uplink'>UPLINK WINDOW // <span id='uplinkClock'>--:--:--</span> REMAINING</div>")
+
+
+def _git_rev() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT).decode().strip()
+    except Exception:
+        return "n/a"
+
+
+BUILD_TS = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+BUILD_REV = _git_rev()
 
 
 def crop_box(path, x, y, w, h):
@@ -315,6 +328,7 @@ footer .fwrap{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:.5r
 footer a{color:var(--accent2)}
 footer .src{color:var(--accent)}
 footer .view{color:var(--faint)}
+footer .sync{color:var(--accent);font-family:var(--mono);letter-spacing:.06em}
 @media (max-width:640px){.nav-in{position:relative}.nav-links{display:none}.nav-links.open{display:flex;position:absolute;top:100%;right:0;background:#0a0e16;border:1px solid var(--border2);padding:.7rem 1.1rem;flex-direction:column;gap:.7rem;z-index:30}.nav-toggle{display:block}.stats{grid-template-columns:repeat(2,1fr)}.brackets span{display:none}}
 .uplink{position:fixed;left:14px;bottom:14px;z-index:60;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;
   color:var(--accent);background:rgba(8,11,18,.9);border:1px solid var(--gold);border-left:3px solid var(--red);
@@ -851,6 +865,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
   <span>Public facility &middot; Data: NASA/JPL HiRISE PDS (public domain) &middot; MIT License</span>
   <span class='src'>SOURCE &nbsp;{BASE}</span>
   <span class='view'>VIEW &nbsp; {SITE_URL}/report/</span>
+  <span class='sync'>LAST SYNC &nbsp; {BUILD_TS} &middot; {BUILD_REV}</span>
   <a href='../'>Home</a>
 </div></footer>
 
@@ -976,7 +991,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
   <div class='findings'>{fhtml}</div>
 </div></section>
 
-<footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License</footer>
+<footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License &middot; <span class='sync'>LAST SYNC {BUILD_TS} &middot; {BUILD_REV}</span></footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 {timer_html()}
 <script>window.STRIP_BASE='../results/strips/';window.LEADS_VER='{leads_ver}';window.UPLINK_END={TIMER_END};</script>
