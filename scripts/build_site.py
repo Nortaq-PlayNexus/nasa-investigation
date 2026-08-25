@@ -457,6 +457,13 @@ JS = r"""
   // findings toggle
   document.querySelectorAll('.finding-card').forEach(function(c){
     c.querySelector('.fc-head').addEventListener('click',function(){c.classList.toggle('open');});});
+  var fs=document.getElementById('fSearch');
+  if(fs){fs.addEventListener('input',function(){
+    var q=fs.value.toLowerCase().trim();
+    document.querySelectorAll('#findings .finding-card').forEach(function(c){
+      var hay=(c.getAttribute('data-search')||'').toLowerCase();
+      c.style.display = (!q || hay.indexOf(q)>=0) ? '' : 'none';
+    });});}
 
   // sortable tables
   document.querySelectorAll('table.sortable').forEach(function(t){
@@ -739,7 +746,8 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
         stamp = "<span class='f-stamp'>CONFIRMED LEAD</span>" if v.startswith("CONFIRMED") else ""
         sub = f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
         fcards += (
-            f"<div class='finding-card'><div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>{stamp}"
+            f"<div class='finding-card' data-search='{html.escape(f.name)} {html.escape(v)} {html.escape(p)}'>"
+            f"<div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>{stamp}"
             f"<span class='ft'>+</span></div>{sub}<div class='fc-body prose'>{md_to_html(txt)}</div></div>"
         )
     chips = "".join(
@@ -828,6 +836,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 
 <section id='findings'><div class='wrap'>
   <div class='sec-head'><h2>Finding Reports</h2><span class='hint'>{len(findings)} dossiers</span></div>
+  <input id='fSearch' type='search' placeholder='Filter findings by id / verdict / product&hellip;' style='width:100%;max-width:420px;margin:.2rem 0 1rem;padding:.5rem .7rem;background:#0a0e16;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono)'>
   <div class='findings'>{fcards}</div>
 </div></section>
 

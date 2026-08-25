@@ -121,6 +121,13 @@
   // findings toggle
   document.querySelectorAll('.finding-card').forEach(function(c){
     c.querySelector('.fc-head').addEventListener('click',function(){c.classList.toggle('open');});});
+  var fs=document.getElementById('fSearch');
+  if(fs){fs.addEventListener('input',function(){
+    var q=fs.value.toLowerCase().trim();
+    document.querySelectorAll('#findings .finding-card').forEach(function(c){
+      var hay=(c.getAttribute('data-search')||'').toLowerCase();
+      c.style.display = (!q || hay.indexOf(q)>=0) ? '' : 'none';
+    });});}
 
   // sortable tables
   document.querySelectorAll('table.sortable').forEach(function(t){
