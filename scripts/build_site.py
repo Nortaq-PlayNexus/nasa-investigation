@@ -232,6 +232,12 @@ section{padding:2.6rem 0}
 .chips{display:flex;gap:.4rem;flex-wrap:wrap}
 .legend{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.2rem 0 .5rem}
 .legend .pill{opacity:.9}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin:.2rem 0 1.4rem}
+.step{border:1px solid var(--border2);border-radius:12px;padding:.9rem 1rem;background:var(--panel);position:relative;overflow:hidden}
+.step .n{font-family:var(--mono);font-size:1.4rem;color:var(--red);font-weight:700;letter-spacing:.05em}
+.step h4{margin:.2rem 0 .25rem;font-size:.95rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+.step p{margin:0;color:var(--muted);font-size:.78rem;line-height:1.4}
+@media(max-width:720px){.steps{grid-template-columns:repeat(2,1fr)}}
 .chip{cursor:pointer;font-family:var(--mono);font-size:.72rem;padding:.3rem .7rem;border-radius:20px;border:1px solid var(--border2);
   color:var(--muted);background:var(--panel);user-select:none;letter-spacing:.04em}
 .chip.on{background:var(--accent);border-color:transparent;color:#1a1206}
@@ -851,6 +857,12 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 </div></header>
 
 <section id='overview'><div class='wrap'>
+  <div class='steps'>
+    <div class='step'><span class='n'>01</span><h4>Acquire</h4><p>EXTRAS-only HiRISE PDS imagery</p></div>
+    <div class='step'><span class='n'>02</span><h4>Analyze</h4><p>local-contrast + cross-band confirmation</p></div>
+    <div class='step'><span class='n'>03</span><h4>Adjudicate</h4><p>debunk-first, documented dossier</p></div>
+    <div class='step'><span class='n'>04</span><h4>Publish</h4><p>verifiable GitHub Pages facility</p></div>
+  </div>
   <div class='sec-head'><h2>Facility map</h2><span class='hint'>everything below is public &amp; verifiable</span></div>
   <div class='card-link'>
     <a class='tile' href='#explorer'><span class='badge'>Interactive</span><h3>Leads Explorer</h3><p>Search, filter and inspect every candidate with evidence strips.</p></a>
