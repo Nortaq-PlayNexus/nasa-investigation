@@ -199,13 +199,31 @@ table.sortable th{background:var(--panel2);cursor:pointer;position:sticky;top:54
 table.sortable th:hover{color:var(--accent2)}
 table.sortable tr:nth-child(even){background:rgba(255,255,255,.025)}
 
-/* lightbox */
-.lb{position:fixed;inset:0;background:rgba(3,5,9,.94);display:none;align-items:center;justify-content:center;z-index:100;padding:2rem}
+/* lightbox / dossier */
+.lb{position:fixed;inset:0;background:rgba(3,5,9,.94);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:3rem 1.5rem;overflow:auto}
 .lb.open{display:flex}
-.lb img{max-width:92vw;max-height:82vh;border:2px solid var(--border2);border-radius:10px;box-shadow:var(--shadow)}
-.lb .cap{position:absolute;bottom:1.4rem;left:0;right:0;text-align:center;color:var(--muted);font-family:var(--mono);font-size:.85rem}
-.lb .x{position:absolute;top:1.2rem;right:1.6rem;font-size:2rem;color:var(--muted);cursor:pointer;line-height:1}
+.lb .x{position:fixed;top:1.2rem;right:1.6rem;font-size:2rem;color:var(--muted);cursor:pointer;line-height:1;z-index:2}
 .lb .x:hover{color:var(--accent)}
+.dossier{display:grid;grid-template-columns:minmax(280px,1.05fr) minmax(300px,1fr);gap:1.2rem;
+  width:min(1000px,94vw);background:rgba(10,14,22,.97);border:1px solid var(--border2);border-radius:16px;
+  padding:1.1rem;box-shadow:var(--shadow);position:relative}
+.dossier-board{display:flex;flex-direction:column;gap:.5rem}
+.db-img{background:#05070a;border:2px solid var(--border2);border-radius:10px;overflow:hidden;aspect-ratio:16/9;
+  display:flex;align-items:center;justify-content:center}
+.db-img img{width:100%;height:100%;object-fit:cover;display:block}
+.db-cap{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.08em}
+.dossier-info{font-family:var(--mono);font-size:.8rem;color:var(--text)}
+.dossier-info h3{margin:.1rem 0 .6rem;font-size:1rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);
+  border-bottom:1px solid var(--border);padding-bottom:.4rem}
+.df{display:flex;justify-content:space-between;gap:1rem;padding:.16rem 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.df .k{color:var(--accent);letter-spacing:.03em}
+.df .v{color:var(--text);text-align:right}
+.dossier-info .sect{margin-top:.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;font-size:.74rem}
+.verify{list-style:none;margin:.3rem 0 0;padding:0;color:var(--muted);font-size:.74rem;line-height:1.7}
+.verify li:before{content:"\203A ";color:var(--accent)}
+.src-chip{border:1px solid var(--border2);border-radius:8px;padding:.4rem .6rem;margin-top:.5rem;word-break:break-all;font-size:.7rem}
+.src-chip a{color:var(--accent2)}
+@media(max-width:720px){.dossier{grid-template-columns:1fr}}
 
 footer{border-top:1px solid var(--border);color:var(--faint);font-size:.82rem;text-align:center;padding:2rem 1rem;margin-top:2rem}
 footer a{color:var(--muted)}
@@ -231,9 +249,41 @@ JS = r"""
       x.fillStyle='rgba(180,205,255,'+(0.4+Math.random()*0.5)+')';x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();}
       requestAnimationFrame(draw);}rs();draw();addEventListener('resize',rs);}
 
-  // lightbox
-  var lb=document.getElementById('lb'),lbImg=document.getElementById('lbImg'),lbCap=document.getElementById('lbCap');
-  window.openLightbox=function(src,cap){lbImg.src=src;lbCap.textContent=cap||'';lb.classList.add('open');};
+  // lightbox / dossier
+  var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
+  var LEADMAP={};LEADS.forEach(function(r){LEADMAP[r.image]=r;});
+  function dossierHTML(r){
+    var strip=r.strip?'<img src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
+    var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
+    var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
+    var view='https://www.uahirise.org/'+prod.toLowerCase();
+    function f(k,v){return '<div class="df"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
+    var info='<h3>Dossier</h3>'
+      +f('VERDICT',r.verdict)+f('CONFIDENCE',r.confidence||'—')+f('SCORE',r.score)
+      +f('POLARITY / CLASS',(r.polarity||'—')+' / '+(r.evidence_class||'—'))
+      +f('CONTRAST',r.contrast)+f('AREA (px)',r.area_px||'—')+f('SIZE',(r.w||'?')+'x'+(r.h||'?')+' px')
+      +f('PIXEL (x,y)','x'+r.x+' y'+r.y)
+      +f('AGREE / DISAGREE',(r.agrees||'?')+' / '+(r.disagrees||'?'))
+      +f('PERSISTENCE',r.persistence||'—')+f('COMPACTNESS',r.compactness||'—')
+      +f('EDGE SHARP',r.edge_sharpness||'—')+f('FDR Q',r.fdr_q||'—')
+      +f('SOLAR EL/AZ',(r.solar_elevation_deg||'?')+'° / '+(r.solar_azimuth_deg||'?')+'°')
+      +f('FLAGS',r.flags||'—');
+    var verify='<div class="sect">Verify This Lead</div><ul class="verify">'
+      +'<li>EDR original: hirise-pds.lpl.arizona.edu/EXTRAS</li>'
+      +'<li>Mars Trek geolocate: trek.nasa.gov/mars</li>'
+      +'<li>Cross-band persistence: '+(r.agrees||'?')+' agree / '+(r.disagrees||'?')+' disagree</li>'
+      +'<li>Seek independent pass, different solar angle</li>'
+      +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
+      +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
+      +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>';
+    return '<div class="dossier-board"><div class="db-img">'+strip+'</div><div class="db-cap">TARGET LOCK // '+r.image+'</div></div>'
+      +'<div class="dossier-info">'+info+verify+'</div>';
+  }
+  function openDossier(img){var r=LEADMAP[img];if(!r)return;
+    lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
+    lb.classList.add('open');}
+  window.openDossier=openDossier;
+  window.openLightbox=function(src,cap){openDossier(cap&&cap.indexOf('//')<0?cap:'');};
   function closeLb(){lb.classList.remove('open');}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
@@ -261,7 +311,7 @@ JS = r"""
       note.textContent='Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.';
       grid.innerHTML=rows.slice(0,200).map(card).join('');
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
-        el.addEventListener('click',function(){var s=el.getAttribute('data-strip');if(s)openLightbox(s,el.getAttribute('data-cap'));});});}
+        el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});});}
     var q=document.getElementById('q'),mc=document.getElementById('minC'),sort=document.getElementById('sort');
     q.addEventListener('input',function(){state.q=q.value;render();});
     mc.addEventListener('input',function(){state.minC=+mc.value;document.getElementById('minCval').textContent=mc.value;render();});
@@ -452,7 +502,7 @@ def build_shared() -> None:
         shutil.copy2(BRAND / "social-preview.png", a / "og-image.png")
 
 
-def lead_json(rows, si) -> str:
+def lead_json(rows, si, base="results/strips/") -> str:
     out = []
     for r in rows:
         img = r.get("image", "")
@@ -469,7 +519,16 @@ def lead_json(rows, si) -> str:
             "area_px": r.get("area_px", ""),
             "polarity": r.get("polarity", ""),
             "flags": r.get("flags", ""),
-            "strip": ("results/strips/" + strip.name) if strip else "",
+            "persistence": r.get("persistence", ""),
+            "compactness": r.get("compactness", ""),
+            "edge_sharpness": r.get("edge_sharpness", ""),
+            "fdr_q": r.get("fdr_q", ""),
+            "pixel_scale_m": r.get("pixel_scale_m", ""),
+            "size_m": r.get("size_m", ""),
+            "solar_elevation_deg": r.get("solar_elevation_deg", ""),
+            "solar_azimuth_deg": r.get("solar_azimuth_deg", ""),
+            "inferred_height_m": r.get("inferred_height_m", ""),
+            "strip": (base + strip.name) if strip else "",
         })
     return json.dumps(out, ensure_ascii=False).replace("</", "<\\/")
 
@@ -581,7 +640,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
   <a href='report/'>Analysis Report</a>
 </footer>
 
-<div class='lb' id='lb'><span class='x'>&times;</span><img id='lbImg' src='' alt=''><div class='cap' id='lbCap'></div></div>
+<div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 <script>{lead_json(rows, si)}</script>
 <script src='assets/app.js?v={JS_VER}'></script>
 </body></html>"""
@@ -600,7 +659,7 @@ def build_report(rows, leads, si, summary_md) -> None:
         flags = (r["flags"].split(",") if r.get("flags") else [])
         fh = "".join(f"<li>{html.escape(f)}</li>" for f in flags) or "<li>none</li>"
         cards.append(
-            f"<div class='lead' onclick=\"openLightbox('../results/strips/{strip.name if strip else ''}','{html.escape(r['image'])}')\">"
+            f"<div class='lead' onclick=\"openDossier('{html.escape(r['image'])}')\">"
             f"<div class='thumb'>{img}{('<div class=stamp>CONFIRMED LEAD</div>' if r['verdict'].startswith('CONFIRMED') else '')}"
             f"<div class='corner-ref'>x{r.get('x')} y{r.get('y')}</div></div><div class='body'>"
             f"<div class='name'>{i+1}. {html.escape(r['image'])}</div>"
@@ -678,7 +737,8 @@ def build_report(rows, leads, si, summary_md) -> None:
 </div></section>
 
 <footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License</footer>
-<div class='lb' id='lb'><span class='x'>&times;</span><img id='lbImg' src='' alt=''><div class='cap' id='lbCap'></div></div>
+<div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
+<script>{lead_json(rows, si, '../results/strips/')}</script>
 <script src='../assets/app.js?v={JS_VER}'></script>
 </body></html>"""
     (SITE / "report" / "index.html").write_text(body, encoding="utf-8")

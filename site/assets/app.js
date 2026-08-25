@@ -17,9 +17,41 @@
       x.fillStyle='rgba(180,205,255,'+(0.4+Math.random()*0.5)+')';x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();}
       requestAnimationFrame(draw);}rs();draw();addEventListener('resize',rs);}
 
-  // lightbox
-  var lb=document.getElementById('lb'),lbImg=document.getElementById('lbImg'),lbCap=document.getElementById('lbCap');
-  window.openLightbox=function(src,cap){lbImg.src=src;lbCap.textContent=cap||'';lb.classList.add('open');};
+  // lightbox / dossier
+  var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
+  var LEADMAP={};LEADS.forEach(function(r){LEADMAP[r.image]=r;});
+  function dossierHTML(r){
+    var strip=r.strip?'<img src="'+r.strip+'" alt="'+r.image+'">':'<div class="ph">no strip</div>';
+    var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
+    var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
+    var view='https://www.uahirise.org/'+prod.toLowerCase();
+    function f(k,v){return '<div class="df"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
+    var info='<h3>Dossier</h3>'
+      +f('VERDICT',r.verdict)+f('CONFIDENCE',r.confidence||'—')+f('SCORE',r.score)
+      +f('POLARITY / CLASS',(r.polarity||'—')+' / '+(r.evidence_class||'—'))
+      +f('CONTRAST',r.contrast)+f('AREA (px)',r.area_px||'—')+f('SIZE',(r.w||'?')+'x'+(r.h||'?')+' px')
+      +f('PIXEL (x,y)','x'+r.x+' y'+r.y)
+      +f('AGREE / DISAGREE',(r.agrees||'?')+' / '+(r.disagrees||'?'))
+      +f('PERSISTENCE',r.persistence||'—')+f('COMPACTNESS',r.compactness||'—')
+      +f('EDGE SHARP',r.edge_sharpness||'—')+f('FDR Q',r.fdr_q||'—')
+      +f('SOLAR EL/AZ',(r.solar_elevation_deg||'?')+'° / '+(r.solar_azimuth_deg||'?')+'°')
+      +f('FLAGS',r.flags||'—');
+    var verify='<div class="sect">Verify This Lead</div><ul class="verify">'
+      +'<li>EDR original: hirise-pds.lpl.arizona.edu/EXTRAS</li>'
+      +'<li>Mars Trek geolocate: trek.nasa.gov/mars</li>'
+      +'<li>Cross-band persistence: '+(r.agrees||'?')+' agree / '+(r.disagrees||'?')+' disagree</li>'
+      +'<li>Seek independent pass, different solar angle</li>'
+      +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
+      +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
+      +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>';
+    return '<div class="dossier-board"><div class="db-img">'+strip+'</div><div class="db-cap">TARGET LOCK // '+r.image+'</div></div>'
+      +'<div class="dossier-info">'+info+verify+'</div>';
+  }
+  function openDossier(img){var r=LEADMAP[img];if(!r)return;
+    lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
+    lb.classList.add('open');}
+  window.openDossier=openDossier;
+  window.openLightbox=function(src,cap){openDossier(cap&&cap.indexOf('//')<0?cap:'');};
   function closeLb(){lb.classList.remove('open');}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
@@ -47,7 +79,7 @@
       note.textContent='Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.';
       grid.innerHTML=rows.slice(0,200).map(card).join('');
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
-        el.addEventListener('click',function(){var s=el.getAttribute('data-strip');if(s)openLightbox(s,el.getAttribute('data-cap'));});});}
+        el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});});}
     var q=document.getElementById('q'),mc=document.getElementById('minC'),sort=document.getElementById('sort');
     q.addEventListener('input',function(){state.q=q.value;render();});
     mc.addEventListener('input',function(){state.minC=+mc.value;document.getElementById('minCval').textContent=mc.value;render();});
