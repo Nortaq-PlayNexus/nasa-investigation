@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml/badge.svg)](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml)
 [![Pages](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/pages.yml/badge.svg)](https://nortaq-playnexus.github.io/nasa-investigation/)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)]()
 
@@ -56,14 +56,14 @@ A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery
 ## Technology Stack
 
 ```
-Core Pipeline     Python 3.9+ / NumPy / Pillow
+Core Pipeline     Python 3.10+ / NumPy / Pillow / requests
 Image Analysis    SciPy (optional) / OpenCV (optional)
-Web Dashboard     FastAPI + Uvicorn / Vanilla HTML/CSS/JS
-Discord Bot       discord.py 2.x
+Published Site    Static dossier (scripts/build_site.py) -> GitHub Pages
+Social Cards      4K card generator (scripts/social_card_4k.py)
 Build System      PyInstaller / pip / pyproject.toml
-Testing           unittest + pytest (69+ test cases)
+Testing           unittest + pytest (90+ test cases)
 Linting           ruff (100 char line length)
-CI/CD             GitHub Actions (Linux + Windows, Python 3.9/3.11/3.12)
+CI/CD             GitHub Actions (Linux + Windows, Python 3.10/3.11/3.12)
 ```
 
 ---
@@ -196,9 +196,9 @@ Features: drag-drop instant analysis, live stats, searchable leads table, pipeli
 ### Discord Bot
 
 ```bash
-pip install -r requirements-extras.txt
+pip install -r requirements.txt
 $env:DISCORD_TOKEN = "<your-token>"
-python bot/discord_bot.py
+python scripts/build_app.py --bot
 ```
 
 Upload a Moon/Mars image → pipeline verdict with marked-up image and plain-language assessment.
@@ -229,20 +229,22 @@ python scripts/check_stereo.py --left pair_a.png --right pair_b.png \
 
 ---
 
-## Pipeline Modules
+## Pipeline Modules (this repository)
 
-| Module | Purpose |
+| Script | Purpose |
 |--------|---------|
-| `pipeline/common.py` | Hardened infrastructure: audit, hashing, atomic writes, stats |
-| `pipeline/pds.py` | Native PDS3/PDS4 + `.IMG` EDR reader |
-| `pipeline/overlay.py` | Text/annotation overlay detection |
-| `pipeline/detect.py` | Multi-scale local-contrast anomaly flagging |
-| `pipeline/analyze.py` | Enhance, measure, artifact-check, rank |
-| `pipeline/adjudicate.py` | Cross-band confirmation, persistence, verdicts |
-| `pipeline/stereo.py` | Block-matching disparity, height estimation |
-| `pipeline/changedet.py` | Phase-correlation registration + change maps |
-| `pipeline/benchmark.py` | Injected-blob calibration + negative controls |
-| `pipeline/extras_compare.py` | B&W vs filtered vs ortho vs DTM comparator |
+| `scripts/download_hirise_extras.py` | EXTRAS-only acquisition from the sanctioned LPL source |
+| `scripts/download_pds.py` / `download_archive.py` | PDS / archive ingestion |
+| `scripts/download_lroc.py` / `download_rover.py` / `download_nasa_library.py` | Multi-source lunar/Mars ingest |
+| `scripts/build_catalog.py` | Catalog with SHA-256, solar geometry, immutable snapshot |
+| `scripts/verify_downloads.py` | Integrity verification + snapshot diff |
+| `scripts/package_anomalies.py` | Assemble conclusions, strips, and finding reports |
+| `scripts/chase_leads.py` | Cross-band lead chasing / persistence |
+| `scripts/check_stereo.py` | Block-matching stereo disparity + height estimate |
+| `scripts/social_card_4k.py` | 4K "anomaly dossier" social cards |
+| `scripts/build_site.py` | **Public dossier site** (landing + explorer + report) on GitHub Pages |
+| `scripts/report_stats.py` | Conclusions summarizer (counts, top acquisitions) |
+| `scripts/validate_conclusions.py` | Schema/rigor gate for the published conclusions |
 
 ---
 
@@ -259,7 +261,7 @@ python -m pytest tests/test_pipeline.py::TestDetect -v
 python scripts/run_pipeline.py --selftest
 ```
 
-**69+ test cases** covering: overlay detection, border exclusion, z-score p-values, Benjamini-Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, and rigor metrics.
+**90+ test cases** covering: overlay detection, border exclusion, z-score p-values, Benjamini-Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, rigor metrics, and the dossier helpers (crop framing, dedupe, diverse preview).
 
 ---
 
