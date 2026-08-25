@@ -122,4 +122,13 @@
       rows.forEach(function(r){tb.appendChild(r);});
       t.querySelectorAll('th').forEach(function(h){h.classList.remove('asc','desc');});
       th.classList.add(asc?'asc':'desc');});});});
+
+  // mobile nav toggle
+  var nt=document.querySelector('.nav-toggle'), nl=document.querySelector('.nav-links');
+  if(nt&&nl){nt.addEventListener('click',function(){nl.classList.toggle('open');});
+    nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');});});}
+
+  // explorer loading shimmer (until leads.json resolves)
+  var g0=document.getElementById('leadsGrid');
+  if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
 })();

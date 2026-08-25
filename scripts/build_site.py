@@ -142,6 +142,7 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
 .nav-links{margin-left:auto;display:flex;gap:1.1rem;flex-wrap:wrap}
 .nav-links a{color:var(--muted);font-size:.9rem}
 .nav-links a:hover{color:var(--accent);text-decoration:none}
+.nav-toggle{display:none;background:none;border:1px solid var(--border2);color:var(--accent);font-size:1.2rem;margin-left:auto;padding:.2rem .6rem;border-radius:8px;cursor:pointer}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;border-radius:10px;
@@ -296,7 +297,7 @@ footer .fwrap{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:.5r
 footer a{color:var(--accent2)}
 footer .src{color:var(--accent)}
 footer .view{color:var(--faint)}
-@media (max-width:640px){.nav-links{display:none}.stats{grid-template-columns:repeat(2,1fr)}.brackets span{display:none}}
+@media (max-width:640px){.nav-in{position:relative}.nav-links{display:none}.nav-links.open{display:flex;position:absolute;top:100%;right:0;background:#0a0e16;border:1px solid var(--border2);padding:.7rem 1.1rem;flex-direction:column;gap:.7rem;z-index:30}.nav-toggle{display:block}.stats{grid-template-columns:repeat(2,1fr)}.brackets span{display:none}}
 """
 
 JS = r"""
@@ -423,6 +424,15 @@ JS = r"""
       rows.forEach(function(r){tb.appendChild(r);});
       t.querySelectorAll('th').forEach(function(h){h.classList.remove('asc','desc');});
       th.classList.add(asc?'asc':'desc');});});});
+
+  // mobile nav toggle
+  var nt=document.querySelector('.nav-toggle'), nl=document.querySelector('.nav-links');
+  if(nt&&nl){nt.addEventListener('click',function(){nl.classList.toggle('open');});
+    nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');});});}
+
+  // explorer loading shimmer (until leads.json resolves)
+  var g0=document.getElementById('leadsGrid');
+  if(g0 && !g0.children.length){g0.innerHTML="<div class='ph'>acquiring candidate feed &hellip;</div>";}
 })();
 """
 
@@ -698,6 +708,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     <a href='#findings'>Findings</a><a href='#methodology'>Methodology</a>
     <a href='report/'>Report</a><a href='{BASE}'>Source</a>
   </div>
+  <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
 </div></nav>
 
 <header class='hero'><div class='reticle'><div class='ring2'></div></div><div class='wrap'>
@@ -837,6 +848,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 <nav><div class='nav-in'>
   <a class='brand' href='../'><img src='../assets/logo.svg' alt='logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
   <div class='nav-links'><a href='../#overview'>Home</a><a href='../#explorer'>Explorer</a><a href='../#findings'>Findings</a><a href='{BASE}'>Source</a></div>
+  <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
 </div></nav>
 <header class='hero'><div class='reticle'><div class='ring2'></div></div><div class='wrap'>
   <div class='tag'>Adjudication // Dossier</div>
