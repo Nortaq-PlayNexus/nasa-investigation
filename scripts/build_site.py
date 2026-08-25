@@ -63,6 +63,11 @@ a:hover{text-decoration:underline}
 
 /* card chrome: top rule, grid, scanlines, corner brackets, starfield */
 .toprule{height:15px;background:linear-gradient(180deg,var(--red) 0 8px,var(--accent) 8px 15px)}
+.ticker{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  background:#080a10;color:var(--red);font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.2em;text-transform:uppercase;padding:.42rem 1.6rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.ticker .eyes{border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:.12rem .6rem;letter-spacing:.12em;white-space:nowrap}
+.ticker .ref{color:var(--muted);letter-spacing:.12em}
 .bg-glow{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
   background:radial-gradient(1100px 520px at 78% -8%,rgba(255,196,48,.10),transparent 60%),
              radial-gradient(900px 480px at 10% 4%,rgba(226,60,58,.10),transparent 55%);}
@@ -490,6 +495,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html) -> None:
 <title>NASA HiRISE Anomaly Investigation — Public Facility</title>
 <link rel='stylesheet' href='assets/style.css?v={CSS_VER}'></head><body>
 <div class='toprule'></div>
+<div class='ticker'><span>Classified // Anomaly Dossier &mdash; Public Facility</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <canvas id='stars'></canvas><div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
 <nav><div class='nav-in'>
@@ -620,6 +626,7 @@ def build_report(rows, leads, si, summary_md) -> None:
 <title>NASA HiRISE — Anomaly Analysis Report</title>
 <link rel='stylesheet' href='../assets/style.css?v={CSS_VER}'></head><body>
 <div class='toprule'></div>
+<div class='ticker'><span>Classified // Anomaly Dossier &mdash; Adjudication</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
 <nav><div class='nav-in'>

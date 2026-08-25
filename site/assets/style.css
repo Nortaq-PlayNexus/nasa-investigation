@@ -21,6 +21,11 @@ a:hover{text-decoration:underline}
 
 /* card chrome: top rule, grid, scanlines, corner brackets, starfield */
 .toprule{height:15px;background:linear-gradient(180deg,var(--red) 0 8px,var(--accent) 8px 15px)}
+.ticker{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  background:#080a10;color:var(--red);font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.2em;text-transform:uppercase;padding:.42rem 1.6rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.ticker .eyes{border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:.12rem .6rem;letter-spacing:.12em;white-space:nowrap}
+.ticker .ref{color:var(--muted);letter-spacing:.12em}
 .bg-glow{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
   background:radial-gradient(1100px 520px at 78% -8%,rgba(255,196,48,.10),transparent 60%),
              radial-gradient(900px 480px at 10% 4%,rgba(226,60,58,.10),transparent 55%);}
