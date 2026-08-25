@@ -113,6 +113,8 @@ section{padding:2.6rem 0}
 .controls input[type=range]{accent-color:var(--accent)}
 .controls input[type=search]{min-width:230px;flex:1}
 .chips{display:flex;gap:.4rem;flex-wrap:wrap}
+.legend{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.2rem 0 .5rem}
+.legend .pill{opacity:.9}
 .chip{cursor:pointer;font-family:var(--mono);font-size:.72rem;padding:.3rem .7rem;border-radius:20px;border:1px solid var(--border2);
   color:var(--muted);background:var(--panel);user-select:none;letter-spacing:.04em}
 .chip.on{background:var(--accent);border-color:transparent;color:#1a1206}

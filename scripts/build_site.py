@@ -230,6 +230,8 @@ section{padding:2.6rem 0}
 .controls input[type=range]{accent-color:var(--accent)}
 .controls input[type=search]{min-width:230px;flex:1}
 .chips{display:flex;gap:.4rem;flex-wrap:wrap}
+.legend{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.2rem 0 .5rem}
+.legend .pill{opacity:.9}
 .chip{cursor:pointer;font-family:var(--mono);font-size:.72rem;padding:.3rem .7rem;border-radius:20px;border:1px solid var(--border2);
   color:var(--muted);background:var(--panel);user-select:none;letter-spacing:.04em}
 .chip.on{background:var(--accent);border-color:transparent;color:#1a1206}
@@ -789,6 +791,10 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
         f"<span class='chip' data-v='{v}'>{v}</span>" for v in
         ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
     )
+    legend_html = "".join(
+        f"<span class='pill p-{v}' style='font-size:.68rem;padding:.1rem .5rem'>{v}</span>" for v in
+        ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
+    )
     ac = Counter(acq_of(r.get("image", "")) for r in rows)
     target_chips = "".join(
         f"<span class='tchip'>{html.escape(k)} <b>{v}</b></span>" for k, v in ac.most_common(14)
@@ -866,6 +872,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     <button id='reset' class='btn' style='padding:.4rem .8rem'>Reset</button>
   </div>
   <div class='chips'>{chips}</div>
+  <div class='legend'>{legend_html}</div>
   <div id='leadNote' class='count-note'></div>
   <div id='leadsGrid' class='grid'></div>
   <div style='text-align:center;margin-top:1rem'><button id='loadMore' class='btn' style='display:none'>Load more</button></div>
