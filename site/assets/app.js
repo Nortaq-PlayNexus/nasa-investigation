@@ -33,6 +33,11 @@
   }
   function dossierHTML(r){
     var strip=cropDiv(r);
+    var ctx = (stripUrl(r.strip)&&r.crop)
+      ? '<div class="db-ctx"><img src="'+stripUrl(r.strip)+'">'
+        +'<span class="box" style="left:'+(r.crop[0]*100)+'%;top:'+(r.crop[1]*100)
+        +'%;width:'+(r.crop[2]*100)+'%;height:'+(r.crop[3]*100)+'%"></span></div>'
+      : '';
     var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
     var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
     var view='https://www.uahirise.org/'+prod.toLowerCase();
@@ -55,7 +60,8 @@
       +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
       +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
       +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>';
-    return '<div class="dossier-board"><div class="db-img">'+strip+'</div><div class="db-cap">TARGET LOCK // '+r.image+'</div></div>'
+    return '<div class="dossier-board"><div class="db-img">'+strip+'</div>'
+      +'<div class="db-cap">TARGET LOCK // '+r.image+'</div>'+ctx+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
   function openDossier(img){var r=LEADMAP[img];if(!r)return;

@@ -308,6 +308,9 @@ table.sortable tr:nth-child(even){background:rgba(255,255,255,.025)}
   display:flex;align-items:center;justify-content:center}
 .db-img img{width:100%;height:100%;object-fit:cover;display:block}
 .db-img .crop{position:absolute;inset:0;background-color:#05070a;background-size:cover}
+.db-ctx{position:relative;margin-top:.5rem;border:1px solid var(--border2);border-radius:8px;overflow:hidden;aspect-ratio:16/9;background:#05070a}
+.db-ctx img{width:100%;height:100%;object-fit:cover;display:block;opacity:.82}
+.db-ctx .box{position:absolute;border:2px solid var(--red);box-shadow:0 0 0 1px rgba(0,0,0,.55);pointer-events:none}
 .db-cap{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.08em}
 .dossier-info{font-family:var(--mono);font-size:.8rem;color:var(--text)}
 .dossier-info h3{margin:.1rem 0 .6rem;font-size:1rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);
@@ -383,6 +386,11 @@ JS = r"""
   }
   function dossierHTML(r){
     var strip=cropDiv(r);
+    var ctx = (stripUrl(r.strip)&&r.crop)
+      ? '<div class="db-ctx"><img src="'+stripUrl(r.strip)+'">'
+        +'<span class="box" style="left:'+(r.crop[0]*100)+'%;top:'+(r.crop[1]*100)
+        +'%;width:'+(r.crop[2]*100)+'%;height:'+(r.crop[3]*100)+'%"></span></div>'
+      : '';
     var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
     var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
     var view='https://www.uahirise.org/'+prod.toLowerCase();
@@ -405,7 +413,8 @@ JS = r"""
       +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
       +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
       +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>';
-    return '<div class="dossier-board"><div class="db-img">'+strip+'</div><div class="db-cap">TARGET LOCK // '+r.image+'</div></div>'
+    return '<div class="dossier-board"><div class="db-img">'+strip+'</div>'
+      +'<div class="db-cap">TARGET LOCK // '+r.image+'</div>'+ctx+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
   function openDossier(img){var r=LEADMAP[img];if(!r)return;
