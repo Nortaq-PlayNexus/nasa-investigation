@@ -939,7 +939,8 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     trs = []
     for i, r in enumerate(top):
         trs.append(
-            f"<tr><td>{i+1}</td><td>{html.escape(r['image'])}</td><td>{round(num(r['score']))}</td>"
+            f"<tr onclick=\"openDossier('{html.escape(r['image'])}')\" style='cursor:pointer'>"
+            f"<td>{i+1}</td><td>{html.escape(r['image'])}</td><td>{round(num(r['score']))}</td>"
             f"<td>{r['x']},{r['y']}</td><td>{html.escape(r.get('evidence_class',''))}</td>"
             f"<td class='p-{r['verdict']}' style='color:inherit'>{html.escape(r['verdict'])}</td>"
             f"<td>{round(num(r['contrast']),2)}</td><td>{r.get('agrees','')}/{r.get('disagrees','')}</td>"
@@ -996,7 +997,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 </div></section>
 
 <section><div class='wrap'>
-  <div class='sec-head'><h2>All top leads ({len(top)})</h2><span class='hint'>click a column header to sort</span></div>
+  <div class='sec-head'><h2>All top leads ({len(top)})</h2><span class='hint'>click a column header to sort &middot; click a row to open its dossier</span></div>
   <table class='sortable'><thead><tr>
     <th data-key='#'>#</th><th data-key='image'>image</th><th data-key='score'>score</th>
     <th data-key='xy'>xy</th><th data-key='class'>class</th><th data-key='verdict'>verdict</th>
