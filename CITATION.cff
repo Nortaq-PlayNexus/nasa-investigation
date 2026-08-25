@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this investigation or its artifacts, please cite the repository."
+title: "NASA HiRISE Anomaly Investigation"
+abstract: "Automated detection, adjudication, and public dossier of anomalous structures in NASA HiRISE imagery of Mars, with a transparent multi-agent analysis pipeline."
+authors:
+  - name: "Nortaq PlayNexus"
+repository-code: "https://github.com/Nortaq-PlayNexus/nasa-investigation"
+license: MIT
+keywords:
+  - Mars
+  - HiRISE
+  - anomaly
+  - remote sensing
+  - computer vision

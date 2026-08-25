@@ -1,51 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "nasa-investigation"
-version = "1.0.95"
-description = "Acquire, catalog, enhance and analyze public NASA Moon/Mars imagery for anomaly candidates"
+name = "nasa-hirise-anomaly-investigation"
+version = "1.4.0"
+description = "Automated detection, adjudication, and public dossier of anomalous structures in NASA HiRISE imagery of Mars."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Nortaq PlayNexus" }]
+keywords = ["mars", "hirise", "anomaly", "remote-sensing", "computer-vision"]
 dependencies = [
-    "Pillow>=9.0",
-    "numpy>=1.24",
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "requests>=2.31.0",
+    "playwright>=1.40.0",
 ]
 
 [project.optional-dependencies]
-# Optional deep-analysis extras (all degrade gracefully if missing).
-extras = [
-    "scipy>=1.10",
-    "opencv-python>=4.8",
-    "imagecodecs>=2023.1",
-]
-# The Discord bot integration.
-bot = [
-    "discord.py>=2.3",
-    "aiohttp>=3.9",
-]
-# Full-stack EXE: FastAPI server + dashboard (bundled into nasa-fullstack.exe)
-fullstack = [
-    "fastapi>=0.100",
-    "uvicorn[standard]>=0.23",
-    "python-multipart>=0.0.9",
-]
-# Dev / tooling for running tests and building a standalone executable.
-dev = [
-    "pytest>=7.0",
-    "ruff>=0.4",
-    "pyinstaller>=6.0",
-]
-
-[project.scripts]
-nasa-fullstack = "app.launcher:main"
-nasa-pipeline = "scripts.run_pipeline:main"
-
-[tool.pytest.ini_options]
-# tests/test_pipeline.py imports the flat pipeline modules as top-level names.
-pythonpath = ["pipeline"]
+dev = ["pytest>=7.0", "ruff>=0.4"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 
-[tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B"]
-ignore = ["E501"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]

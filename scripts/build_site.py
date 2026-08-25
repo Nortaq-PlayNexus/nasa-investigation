@@ -992,5 +992,67 @@ def main() -> None:
           f"{len(list((SITE/'results'/'strips').glob('*.jpg')))} strips")
 
 
+def selftest() -> int:
+    """Lightweight offline checks for the dossier helpers (no HiRISE data needed)."""
+    import io, tempfile
+    from PIL import Image
+    fails = 0
+
+    def ok(cond, msg):
+        nonlocal fails
+        if not cond:
+            fails += 1
+            print("  FAIL:", msg)
+        else:
+            print("  ok:", msg)
+
+    # crop_box: build a known synthetic strip and frame a feature
+    im = Image.new("RGB", (200, 100), (10, 10, 10))
+    for xx in range(90, 110):
+        for yy in range(40, 60):
+            im.putpixel((xx, yy), (240, 240, 240))
+    tf = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+    im.save(tf.name)
+    cb = crop_box(Path(tf.name), 100, 50, 20, 20)
+    ok(cb is not None, "crop_box returns a frame")
+    ok(cb and all(0.0 <= v <= 1.0 for v in cb), "crop fractions within [0,1]")
+    ok(cb and cb[2] > 0 and cb[3] > 0, "crop has positive size")
+    ok(cb and abs((cb[0] + cb[2] / 2) - 0.5) < 0.05, "crop centers near feature x")
+    # missing file -> None
+    ok(crop_box(Path("nope.jpg"), 1, 1, 2, 2) is None, "crop_box handles missing file")
+
+    # dedupe: same (acq,x,y) across bands collapses to one, highest score kept
+    rows = [
+        {"image": "ESP_013236_1410_MIRB.abrowse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "80", "x": "5", "y": "5", "w": "10", "h": "10", "contrast": "2"},
+        {"image": "ESP_013236_1410_RED.browse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "100", "x": "5", "y": "5", "w": "10", "h": "10", "contrast": "2"},
+        {"image": "ESP_013948_1410_RED.browse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "90", "x": "9", "y": "9", "w": "10", "h": "10", "contrast": "2"},
+    ]
+    dd = dedupe(rows)
+    ok(len(dd) == 2, "dedupe collapses same (acq,x,y) to one row")
+    kept = [r for r in dd if r["image"].startswith("ESP_013236_1410")][0]
+    ok(kept["score"] == "100", "dedupe keeps highest-score band")
+
+    # diverse_preview: spreads across images, respects cap
+    big = []
+    for i in range(20):
+        big.append({"image": f"IMG_{i % 3}.png", "verdict": "CONFIRMED-LEAD", "score": str(i),
+                    "x": "1", "y": "1", "w": "4", "h": "4", "contrast": "2"})
+    prev = diverse_preview(big, 6, 2)
+    from collections import Counter
+    cnt = Counter(r["image"] for r in prev)
+    ok(len(prev) == 6, "diverse_preview returns requested count")
+    ok(all(v <= 2 for v in cnt.values()), "diverse_preview respects per-image cap")
+
+    # verdict_counts / top_leads basic sanity
+    tc = verdict_counts(rows)
+    ok(tc.get("CONFIRMED-LEAD", 0) == 3, "verdict_counts tallies correctly")
+
+    print(f"selftest: {'ALL PASS' if fails == 0 else str(fails)+' FAILED'}")
+    return fails
+
+
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
+        raise SystemExit(selftest())
     main()
