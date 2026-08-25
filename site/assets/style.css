@@ -28,7 +28,9 @@ a:hover{text-decoration:underline}
 .ticker .ref{color:var(--muted);letter-spacing:.12em}
 .bg-glow{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
   background:radial-gradient(1100px 520px at 78% -8%,rgba(255,196,48,.10),transparent 60%),
-             radial-gradient(900px 480px at 10% 4%,rgba(226,60,58,.10),transparent 55%);}
+             radial-gradient(900px 480px at 10% 4%,rgba(226,60,58,.10),transparent 55%);
+  animation:glowpulse 9s ease-in-out infinite}
+@keyframes glowpulse{0%,100%{opacity:.42}50%{opacity:.62}}
 .grid-ov{position:fixed;inset:0;z-index:-1;pointer-events:none;
   background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
     linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
