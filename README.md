@@ -10,7 +10,7 @@
 [![Pages](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/pages.yml/badge.svg)](https://nortaq-playnexus.github.io/nasa-investigation/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-88%20passing-brightgreen)]()
 
 </div>
 
@@ -61,7 +61,7 @@ Image Analysis    SciPy (optional) / OpenCV (optional)
 Published Site    Static dossier (scripts/build_site.py) -> GitHub Pages
 Social Cards      4K card generator (scripts/social_card_4k.py)
 Build System      PyInstaller / pip / pyproject.toml
-Testing           unittest + pytest (90+ test cases)
+Testing           unittest + pytest (88 test cases)
 Linting           ruff (100 char line length)
 CI/CD             GitHub Actions (Linux + Windows, Python 3.10/3.11/3.12)
 ```
@@ -261,7 +261,7 @@ python -m pytest tests/test_pipeline.py::TestDetect -v
 python scripts/run_pipeline.py --selftest
 ```
 
-**90+ test cases** covering: overlay detection, border exclusion, z-score p-values, Benjamini-Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, rigor metrics, and the dossier helpers (crop framing, dedupe, diverse preview).
+**88 test cases** covering: overlay detection, border exclusion, z-score p-values, Benjamini-Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, rigor metrics, and the dossier helpers (crop framing, dedupe, diverse preview).
 
 ---
 

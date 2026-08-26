@@ -14,12 +14,11 @@ keywords = ["mars", "hirise", "anomaly", "remote-sensing", "computer-vision"]
 dependencies = [
     "Pillow>=10.0.0",
     "numpy>=1.24.0",
-    "requests>=2.31.0",
-    "playwright>=1.40.0",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "ruff>=0.4"]
+screenshots = ["playwright>=1.40.0"]
 
 [tool.ruff]
 line-length = 100

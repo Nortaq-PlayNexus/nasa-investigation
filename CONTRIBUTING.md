@@ -29,7 +29,7 @@ Thank you for your interest in contributing to this project. This document provi
 
 ### Python
 
-- **Version:** >= 3.9
+- **Version:** >= 3.10
 - **Line length:** 100 characters (enforced by ruff)
 - **Formatter/Linter:** ruff (rules: E, F, W, I, UP, B)
 - **Imports:** sorted by ruff (isort-compatible)
