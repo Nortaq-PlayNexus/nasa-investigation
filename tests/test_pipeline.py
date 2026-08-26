@@ -868,5 +868,123 @@ class TestAnalyzeRigor(unittest.TestCase):
             self.assertIsInstance(feats[key], float)
 
 
+class TestEnhance(unittest.TestCase):
+    """Image enhancement utilities: stretch, to_uint16, is_16bit."""
+
+    def test_stretch_2d(self):
+        import enhance
+        arr = np.linspace(10, 200, 256 * 256, dtype=np.float32).reshape(256, 256)
+        out = enhance.stretch(arr)
+        self.assertEqual(out.shape, (256, 256))
+        self.assertEqual(out.dtype, np.float32)
+        self.assertAlmostEqual(float(out.min()), 0.0, places=0)
+        self.assertAlmostEqual(float(out.max()), 255.0, places=0)
+
+    def test_stretch_3d(self):
+        import enhance
+        arr = np.full((32, 32, 3), 100.0, dtype=np.float32)
+        arr[:, :, 0] = 50.0
+        arr[:, :, 2] = 200.0
+        out = enhance.stretch(arr)
+        self.assertEqual(out.ndim, 3)
+        self.assertEqual(out.shape[2], 3)
+
+    def test_is_16bit(self):
+        import enhance
+        self.assertTrue(enhance.is_16bit(np.zeros((4, 4), dtype=np.float32)))
+        self.assertTrue(enhance.is_16bit(np.zeros((4, 4), dtype=np.uint16)))
+        self.assertFalse(enhance.is_16bit(np.zeros((4, 4), dtype=np.uint8)))
+
+    def test_to_uint16(self):
+        import enhance
+        arr = np.linspace(0, 1.0, 100, dtype=np.float32).reshape(10, 10)
+        out = enhance.to_uint16(arr)
+        self.assertEqual(out.dtype, np.uint16)
+        self.assertEqual(out.shape, (10, 10))
+        self.assertGreater(out.max(), 0)
+
+
+class TestTriage(unittest.TestCase):
+    """Triage helper functions: fit, draw_boxes."""
+
+    def test_fit_preserves_aspect(self):
+        import triage
+        from PIL import Image
+        im = Image.new("RGB", (400, 200))
+        thumb = triage.fit(im, 100)
+        self.assertLessEqual(max(thumb.width, thumb.height), 100)
+        ratio = thumb.width / thumb.height
+        self.assertAlmostEqual(ratio, 2.0, places=1)
+
+    def test_draw_boxes_returns_image(self):
+        import triage
+        from PIL import Image
+        im = Image.new("RGB", (200, 200), (50, 50, 50))
+        boxes = [(10, 10, 40, 40), (80, 80, 50, 50)]
+        thumb = triage.draw_boxes(im, boxes, 128)
+        self.assertEqual(thumb.mode, "RGB")
+        self.assertLessEqual(max(thumb.width, thumb.height), 128)
+
+
+class TestMark(unittest.TestCase):
+    """Mark overlay drawing on images."""
+
+    def test_mark_boxes_on_image(self):
+        import mark
+        from PIL import Image
+        import csv as csv_mod
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            im = Image.new("RGB", (100, 100), (80, 80, 80))
+            src = os.path.join(td, "src.png")
+            im.save(src)
+            cands = os.path.join(td, "cands.csv")
+            with open(cands, "w", newline="") as f:
+                w = csv_mod.writer(f)
+                w.writerow(["image", "path", "x", "y", "w", "h", "score", "fill"])
+                w.writerow(["src.png", src, "10", "10", "30", "30", "0.9", "0.8"])
+            out = os.path.join(td, "marked")
+            mark.main(["--candidates", cands, "--out", out])
+            self.assertTrue(os.path.exists(os.path.join(out, "marked_src.png")))
+
+
+class TestExtrasCompare(unittest.TestCase):
+    """Variant comparison taxonomy and normalization helpers."""
+
+    def test_taxonomy_red(self):
+        import extras_compare
+        self.assertIn("B&W", extras_compare._taxonomy("ESP_012345_1234_RED.browse.jpg"))
+
+    def test_taxonomy_irb(self):
+        import extras_compare
+        self.assertIn("IRB", extras_compare._taxonomy("ESP_012345_1234_IRB.browse.jpg"))
+
+    def test_taxonomy_dtm(self):
+        import extras_compare
+        self.assertIn("DTM", extras_compare._taxonomy("DTEEC_012345_1234_012345_1234.ca.jpg"))
+
+    def test_variant_role_red(self):
+        import extras_compare
+        self.assertEqual(extras_compare._variant_role("ESP_012345_1234_RED.browse.jpg"), "red")
+
+    def test_variant_role_dtm(self):
+        import extras_compare
+        self.assertEqual(extras_compare._variant_role("DTEEC_012345_1234.jp2"), "dtm")
+
+    def test_norm01_basic(self):
+        import extras_compare
+        arr = np.array([0.0, 50.0, 100.0, 150.0, 200.0], dtype=np.float32)
+        out = extras_compare._norm01(arr)
+        self.assertEqual(out.dtype, np.float32)
+        self.assertAlmostEqual(float(out.min()), 0.0, places=3)
+        self.assertAlmostEqual(float(out.max()), 1.0, places=3)
+
+    def test_norm01_empty(self):
+        import extras_compare
+        arr = np.array([], dtype=np.float32)
+        out = extras_compare._norm01(arr)
+        self.assertEqual(out.size, 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

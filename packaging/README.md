@@ -11,14 +11,14 @@ producing a junk binary.
 ```bash
 python -m venv .venv                 # optional but recommended
 .venv/Scripts/activate               # Windows
-pip install -e .[dev]                # numpy, Pillow, pytest, ruff, pyinstaller
-pip install -e .[bot]                # only if you want to build the Discord bot
+pip install -e .[dev]                # numpy, Pillow, pytest, ruff
 ```
 
 ## Build the full-stack EXE (recommended)
 
 ```bash
-pip install -e .[fullstack,dev]            # fastapi + uvicorn + pyinstaller
+pip install -e .[dev]               # core + dev tools
+pip install fastapi uvicorn pyinstaller  # for fullstack build
 python scripts/build_app.py --fullstack     # -> dist/nasa-fullstack/
 python scripts/build_app.py --fullstack --onefile  # single-file  -> dist/nasa-fullstack.exe
 ```
@@ -59,7 +59,8 @@ dist/nasa-pipeline/nasa-pipeline.exe --selftest
 ## Build the Discord bot exe
 
 ```bash
-pip install -e .[bot,dev]
+pip install -e .[dev]
+pip install discord.py aiohttp
 python scripts/build_app.py --bot
 ```
 
