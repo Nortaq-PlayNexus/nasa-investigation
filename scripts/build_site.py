@@ -805,8 +805,13 @@ def build_leads_data(rows, si) -> str:
     return ver
 
 
-def lead_json(rows, si, max_per_image=40) -> str:
-    """Build leads JSON, capping candidates per source image for visual variety."""
+def lead_json(rows, si, max_per_image=8) -> str:
+    """Build leads JSON, capping candidates per source image for visual variety.
+
+    Groups by strip image, keeps top-scored candidates per image so the
+    explorer grid shows genuinely different views rather than the same
+    strip repeated dozens of times.
+    """
     by_img = defaultdict(list)
     for r in rows:
         by_img[r.get("image", "")].append(r)
@@ -851,7 +856,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     for r in rows:
         img = r.get("image", "")
         by_img_count[img] += 1
-        if by_img_count[img] <= 40:
+        if by_img_count[img] <= 8:
             displayed += 1
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
     fcards = ""
