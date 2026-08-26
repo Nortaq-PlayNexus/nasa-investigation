@@ -453,7 +453,7 @@ JS = r"""
   function initExplorer(){
     var grid=document.getElementById('leadsGrid');
     if(!grid)return;
-    var state={q:'',minC:0,vs:new Set(),sort:'score',limit:200};
+    var state={q:'',minC:0,vs:new Set(),sort:'score',limit:200,cur:[]};
     function verdictColor(v){return v;}
     function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
       var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
@@ -471,10 +471,11 @@ JS = r"""
       return true;});
       if(rows!==DIVERSE)rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
       var note=document.getElementById('leadNote');
-      var cap=Math.min(rows.length,state.limit);
-      note.textContent = rows.length ? ('Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.')
-        : 'No candidates match the current filters — press Reset.';
-      grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
+ var cap=Math.min(rows.length,state.limit);
+ note.textContent = rows.length ? ('Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.')
+ : 'No candidates match the current filters - press Reset.';
+ state.cur=rows;
+ grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
       var lm=document.getElementById('loadMore');
       if(lm)lm.style.display=(state.limit<rows.length)?'inline-block':'none';
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
@@ -489,9 +490,22 @@ JS = r"""
       sort.value='score';state.q='';state.minC=0;state.sort='score';state.vs.clear();state.limit=200;
       nl.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
       render();});}
-    var lmBtn=document.getElementById('loadMore');
-    if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
-      lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
+ var lmBtn=document.getElementById('loadMore');
+ if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
+ lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
+ var exBtn=document.getElementById('export');
+ if(exBtn){exBtn.addEventListener('click',function(){
+ var rows=state.cur||LEADS;
+ var cols=['image','x','y','w','h','contrast','score','verdict','confidence','evidence_class','agrees','disagrees','area_px','flags','strip'];
+ var lines=[cols.join(',')];
+  rows.forEach(function(r){
+    var parts=cols.map(function(c){var v=r[c]==null?'':(''+r[c]);
+      return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;});
+    lines.push(parts.join(','));
+  });
+ var blob=new Blob([lines.join('\n')],{type:'text/csv'});
+ var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hirise_leads_export.csv';a.click();
+ URL.revokeObjectURL(a.href);});}
     document.querySelectorAll('.chip').forEach(function(ch){ch.addEventListener('click',function(){var v=ch.dataset.v;
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
@@ -937,8 +951,9 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
       <option value='area_px'>sort: area</option>
       <option value='w'>sort: width</option>
     </select>
-    <button id='reset' class='btn' style='padding:.4rem .8rem'>Reset</button>
-  </div>
+<button id='reset' class='btn' style='padding:.4rem .8rem'>Reset</button>
+<button id='export' class='btn' style='padding:.4rem .8rem'>Export CSV</button>
+</div>
   <div class='chips'>{chips}</div>
   <div class='legend'>{legend_html}</div>
   <div id='leadNote' class='count-note'></div>
