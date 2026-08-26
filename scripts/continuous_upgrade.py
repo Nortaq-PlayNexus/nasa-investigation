@@ -42,7 +42,8 @@ def write_timer(iteration, phase, end_ts):
     remaining = max(0, end_ts - now)
     elapsed = now - START.timestamp()
     pct = min(100, elapsed / (end_ts - START.timestamp()) * 100) if end_ts > START.timestamp() else 0
-    hms = lambda s: f"{int(s // 3600):02d}:{int((s % 3600) // 60):02d}:{int(s % 60):02d}"
+    def hms(s):
+        return f"{int(s // 3600):02d}:{int((s % 3600) // 60):02d}:{int(s % 60):02d}"
     data = {
         "start": START.isoformat(), "end": datetime.datetime.fromtimestamp(end_ts).isoformat(),
         "now": datetime.datetime.now().isoformat(),
@@ -121,9 +122,11 @@ def upgrade_everything(iteration, py):
 def test_all(py):
     log("=== TEST ===")
     if run([py, "-m", "pytest", "tests/", "-q", "-p", "no:cacheprovider"]) != 0:
-        log("TEST FAIL (pytest)"); return False
+        log("TEST FAIL (pytest)")
+        return False
     if run([py, "scripts/build_site.py", "--selftest"]) != 0:
-        log("TEST FAIL (selftest)"); return False
+        log("TEST FAIL (selftest)")
+        return False
     log("ALL TESTS PASS")
     return True
 
@@ -131,7 +134,8 @@ def test_all(py):
 def build_site(py):
     log("=== BUILD SITE ===")
     if run([py, "scripts/build_site.py"]) != 0:
-        log("BUILD FAIL"); return False
+        log("BUILD FAIL")
+        return False
     log("BUILD PASS")
     return True
 
@@ -142,7 +146,8 @@ def verify(py):
             ROOT / "site" / "assets" / "leads.json"]
     for f in need:
         if not f.exists():
-            log(f"VERIFY FAIL missing {f}"); return False
+            log(f"VERIFY FAIL missing {f}")
+            return False
     run([py, "scripts/audit_strips.py"])
     run([py, "scripts/validate_conclusions.py"])
     log("VERIFY PASS")

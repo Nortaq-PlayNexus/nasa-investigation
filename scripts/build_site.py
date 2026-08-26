@@ -604,7 +604,7 @@ JS = r"""
 })();
 """
 
-import hashlib
+import hashlib  # noqa: E402
 
 
 def _ver(s: str) -> str:
@@ -839,7 +839,6 @@ def lead_json(rows, si) -> str:
 
 def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver: str) -> None:
     counts = verdict_counts(rows)
-    dist = " &middot; ".join(f"{html.escape(k)}: {v}" for k, v in sorted(counts.items()))
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
     fcards = ""
     for f in findings:

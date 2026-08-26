@@ -29,7 +29,7 @@ try:
 except Exception:  # noqa: BLE001
     common = None
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -116,14 +116,18 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
     x, y, w, h = [int(v) for v in box]
     iw, ih = im.size
     pad = max(w, h) * 7 + 1
-    cx0 = max(0, int(x - pad)); cy0 = max(0, int(y - pad))
-    cx1 = min(iw, int(x + w + pad)); cy1 = min(ih, int(y + h + pad))
+    cx0 = max(0, int(x - pad))
+    cy0 = max(0, int(y - pad))
+    cx1 = min(iw, int(x + w + pad))
+    cy1 = min(ih, int(y + h + pad))
     crop = im.crop((cx0, cy0, cx1, cy1))
     scale = target_w / float(crop.width)
     tgt_h = max(1, int(round(crop.height * scale)))
     crop = crop.resize((target_w, tgt_h), Image.LANCZOS)
-    bx0 = (x - cx0) * scale; by0 = (y - cy0) * scale
-    bx1 = (x + w - cx0) * scale; by1 = (y + h - cy0) * scale
+    bx0 = (x - cx0) * scale
+    by0 = (y - cy0) * scale
+    bx1 = (x + w - cx0) * scale
+    by1 = (y + h - cy0) * scale
     d = ImageDraw.Draw(crop)
     lw = max(4, int(target_w / 150))
     d.rectangle([bx0, by0, bx1, by1], outline=red, width=lw)
@@ -132,7 +136,8 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
                              (bx0, by1, 1, -1), (bx1, by1, -1, -1)]:
         d.line([(tx, ty), (tx + dx * t, ty)], fill=acc, width=lw)
         d.line([(tx, ty), (tx, ty + dy * t)], fill=acc, width=lw)
-    mxc = (bx0 + bx1) / 2; myc = (by0 + by1) / 2
+    mxc = (bx0 + bx1) / 2
+    myc = (by0 + by1) / 2
     d.line([(mxc - target_w / 18, myc), (mxc + target_w / 18, myc)], fill=red, width=lw - 1)
     d.line([(mxc, myc - target_w / 18), (mxc, myc + target_w / 18)], fill=red, width=lw - 1)
     lbl = "ANOMALY"
@@ -181,7 +186,6 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
     dim = (140, 149, 168)
     acc = (255, 196, 48)
     red = (226, 60, 58)
-    mono = _load_font(30)
     mono_sm = _load_font(24)
     mono_xs = _load_font(20)
     title_f = _load_font(78, True)

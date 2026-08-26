@@ -314,13 +314,13 @@ class TestAdjudicate(unittest.TestCase):
 # --------------------------------------------------------------------------
 
 
-import changedet
-import metadata
-import pds
-import photometry
-import stack as stackmod
-import stereo
-from PIL import Image, ImageFilter
+import changedet  # noqa: E402
+import metadata  # noqa: E402
+import pds  # noqa: E402
+import photometry  # noqa: E402
+import stack as stackmod  # noqa: E402
+import stereo  # noqa: E402
+from PIL import Image, ImageFilter  # noqa: E402
 
 LABEL_RECORD_BYTES = 4096
 
@@ -628,7 +628,7 @@ class TestCommonIO(unittest.TestCase):
 # scipy-free morphology fallback, benchmark temp-file hygiene.
 # --------------------------------------------------------------------------
 
-import analyze
+import analyze  # noqa: E402
 
 
 def _cube_label(bands, storage, prefix=0, lines=4, samples=4):
@@ -654,7 +654,8 @@ def _cube_label(bands, storage, prefix=0, lines=4, samples=4):
 
 
 def _cube_bytes_for(b0, b1, storage, prefix):
-    pre = lambda n: np.full(n, 0xEE, dtype=np.uint16)
+    def pre(n):
+        return np.full(n, 0xEE, dtype=np.uint16)
     lines = b0.shape[0]
     if storage == "BAND_SEQUENTIAL":
         return np.concatenate([np.concatenate([pre(prefix), r])

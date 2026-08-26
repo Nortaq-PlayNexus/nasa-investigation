@@ -23,10 +23,6 @@ import numpy as np
 from PIL import Image
 
 
-def load_img_gray(path):
-    return np.asarray(Image.open(path).convert("L"), dtype=np.float32)
-
-
 RAW_DIR = os.path.join("data", "raw", "moon")
 PROC_DIR = os.path.join("data", "processed", "moon")
 
@@ -154,8 +150,10 @@ def raw_z_score(proc_path, ex, ey, ew, eh, scale=ENH_SCALE):
     sx = sy = 1.0 / scale
     x0, y0 = int(ex * sx), int(ey * sy)
     x1, y1 = int((ex + ew) * sx), int((ey + eh) * sy)
-    x0 = max(0, min(x0, W - 2)); y0 = max(0, min(y0, H - 2))
-    x1 = max(x0 + 2, min(x1, W)); y1 = max(y0 + 2, min(y1, H))
+    x0 = max(0, min(x0, W - 2))
+    y0 = max(0, min(y0, H - 2))
+    x1 = max(x0 + 2, min(x1, W))
+    y1 = max(y0 + 2, min(y1, H))
     fg = raw[y0:y1, x0:x1]
     pad = max(16, int(max((x1 - x0), (y1 - y0)) * 1.5))
     xb0, xb1 = max(0, x0 - pad), min(W, x1 + pad)

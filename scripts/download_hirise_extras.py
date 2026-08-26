@@ -402,7 +402,6 @@ def main(argv: list[str] | None = None) -> int:
 
     out_root = Path(args.out)
     manifest = Path(args.manifest)
-    max_size = None if (args.max_size_mb is not None and args.max_size_mb == 0) else (int(args.max_size_mb * 1024 * 1024) if args.max_size_mb else None)
 
     # Enforce global flag if needed (monkey-patch guard)
     if not args.enforce_extras:
