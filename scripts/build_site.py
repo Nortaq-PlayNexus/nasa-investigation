@@ -805,40 +805,54 @@ def build_leads_data(rows, si) -> str:
     return ver
 
 
-def lead_json(rows, si) -> str:
-    out = []
+def lead_json(rows, si, max_per_image=40) -> str:
+    """Build leads JSON, capping candidates per source image for visual variety."""
+    by_img = defaultdict(list)
     for r in rows:
-        img = r.get("image", "")
-        strip = si.get(img)
-        out.append({
-            "image": img,
-            "x": r.get("x"), "y": r.get("y"), "w": r.get("w"), "h": r.get("h"),
-            "contrast": round(num(r.get("contrast")), 2),
-            "score": round(num(r.get("score")), 1),
-            "verdict": r.get("verdict", ""),
-            "confidence": r.get("confidence", ""),
-            "evidence_class": r.get("evidence_class", ""),
-            "agrees": r.get("agrees", ""), "disagrees": r.get("disagrees", ""),
-            "area_px": r.get("area_px", ""),
-            "polarity": r.get("polarity", ""),
-            "flags": r.get("flags", ""),
-            "persistence": r.get("persistence", ""),
-            "compactness": r.get("compactness", ""),
-            "edge_sharpness": r.get("edge_sharpness", ""),
-            "fdr_q": r.get("fdr_q", ""),
-            "pixel_scale_m": r.get("pixel_scale_m", ""),
-            "size_m": r.get("size_m", ""),
-            "solar_elevation_deg": r.get("solar_elevation_deg", ""),
-            "solar_azimuth_deg": r.get("solar_azimuth_deg", ""),
-            "inferred_height_m": r.get("inferred_height_m", ""),
-            "strip": strip.name if strip else "",
-            "crop": crop_box(strip, r.get("x"), r.get("y"), r.get("w"), r.get("h")),
-        })
+        by_img[r.get("image", "")].append(r)
+    for img_rows in by_img.values():
+        img_rows.sort(key=lambda r: num(r.get("score")), reverse=True)
+    out = []
+    for img in sorted(by_img, key=lambda k: -num(by_img[k][0].get("score"))):
+        for r in by_img[img][:max_per_image]:
+            strip = si.get(img)
+            out.append({
+                "image": img,
+                "x": r.get("x"), "y": r.get("y"), "w": r.get("w"), "h": r.get("h"),
+                "contrast": round(num(r.get("contrast")), 2),
+                "score": round(num(r.get("score")), 1),
+                "verdict": r.get("verdict", ""),
+                "confidence": r.get("confidence", ""),
+                "evidence_class": r.get("evidence_class", ""),
+                "agrees": r.get("agrees", ""), "disagrees": r.get("disagrees", ""),
+                "area_px": r.get("area_px", ""),
+                "polarity": r.get("polarity", ""),
+                "flags": r.get("flags", ""),
+                "persistence": r.get("persistence", ""),
+                "compactness": r.get("compactness", ""),
+                "edge_sharpness": r.get("edge_sharpness", ""),
+                "fdr_q": r.get("fdr_q", ""),
+                "pixel_scale_m": r.get("pixel_scale_m", ""),
+                "size_m": r.get("size_m", ""),
+                "solar_elevation_deg": r.get("solar_elevation_deg", ""),
+                "solar_azimuth_deg": r.get("solar_azimuth_deg", ""),
+                "inferred_height_m": r.get("inferred_height_m", ""),
+                "strip": strip.name if strip else "",
+                "crop": crop_box(strip, r.get("x"), r.get("y"), r.get("w"), r.get("h")),
+            })
     return json.dumps(out, ensure_ascii=False).replace("</", "<\\/")
 
 
 def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver: str) -> None:
     counts = verdict_counts(rows)
+    # Count candidates that will actually appear in the explorer (per-image capped)
+    by_img_count = defaultdict(int)
+    displayed = 0
+    for r in rows:
+        img = r.get("image", "")
+        by_img_count[img] += 1
+        if by_img_count[img] <= 40:
+            displayed += 1
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
     fcards = ""
     for f in findings:
@@ -938,7 +952,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 </div></section>
 
 <section id='explorer'><div class='wrap'>
-  <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>all {len(rows)} adjudicated candidates</span></div>
+  <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>top {displayed} candidates across {len(by_img_count)} source images</span></div>
   <div class='controls'>
     <input id='q' type='search' placeholder='Search image or flag&hellip;'>
     <label style='color:var(--muted);font-size:.85rem'>min contrast
