@@ -11,6 +11,8 @@
   "detect_min_size": 12,
   "detect_scales": "4",
   "detect_max_scale_pixels": 8000000,
+  "detect_border_frac": 0.04,
+  "detect_overlay_threshold": 0.5,
   "analyze_max_crop": 512,
   "adjudicate_max_crop": 512,
   "adjudicate_top": 20,

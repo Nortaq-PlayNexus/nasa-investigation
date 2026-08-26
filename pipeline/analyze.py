@@ -489,10 +489,12 @@ def llm_verdict(strip_path, feats, flags, cls):
 
 
 def main(argv=None):
+    cfg = common.load_config()
     p = argparse.ArgumentParser(description="Enhance, evaluate and investigate anomaly candidates")
     p.add_argument("--candidates", required=True)
     p.add_argument("--out", default="data/anomalies/analysis")
-    p.add_argument("--max-crop", type=int, default=512, help="analysis crop cap per side")
+    p.add_argument("--max-crop", type=int, default=common.option_default(cfg, "analyze_max_crop", 512),
+                   help="analysis crop cap per side")
     p.add_argument("--top", type=int, default=12, help="how many top candidates to ask the LLM about")
     p.add_argument("--llm", action="store_true", help="ask vision LLM for top candidates (requires env AI_LLM_KEY)")
     a = p.parse_args(argv)

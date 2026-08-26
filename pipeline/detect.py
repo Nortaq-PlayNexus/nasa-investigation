@@ -242,24 +242,31 @@ def sun_shadow_sanity(arr, x, y, w, h, solar_azimuth_deg, solar_elevation_deg,
 
 
 def main(argv=None):
+    cfg = common.load_config()
     p = argparse.ArgumentParser(description="Flag local contrast anomalies and emit a candidates CSV")
     p.add_argument("--dir", required=True)
     p.add_argument("--out", required=True)
-    p.add_argument("--scales", default="4", help="downsample factors; finer scales find smaller features")
-    p.add_argument("--z", type=float, default=3.0, help="z-score threshold on the detail map (lower = more candidates)")
-    p.add_argument("--min-size", type=int, default=12, help="min blob area in downsampled pixels")
-    p.add_argument("--max-scale-pixels", type=int, default=8000000,
+    p.add_argument("--scales", default=common.option_default(cfg, "detect_scales", "4"),
+                   help="downsample factors; finer scales find smaller features")
+    p.add_argument("--z", type=float, default=common.option_default(cfg, "detect_z", 3.0),
+                   help="z-score threshold on the detail map (lower = more candidates)")
+    p.add_argument("--min-size", type=int, default=common.option_default(cfg, "detect_min_size", 12),
+                   help="min blob area in downsampled pixels")
+    p.add_argument("--max-scale-pixels", type=int,
+                   default=common.option_default(cfg, "detect_max_scale_pixels", 8000000),
                    help="skip a scale if it would process more pixels than this")
     p.add_argument("--method", choices=("box", "annulus"), default="box",
                    help="background estimator: box blur vs annular ring contrast")
     p.add_argument("--rin", type=int, default=5, help="annulus inner radius (pixels)")
     p.add_argument("--rout", type=int, default=15, help="annulus outer radius (pixels)")
     p.add_argument("--exts", default=".png")
-    p.add_argument("--border-frac", type=float, default=0.04,
+    p.add_argument("--border-frac", type=float,
+                   default=common.option_default(cfg, "detect_border_frac", 0.04),
                    help="fraction of each dimension kept clear along image "
                         "borders (0 disables); edges host calibration strips, "
                         "dark bands and vignetting, not anomalies")
-    p.add_argument("--overlay-threshold", type=float, default=0.5,
+    p.add_argument("--overlay-threshold", type=float,
+                   default=common.option_default(cfg, "detect_overlay_threshold", 0.5),
                    help="text/annotation overlay confidence that marks an "
                         "image as annotated (0 disables overlay skipping)")
     p.add_argument("--keep-overlays", action="store_true",

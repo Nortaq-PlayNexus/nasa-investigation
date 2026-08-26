@@ -254,15 +254,15 @@ def validate_box(x, y, w, h, W, H, margin_ok=False):
         return False
     if not margin_ok and (x < 0 or y < 0 or x + w > W or y + h > H):
         return False
-    return x >= 0 and y >= 0 and x + w <= W and y + h <= H
+    return True
 
 
 def contain_path(path):
     """Reject paths escaping the project root (defense in depth)."""
     p = os.path.abspath(path)
     root = os.path.abspath(PROJECT_ROOT)
-    common = os.path.commonpath([p, root]) if os.name != "nt" else os.path.normcase(os.path.commonpath([p, root]))
-    return common == root
+    common_prefix = os.path.commonpath([p, root]) if os.name != "nt" else os.path.normcase(os.path.commonpath([p, root]))
+    return common_prefix == root
 
 
 # --------------------------------------------------------------------------
@@ -329,6 +329,8 @@ CONFIG_SCHEMA = {
     "detect_min_size": int,
     "detect_scales": str,
     "detect_max_scale_pixels": int,
+    "detect_border_frac": float,
+    "detect_overlay_threshold": float,
     "analyze_max_crop": int,
     "adjudicate_max_crop": int,
     "adjudicate_top": int,
