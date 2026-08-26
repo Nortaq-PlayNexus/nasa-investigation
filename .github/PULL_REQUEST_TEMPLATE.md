@@ -13,8 +13,8 @@ Brief description of the changes.
 
 ## Testing
 
-- [ ] Tests pass (`python -m pytest tests/test_pipeline.py -v`)
-- [ ] Linter passes (`ruff check .`)
+- [ ] Tests pass (`python -m pytest tests/ -q`)
+- [ ] Linter passes (`ruff check scripts/ tests/ pipeline/ bot/ app/`)
 - [ ] New tests added for new features
 
 ## Checklist

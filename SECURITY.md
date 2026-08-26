@@ -57,5 +57,5 @@ However, we take security seriously and address all valid reports.
 
 | Version | Supported |
 |---------|-----------|
-| 1.0.x   | Yes       |
-| < 1.0   | No        |
+| 1.4.x   | Yes       |
+| < 1.4   | No        |

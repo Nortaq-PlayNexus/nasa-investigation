@@ -28,7 +28,7 @@ What actually happened (include error output).
 
 - **OS:** [e.g., Windows 11, Ubuntu 22.04]
 - **Python version:** [e.g., 3.11.5]
-- **Project version:** [e.g., 1.0.95]
+- **Project version:** [e.g., 1.4.50]
 - **Dependencies:** [core only / extras / fullstack / bot]
 
 ## Additional Context
