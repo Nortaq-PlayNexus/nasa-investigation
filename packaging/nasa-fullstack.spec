@@ -42,9 +42,11 @@ datas = [
     (str(ROOT / "config" / "sources.yaml"), "config"),
 ]
 
-# app dashboard (always)
-if (ROOT / "app" / "static").exists():
-    datas.append((str(ROOT / "app" / "static"), "app/static"))
+# Frontend: bundle the dossier site/ as app/static so the frozen exe serves it
+# at / (the site uses root-relative assets/, results/, report/ which the server
+# mounts). In dev, server.py prefers site/ directly; in the exe, app/static == site.
+if (ROOT / "site").exists():
+    datas.append((str(ROOT / "site"), "app/static"))
 
 # showcase: full gallery (index.html + img thumbs + css/js is inline)
 # 90 MB — the portable gallery. Full-res originals stay in data/processed

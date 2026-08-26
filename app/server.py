@@ -397,7 +397,17 @@ def create_fastapi_app():
         return {"stats": _build_stats(), "features": [], "findings": [], "sources": [], "marked": []}
 
     # ---- static mounts ----
-    # app/static (new full-stack dashboard)
+    # Frontend: the dossier site/ is the single source of truth. The PyInstaller
+    # spec bundles site/ as app/static, so the frozen exe serves it from app/static.
+    frontend_dir = ROOT / "site" if (ROOT / "site" / "index.html").exists() else (ROOT / "app" / "static")
+    # dossier root-relative assets (assets/, results/, report/) -> served at /
+    if (frontend_dir / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(frontend_dir / "assets")), name="assets")
+    if (frontend_dir / "results").exists():
+        app.mount("/results", StaticFiles(directory=str(frontend_dir / "results")), name="results")
+    if (frontend_dir / "report").exists():
+        app.mount("/report", StaticFiles(directory=str(frontend_dir / "report"), html=True), name="report")
+    # legacy dashboard assets (kept for backward compatibility)
     static_dir = ROOT / "app" / "static"
     if static_dir.exists():
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static-app")
@@ -413,8 +423,8 @@ def create_fastapi_app():
     # ---- root: serve the full-stack dashboard, fallback to showcase ----
     @app.get("/", response_class=HTMLResponse)
     def root():
-        # Prefer new dashboard
-        dash = ROOT / "app" / "static" / "index.html"
+        # Prefer new dossier frontend
+        dash = frontend_dir / "index.html"
         if dash.exists():
             return dash.read_text(encoding="utf-8", errors="replace")
         sh = ROOT / "showcase" / "index.html"
@@ -450,8 +460,8 @@ def run_stdlib_server(host: str = "127.0.0.1", port: int = 8000):
                 self.send_json({"audit": _safe_read_jsonl(ROOT / "data" / "anomalies" / "audit.jsonl")})
                 return
             if parsed.path in ("/", "/dashboard", "/index.html"):
-                dash = ROOT / "app" / "static" / "index.html"
-                target = dash if dash.exists() else (ROOT / "showcase" / "index.html")
+                frontend = ROOT / "site" / "index.html" if (ROOT / "site" / "index.html").exists() else (ROOT / "app" / "static" / "index.html")
+                target = frontend if frontend.exists() else (ROOT / "showcase" / "index.html")
                 if target.exists():
                     self.send_file(target, "text/html")
                 else:
@@ -460,8 +470,19 @@ def run_stdlib_server(host: str = "127.0.0.1", port: int = 8000):
                     self.end_headers()
                     self.wfile.write(b"<h1>NASA Investigation</h1><p>API at /api/health</p>")
                 return
-            # serve showcase / data statically
-            # map /showcase/* -> showcase/* , /data/* -> data/*
+            # dossier frontend paths (assets/, results/, report/) -> site/ or app/static
+            frontend = ROOT / "site" if (ROOT / "site" / "index.html").exists() else (ROOT / "app" / "static")
+            for prefix, sub in (("/assets/", "assets"), ("/results/", "results"), ("/report/", "report")):
+                if parsed.path.startswith(prefix):
+                    fs = frontend / sub / parsed.path[len(prefix):]
+                    if fs.is_dir():
+                        fs = fs / "index.html"
+                    if fs.exists() and fs.is_file():
+                        ctype = "text/html" if fs.suffix == ".html" else ("application/json" if fs.suffix == ".json" else "application/octet-stream")
+                        self.send_file(fs, ctype)
+                        return
+            # serve showcase / data / legacy static
+            # map /showcase/* -> showcase/* , /data/* -> data/* , /static/* -> app/static/*
             if parsed.path.startswith("/showcase/") or parsed.path.startswith("/data/") or parsed.path.startswith("/static/"):
                 # translate to filesystem
                 rel = parsed.path.lstrip("/")
