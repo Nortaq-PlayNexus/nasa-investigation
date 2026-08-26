@@ -322,8 +322,9 @@ def main(argv=None):
         cand = list(csv.DictReader(f))
     with open(a.evaluated, newline="", encoding="utf-8") as f:
         ev = list(csv.DictReader(f))
-    key = lambda r: (r["image"], r["x"], r["y"], r["w"], r["h"])
-    ev_by_key = {key(r): r for r in ev}
+    def _sort_key(r):
+        return (r["image"], r["x"], r["y"], r["w"], r["h"])
+    ev_by_key = {_sort_key(r): r for r in ev}
     geom_rows = load_geometry(a.metadata)
     common.log("info", "adjudicate: %d candidates, %d evaluated rows, %d geometry rows"
                % (len(cand), len(ev), len(geom_rows)))
@@ -336,7 +337,7 @@ def main(argv=None):
     out_rows = []
     skipped = 0
     for i, row in enumerate(cand):
-        e = ev_by_key.get(key(row))
+        e = ev_by_key.get(_sort_key(row))
         if e is None:
             skipped += 1
             continue

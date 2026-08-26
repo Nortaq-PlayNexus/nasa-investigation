@@ -37,13 +37,13 @@ def disparity_map(left, right, block=9, search=16):
     of `left`, the displacement into `right` with the lowest SSD, and ssd is
     the matching cost. Arrays are float32 for bdx/bdy.
     """
-    l = np.asarray(left, dtype=np.float32)
-    r = np.asarray(right, dtype=np.float32)
-    h, w = l.shape
+    left_arr = np.asarray(left, dtype=np.float32)
+    right_arr = np.asarray(right, dtype=np.float32)
+    h, w = left_arr.shape
     if h * w > 1_500_000:
         raise ValueError("disparity_map too large (%dx%d); downscale first" % (h, w))
-    if l.shape != r.shape:
-        raise ValueError("stereo frames must be same size: %s vs %s" % (l.shape, r.shape))
+    if left_arr.shape != right_arr.shape:
+        raise ValueError("stereo frames must be same size: %s vs %s" % (left_arr.shape, right_arr.shape))
 
     s = int(search)
     best = np.full((h, w), np.inf, dtype=np.float64)
@@ -53,13 +53,13 @@ def disparity_map(left, right, block=9, search=16):
 
     for dy in range(-s, s + 1):
         for dx in range(-s, s + 1):
-            shifted = np.zeros_like(l)
+            shifted = np.zeros_like(left_arr)
             r0 = max(0, dy)
             r1 = min(h, h + dy)
             c0 = max(0, dx)
             c1 = min(w, w + dx)
-            shifted[r0:r1, c0:c1] = r[r0 - dy:r1 - dy, c0 - dx:c1 - dx]
-            d2 = (l - shifted) ** 2
+            shifted[r0:r1, c0:c1] = right_arr[r0 - dy:r1 - dy, c0 - dx:c1 - dx]
+            d2 = (left_arr - shifted) ** 2
             ssd = _box_sum(d2, block)
             m = ssd < best
             bdx[m] = dx
@@ -123,17 +123,17 @@ def height_from_disparity(disp_px, altitude_m, baseline_m, focal_px):
 
 def anaglyph(left, right, shift=None):
     """Red-cyan anaglyph from a stereo pair (left = red, right = cyan)."""
-    l = np.asarray(left, dtype=np.float32)
-    r = np.asarray(right, dtype=np.float32)
-    if l.shape != r.shape:
+    left_arr = np.asarray(left, dtype=np.float32)
+    right_arr = np.asarray(right, dtype=np.float32)
+    if left_arr.shape != right_arr.shape:
         raise ValueError("anaglyph needs equal-size frames")
-    lo = min(l.min(), r.min())
-    hi = max(l.max(), r.max())
+    lo = min(left_arr.min(), right_arr.min())
+    hi = max(left_arr.max(), right_arr.max())
     span = max(1.0, float(hi - lo))
     scale = 255.0 / span
-    l8 = np.clip((l - lo) * scale, 0, 255).astype(np.uint8)
-    r8 = np.clip((r - lo) * scale, 0, 255).astype(np.uint8)
-    out = np.zeros(l.shape + (3,), dtype=np.uint8)
+    l8 = np.clip((left_arr - lo) * scale, 0, 255).astype(np.uint8)
+    r8 = np.clip((right_arr - lo) * scale, 0, 255).astype(np.uint8)
+    out = np.zeros(left_arr.shape + (3,), dtype=np.uint8)
     out[..., 0] = l8
     out[..., 1] = r8
     out[..., 2] = r8

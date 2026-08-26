@@ -172,6 +172,7 @@ def _parse_pds4(text):
         if child.tag.startswith("{"):
             ns = child.tag.split("}")[0].strip("{}")
             break
+    del ns  # namespace detected but not needed by local()
     def local(el):
         return el.tag.rsplit("}", 1)[-1]
     for el in root.iter():
@@ -349,7 +350,7 @@ def _data_file_and_offset(data, text_start_offset, label_path):
     if isinstance(pointer, tuple):
         fname = str(pointer[0]).strip('"')
         rec = _to_int(pointer[1]) if len(pointer) > 1 else None
-        nbytes = _to_int(pointer[2]) if len(pointer) > 2 else None
+        _nbytes = _to_int(pointer[2]) if len(pointer) > 2 else None
         path = os.path.join(label_dir, fname)
         if rec is not None and record_bytes:
             offset = rec * record_bytes
@@ -555,7 +556,7 @@ def read_band(label_path, band, dtype_float=True):
                          % (band, geom["bands"]))
     if geom["storage"] != "BAND_SEQUENTIAL":
         return read_image(label_path, band=band, dtype_float=dtype_float)
-    flat = label_flat(data)
+    _flat = label_flat(data)
     path, offset = _data_file_and_offset(data, 0, label_path)
     dtype = _dtype_from_pds3(geom["sample_type"], geom["bits"])
     prefix = _to_int(label_in(data, "IMAGE", "LINE_PREFIX_BYTES")) or 0
@@ -607,12 +608,13 @@ def _pds4_dtype(dtype_name, byte_size):
 def _read_pds4(label_path, band=None, dtype_float=True):
     tree = ET.parse(label_path)
     root = tree.getroot()
-    local = lambda el: el.tag.rsplit("}", 1)[-1]
+    def _local(el):
+        return el.tag.rsplit("}", 1)[-1]
 
     # data file name
     fname = None
     for el in root.iter():
-        if local(el) == "File_Name":
+        if _local(el) == "File_Name":
             fname = el.text.strip()
             break
     if not fname:
@@ -621,8 +623,8 @@ def _read_pds4(label_path, band=None, dtype_float=True):
 
     array = None
     for el in root.iter():
-        if local(el) in ("Array_2D_Image", "Array_2D_Map", "Array_2D_Spectral_Image",
-                         "Array_3D_Image", "Array_3D_Map", "Array_3D_Spectral_Image"):
+        if _local(el) in ("Array_2D_Image", "Array_2D_Map", "Array_2D_Spectral_Image",
+                          "Array_3D_Image", "Array_3D_Map", "Array_3D_Spectral_Image"):
             array = el
             break
     if array is None:
@@ -630,7 +632,7 @@ def _read_pds4(label_path, band=None, dtype_float=True):
 
     elem = None
     for el in array.iter():
-        if local(el) == "Element_Array":
+        if _local(el) == "Element_Array":
             elem = el
             break
     dtype = np.dtype("u1")
@@ -638,18 +640,18 @@ def _read_pds4(label_path, band=None, dtype_float=True):
         dt = ""
         bs = None
         for sub in elem.iter():
-            if local(sub) == "Data_Type":
+            if _local(sub) == "Data_Type":
                 dt = sub.text.strip()
-            if local(sub) == "Byte_Size":
+            if _local(sub) == "Byte_Size":
                 bs = int(sub.text.strip())
         dtype = _pds4_dtype(dt, bs)
 
     axes = []  # (name, size, offset, length)
     for el in array.iter():
-        if local(el) == "Axis_Array":
+        if _local(el) == "Axis_Array":
             name = size = off = length = None
             for sub in el.iter():
-                t = local(sub)
+                t = _local(sub)
                 if t == "Axis_Name":
                     name = sub.text.strip()
                 elif t == "Axis_Size":
@@ -666,7 +668,7 @@ def _read_pds4(label_path, band=None, dtype_float=True):
 
     data_offset = 0
     for el in root.iter():
-        if local(el) == "Byte_Stream":
+        if _local(el) == "Byte_Stream":
             off = el.attrib.get("offset")
             if off is not None:
                 data_offset = int(off)
@@ -708,10 +710,11 @@ def image_geometry(label_path):
         text = f.read()
     if is_pds4_text(text):
         tree = ET.fromstring(text)
-        local = lambda el: el.tag.rsplit("}", 1)[-1]
+        def _local(el):
+            return el.tag.rsplit("}", 1)[-1]
         sizes = []
         for el in tree.iter():
-            if local(el) == "Axis_Size":
+            if _local(el) == "Axis_Size":
                 try:
                     sizes.append(int(el.text.strip()))
                 except (TypeError, ValueError):

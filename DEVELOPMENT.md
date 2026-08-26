@@ -27,7 +27,7 @@ python scripts/run_pipeline.py --selftest
 ## Linting
 
 ```bash
-ruff check scripts/ tests/ bot/ app/
+ruff check scripts/ tests/ pipeline/ bot/ app/
 ```
 
 ## Project Structure
