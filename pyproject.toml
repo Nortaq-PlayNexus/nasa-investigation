@@ -23,6 +23,7 @@ screenshots = ["playwright>=1.40.0"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+extend-include = ["bot/", "app/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

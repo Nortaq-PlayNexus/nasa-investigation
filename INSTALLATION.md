@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Python:** 3.9 or higher
+- **Python:** 3.10 or higher
 - **OS:** Windows, Linux, or macOS
 - **Disk:** ~100 MB for code, variable for data
 
@@ -23,7 +23,6 @@ pip install -e .[dev]
 This installs:
 - Core dependencies (numpy, Pillow)
 - Dev tools (pytest, ruff)
-- PyInstaller for EXE builds
 
 ## Optional Dependencies
 
@@ -41,7 +40,7 @@ Provides:
 ### Full-Stack Dashboard
 
 ```bash
-pip install -e .[fullstack]
+pip install fastapi uvicorn
 ```
 
 Provides:
@@ -51,12 +50,8 @@ Provides:
 ### Discord Bot
 
 ```bash
-pip install -e .[bot]
+pip install discord.py aiohttp
 ```
-
-Provides:
-- discord.py framework
-- aiohttp for asset downloads
 
 ## Standalone EXE
 
@@ -76,4 +71,4 @@ See [packaging/README.md](../packaging/README.md) for build details.
 python scripts/run_pipeline.py --selftest
 ```
 
-This runs the full test suite (69+ cases) to verify everything works.
+This runs the full test suite (88 cases) to verify everything works.

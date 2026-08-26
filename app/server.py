@@ -242,7 +242,7 @@ def create_fastapi_app():
         import uvicorn  # noqa: F401
         from fastapi import FastAPI, File, HTTPException, Request, UploadFile
         from fastapi.middleware.cors import CORSMiddleware
-        from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+        from fastapi.responses import HTMLResponse, JSONResponse
         from fastapi.staticfiles import StaticFiles
     except ImportError:
         return None

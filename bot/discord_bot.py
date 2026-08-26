@@ -36,8 +36,8 @@ from PIL import Image, ImageDraw
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "pipeline"))
 
-import analyze
-import detect
+import analyze  # noqa: E402
+import detect  # noqa: E402
 
 MAX_PIXELS = int(os.environ.get("ANOMALY_MAX_PIXELS", "4_000_000"))
 MAX_BYTES = int(os.environ.get("ANOMALY_MAX_BYTES", str(25 * 1024 * 1024)))

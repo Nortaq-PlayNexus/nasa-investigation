@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.50] - 2026-08-26
+
+### Fixed
+- **32 ruff lint errors** across scripts/ and tests/ (E702, E731, E402, F811, F841)
+- **Dead dependency cleanup** — removed unused `requests`, moved `playwright` to optional
+- **Doc drift** — corrected Python version (3.9→3.10), test counts (69→88), removed nonexistent extras references
+- **CI hardening** — removed `|| true` from ruff check, added Python 3.13 to matrix
+
 ## [1.0.95] - 2026-08-25
 
 ### Added
@@ -16,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Bounding box scaling** in `make_strip()` — crop coordinates now correctly scale when tiles are resized to 256px height
-- **Double audio** in RustVoiceBooster — native WASAPI stream is now the sole live path; WebAudio `setSinkId` is fallback-only
 - **Version mismatch** — app package version aligned with pyproject.toml (1.0.95)
 
 ### Changed

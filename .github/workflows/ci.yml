@@ -29,7 +29,7 @@ jobs:
           pip install pytest ruff
 
       - name: Lint with ruff
-        run: ruff check scripts/ tests/
+        run: ruff check scripts/ tests/ bot/ app/
 
       - name: Run dossier helper tests
         run: python -m pytest tests/ -q -p no:cacheprovider

@@ -1,6 +1,6 @@
 # Roadmap
 
-## Current Status: v1.0.95 — Production Ready
+## Current Status: v1.4.50 — Production Ready
 
 The core anomaly investigation pipeline is complete and functional. The system acquires, catalogs, enhances, detects, analyzes, and adjudicates anomalies in HiRISE EXTRAS imagery.
 

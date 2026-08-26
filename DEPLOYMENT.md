@@ -30,10 +30,10 @@ Distribute the single file. Data stays next to the EXE.
 | `python scripts/build_app.py --onefile` | Single `.exe` | Portable single file |
 | `python scripts/build_app.py --bot` | `dist/nasa-bot/` | Discord bot |
 
-## Full-Stack Server
+### Full-Stack Server
 
 ```bash
-pip install -e .[fullstack]
+pip install fastapi uvicorn
 python scripts/build_app.py --fullstack
 dist/nasa-fullstack/nasa-fullstack.exe
 # Opens http://127.0.0.1:8000
@@ -59,10 +59,10 @@ nasa-fullstack.exe --from detect --to adjudicate  # CLI with step range
 | `/api/pipeline/status` | GET | Current pipeline status |
 | `/showcase/` | GET | Investigation showcase |
 
-## Discord Bot
+### Discord Bot
 
 ```bash
-pip install -e .[bot]
+pip install discord.py aiohttp
 $env:DISCORD_TOKEN = "<your-token>"
 python bot/discord_bot.py
 ```
