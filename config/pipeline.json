@@ -21,5 +21,9 @@
   "adjudicate_area_max": 50000,
   "adjudicate_q": 0.05,
   "benchmark_seed": 7,
-  "benchmark_sizes": "8,16,24,32,48,64,96,128"
+  "benchmark_sizes": "8,16,24,32,48,64,96,128",
+  "llm_endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "llm_model": "meta-llama/llama-3.2-90b-vision-instruct",
+  "llm_max_tokens": 300,
+  "llm_timeout": 60
 }

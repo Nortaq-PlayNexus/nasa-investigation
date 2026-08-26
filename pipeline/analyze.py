@@ -455,9 +455,12 @@ def load_size(path):
 
 
 def llm_verdict(strip_path, feats, flags, cls):
+    cfg = common.load_config()
     key = os.environ.get("AI_LLM_KEY")
-    endpoint = os.environ.get("AI_LLM_ENDPOINT", "https://openrouter.ai/api/v1/chat/completions")
-    model = os.environ.get("AI_LLM_MODEL", "meta-llama/llama-3.2-90b-vision-instruct")
+    endpoint = os.environ.get("AI_LLM_ENDPOINT", cfg.get("llm_endpoint", "https://openrouter.ai/api/v1/chat/completions"))
+    model = os.environ.get("AI_LLM_MODEL", cfg.get("llm_model", "meta-llama/llama-3.2-90b-vision-instruct"))
+    max_tokens = int(os.environ.get("AI_LLM_MAX_TOKENS", cfg.get("llm_max_tokens", 300)))
+    timeout = int(os.environ.get("AI_LLM_TIMEOUT", cfg.get("llm_timeout", 60)))
     if not key:
         return ""
     with open(strip_path, "rb") as f:
@@ -475,13 +478,13 @@ def llm_verdict(strip_path, feats, flags, cls):
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}},
         ]}],
-        "max_tokens": 300,
+        "max_tokens": max_tokens,
     }
     req = urllib.request.Request(
         endpoint, data=json.dumps(payload).encode(),
         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode())
         return data["choices"][0]["message"]["content"].strip()
     except Exception as e:

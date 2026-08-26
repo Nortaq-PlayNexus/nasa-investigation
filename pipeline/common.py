@@ -340,6 +340,10 @@ CONFIG_SCHEMA = {
     "adjudicate_q": float,
     "benchmark_seed": int,
     "benchmark_sizes": str,
+    "llm_endpoint": str,
+    "llm_model": str,
+    "llm_max_tokens": int,
+    "llm_timeout": int,
 }
 
 
