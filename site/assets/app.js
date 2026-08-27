@@ -20,54 +20,105 @@
       x.fillStyle='rgba(180,205,255,'+(0.4+Math.random()*0.5)+')';x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();}
       requestAnimationFrame(draw);}rs();draw();addEventListener('resize',rs);}
 
-  // lightbox / dossier
+  // lightbox / dossier — grouped: one distinct anomaly holds all band views
   var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
   var LEADMAP={};
+  function stripFrom(r){
+    // grouped feature may carry strip at top level or inside variants[0]
+    if(r.strip) return r.strip;
+    if(r.variants && r.variants[0] && r.variants[0].strip) return r.variants[0].strip;
+    if(r.members && r.members[0] && r.members[0].strip) return r.members[0].strip;
+    return '';
+  }
+  function cropFrom(r){
+    if(r.crop) return r.crop;
+    if(r.variants && r.variants[0] && r.variants[0].crop) return r.variants[0].crop;
+    if(r.members && r.members[0] && r.members[0].crop) return r.members[0].crop;
+    return null;
+  }
   function cropDiv(r){
-    var s=stripUrl(r.strip);
-    if(!s||!r.crop) return '<div class="ph">no strip</div>';
-    var c=r.crop, fw=c[2], fh=c[3];
+    var s=stripUrl(stripFrom(r)), c=cropFrom(r);
+    if(!s||!c) return '<div class="ph">no strip — enhancements pending</div>';
+    var fw=c[2], fh=c[3];
     var bx = fw>=1?0:(c[0]/(1-fw)*100);
     var by = fh>=1?0:(c[1]/(1-fh)*100);
     return '<div class="crop" style="background-image:url('+s+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%"></div>';
   }
+  function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function dossierHTML(r){
-    var strip=cropDiv(r);
-    var ctx = (stripUrl(r.strip)&&r.crop)
-      ? '<div class="db-ctx"><img src="'+stripUrl(r.strip)+'">'
-        +'<span class="box" style="left:'+(r.crop[0]*100)+'%;top:'+(r.crop[1]*100)
-        +'%;width:'+(r.crop[2]*100)+'%;height:'+(r.crop[3]*100)+'%"></span></div>'
+    // grouped vs legacy flat: support both
+    var variants = r.variants || r.members || [r];
+    var isGrouped = variants.length>1 || r.base;
+    var primaryStrip=cropDiv(r);
+    // build gallery of every image of this anomaly
+    var gallery='';
+    if(isGrouped && variants.length>1){
+      gallery='<div class="gallery">'+variants.map(function(v){
+        var su=stripUrl(v.strip||stripFrom(v));
+        var c=v.crop, style='';
+        if(su && c){
+          var fw=c[2],fh=c[3],bx=fw>=1?0:(c[0]/(1-fw)*100),by=fh>=1?0:(c[1]/(1-fh)*100);
+          style='background-image:url('+su+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%';
+        }
+        var thumb = (su&&c) ? '<div class="crop" style="'+style+'"></div>' : '<div class="ph" style="padding:18px">'+escH(v.image||v.band||'no strip')+'</div>';
+        return '<figure><div style="position:relative;aspect-ratio:16/9;background:#05070a;overflow:hidden">'+thumb+'</div><figcaption>'+escH(v.band||'')+' '+escH(v.image||'')+' — '+v.score+' / c'+v.contrast+'</figcaption></figure>';
+      }).join('')+'</div><div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:.35rem">All '+variants.length+' views of this physical anomaly are shown above — same crater/rock seen in '+(r.bands?r.bands.join(' / '):variants.map(function(v){return v.band;}).join(' / '))+' and nearby crops within 8 px. The grid now shows this as a single card.</div>';
+    } else {
+      gallery='';
+    }
+    var ctx = (stripUrl(stripFrom(r)) && cropFrom(r))
+      ? '<div class="db-ctx"><img src="'+stripUrl(stripFrom(r))+'">'
+        +'<span class="box" style="left:'+(cropFrom(r)[0]*100)+'%;top:'+(cropFrom(r)[1]*100)
+        +'%;width:'+(cropFrom(r)[2]*100)+'%;height:'+(cropFrom(r)[3]*100)+'%"></span></div>'
       : '';
-    var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
-    var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
-    var view='https://www.uahirise.org/'+prod.toLowerCase();
+    var prod=(r.base||r.image||'').split('.')[0].split('_').slice(0,3).join('_'), pfx=(r.image||r.base||'').split('_')[0];
+    // for files like ESP_013236_1410 we want the full prod id as stored in base
+    var fullProd=(r.base||r.image||'').split('.')[0];
+    var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+fullProd+'/';
+    var view='https://www.uahirise.org/'+fullProd.toLowerCase();
     function f(k,v){return '<div class="df"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
-    var info='<h3>Dossier</h3>'
-      +f('VERDICT',r.verdict)+f('CONFIDENCE',r.confidence||'—')+f('SCORE',r.score)
+    var sc=r.max_score!=null?r.max_score:r.score, ct=r.max_contrast!=null?r.max_contrast:r.contrast;
+    var flagsDisp = r.flags ? (Array.isArray(r.flags)?r.flags.join(', '):r.flags) : (variants.map(function(v){return v.flags;}).filter(Boolean).join(', ')||'—');
+    var info='<h3>Dossier — '+(isGrouped? (variants.length+' views grouped'): 'single view')+'</h3>'
+      +f('ANOMALY', escH(r.base||r.image||'—') + (isGrouped?' <span class="vcount">'+variants.length+' variants — '+((r.bands||[]).join(' / ') || 'bands')+'</span>':''))
+      +f('VERDICT',r.verdict|| (r.verdicts?r.verdicts.join(' / '):'—'))+f('CONFIDENCE',r.confidence||'—')+f('SCORE (best)',sc)
       +f('POLARITY / CLASS',(r.polarity||'—')+' / '+(r.evidence_class||'—'))
-      +f('CONTRAST',r.contrast)+f('AREA (px)',r.area_px||'—')+f('SIZE',(r.w||'?')+'x'+(r.h||'?')+' px')
-      +f('PIXEL (x,y)','x'+r.x+' y'+r.y)
+      +f('CONTRAST (best)',ct)+f('AREA (px)',r.area_px||'—')+f('SIZE',(r.w||'?')+'×'+(r.h||'?')+' px')
+      +f('PIXEL (x,y)','x'+r.x+' y'+r.y + (isGrouped?' — representative':''))
       +f('AGREE / DISAGREE',(r.agrees||'?')+' / '+(r.disagrees||'?'))
       +f('PERSISTENCE',r.persistence||'—')+f('COMPACTNESS',r.compactness||'—')
       +f('EDGE SHARP',r.edge_sharpness||'—')+f('FDR Q',r.fdr_q||'—')
       +f('SOLAR EL/AZ',(r.solar_elevation_deg||'?')+'° / '+(r.solar_azimuth_deg||'?')+'°')
-      +f('FLAGS',r.flags||'—');
+      +f('FLAGS',flagsDisp);
+    // per-variant table
+    var perBand='';
+    if(isGrouped){
+      perBand='<div class="sect" style="margin-top:.9rem">Every image of this anomaly</div><table style="width:100%;font-size:.74rem;border-collapse:collapse"><tr style="color:var(--muted);font-family:var(--mono)"><th style="text-align:left;padding:.2rem .4rem">band</th><th>image</th><th>score</th><th>contrast</th><th>x,y</th><th>box</th></tr>'
+        +variants.map(function(v){return '<tr><td style="padding:.2rem .4rem">'+escH(v.band||'')+'</td><td style="font-family:var(--mono);font-size:.70rem;word-break:break-all">'+escH(v.image)+'</td><td>'+v.score+'</td><td>'+v.contrast+'</td><td>'+v.x+','+v.y+'</td><td>'+v.w+'×'+v.h+'</td></tr>';}).join('')
+        +'</table>';
+    }
     var verify='<div class="sect">Verify This Lead</div><ul class="verify">'
       +'<li>EDR original: hirise-pds.lpl.arizona.edu/EXTRAS</li>'
       +'<li>Mars Trek geolocate: trek.nasa.gov/mars</li>'
-      +'<li>Cross-band persistence: '+(r.agrees||'?')+' agree / '+(r.disagrees||'?')+' disagree</li>'
-      +'<li>Seek independent pass, different solar angle</li>'
+      +'<li>Cross-band persistence: '+(r.agrees||'?')+' agree / '+(r.disagrees||'?')+' disagree — now collapsed into one card</li>'
+      +'<li>Seek independent pass, different solar angle — see.gallery</li>'
       +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
       +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
         +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>'
+        +perBand
         +'<button id="copyLink" class="btn" style="margin-top:.6rem;width:100%">Copy shareable link</button>';
-        return '<div class="dossier-board"><div class="db-img">'+strip+'</div>'
-      +'<div class="db-cap">TARGET LOCK // '+r.image+'</div>'+ctx+'</div>'
+        return '<div class="dossier-board"><div class="db-img">'+primaryStrip+'</div>'
+      +'<div class="db-cap">TARGET LOCK // '+escH(r.base||r.image)+' — '+(isGrouped? variants.length+' views': '1 view')+'</div>'+ctx+gallery+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
- function openDossier(img){var r=LEADMAP[img];if(!r)return;
-  lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
-  lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(img));
+  function keyOf(r){return r.base || r.image || '';}
+  function openDossier(img){var r=LEADMAP[img];if(!r){
+    // try lookup by base as well
+    for(var k in LEADMAP){ if(LEADMAP[k] && (LEADMAP[k].base===img || LEADMAP[k].image===img)){ r=LEADMAP[k]; break; } }
+    if(!r) return;
+  }
+   lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
+   lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(keyOf(r)));
   var cb=lbBox.querySelector('#copyLink');
   if(cb){cb.addEventListener('click',function(e){e.stopPropagation();
     navigator.clipboard.writeText(location.href).then(function(){cb.textContent='Link copied';setTimeout(function(){cb.textContent='Copy shareable link';},1500);});
@@ -77,33 +128,59 @@
   function closeLb(){lb.classList.remove('open');history.replaceState(null,'',location.pathname+location.search);}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
-  // leads explorer (initialised after leads.json loads)
+  // leads explorer (initialised after leads.json loads) — now grouped features
   function initExplorer(){
     var grid=document.getElementById('leadsGrid');
     if(!grid)return;
     var state={q:'',minC:0,vs:new Set(),sort:'score',limit:200,cur:[]};
-    function verdictColor(v){return v;}
-    function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
-      var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
+    function isCL(r){var v=r.verdict|| (r.verdicts&&r.verdicts[0]) ||''; return v.indexOf('CONFIRMED')===0;}
+    function card(r){
+      var cl=isCL(r);
+      var stamp=cl?'<div class="stamp">CONFIRMED LEAD</div>':'';
       var strip=cropDiv(r);
-      return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'">'
+      var variants = r.variants || r.members || [];
+      var vc = variants.length>1 ? '<span class="vcount">'+variants.length+' views</span>' : '';
+      var bands = (r.bands||[]).map(function(b){return '<span class="pill p-'+r.verdict+'" style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d;font-size:.62rem">'+b+'</span>';}).join('');
+      // show base as title, with count; still index by base so dossier groups open
+      var title = escH(r.base||r.image);
+      var scoreDisp = r.max_score!=null?r.max_score:r.score;
+      var contrastDisp = r.max_contrast!=null?r.max_contrast:r.contrast;
+      var verdictDisp = r.verdict|| (r.verdicts?r.verdicts[0]:'');
+      return '<div class="lead" data-img="'+escH(r.base||r.image)+'" data-strip="'+escH(r.strip||'')+'">'
         +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
-        +'<div class="body"><div class="name">'+r.image+'</div>'
-        +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
-        +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
+        +'<div class="body"><div class="name">'+title+' '+vc+'</div>'
+        +'<div class="row"><span class="pill p-'+verdictDisp+'">'+verdictDisp+'</span><span>'+scoreDisp+'</span></div>'
+        +'<div class="row" style="flex-wrap:wrap;gap:.25rem">'+bands+(r.bands&&r.bands.length?'':'')+'<span style="margin-left:auto;color:var(--muted)">c '+contrastDisp+' · '+r.w+'×'+r.h+(variants.length>1?' · '+variants.length+' images':'')+'</span></div></div></div>';}
+    function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function effScore(r){return r.max_score!=null?r.max_score: (+r.score||0);}
+    function effContrast(r){return r.max_contrast!=null?r.max_contrast: (+r.contrast||0);}
+    function effArea(r){return +r.area_px||0;}
     function baseRows(){if(state.q===''&&state.vs.size===0&&state.minC===0&&state.sort==='score')return DIVERSE;return LEADS;}
     function render(){var rows=baseRows().filter(function(r){
-      if(state.vs.size&&!state.vs.has(r.verdict))return false;
-      if(+r.contrast<state.minC)return false;
-      if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
+      var vlist = r.verdicts||[r.verdict];
+      if(state.vs.size){var hit=false; for(var i=0;i<vlist.length;i++) if(state.vs.has(vlist[i])) hit=true; if(!hit) return false; }
+      if(effContrast(r)<state.minC)return false;
+      if(state.q){
+        var q=state.q.toLowerCase();
+        var hay=(r.base||'')+' '+(r.image||'')+' '+(r.flags||'')+' '+(r.verdict||'')+' '+(r.bands||[]).join(' ')+' '+((r.variants||r.members||[]).map(function(m){return m.image+' '+m.band+' '+m.flags;}).join(' '));
+        if(hay.toLowerCase().indexOf(q)<0) return false;
+      }
       return true;});
-      if(rows!==DIVERSE)rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
+      if(rows!==DIVERSE){
+        rows.sort(function(a,b){
+          if(state.sort==='score') return effScore(b)-effScore(a);
+          if(state.sort==='contrast') return effContrast(b)-effContrast(a);
+          if(state.sort==='area_px') return effArea(b)-effArea(a);
+          if(state.sort==='w') return (+b.w||0)-(+a.w||0);
+          return 0;
+        });
+      }
       var note=document.getElementById('leadNote');
- var cap=Math.min(rows.length,state.limit);
- note.textContent = rows.length ? ('Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.')
- : 'No candidates match the current filters - press Reset.';
- state.cur=rows;
- grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
+  var cap=Math.min(rows.length,state.limit);
+  note.innerHTML = rows.length ? ('Showing '+cap+' of '+rows.length+' distinct anomalies (one card = all views of that anomaly — '+(LEADS.length?LEADS.length:rows.length)+' grouped features total, dup bands collapsed). Click a card to see every image.')
+ : 'No anomalies match the current filters - press Reset.';
+  state.cur=rows;
+  grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
       var lm=document.getElementById('loadMore');
       if(lm)lm.style.display=(state.limit<rows.length)?'inline-block':'none';
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
@@ -118,37 +195,53 @@
       sort.value='score';state.q='';state.minC=0;state.sort='score';state.vs.clear();state.limit=200;
       nl.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
       render();});}
- var lmBtn=document.getElementById('loadMore');
- if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
- lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
- var exBtn=document.getElementById('export');
- if(exBtn){exBtn.addEventListener('click',function(){
- var rows=state.cur||LEADS;
- var cols=['image','x','y','w','h','contrast','score','verdict','confidence','evidence_class','agrees','disagrees','area_px','flags','strip'];
- var lines=[cols.join(',')];
-  rows.forEach(function(r){
-    var parts=cols.map(function(c){var v=r[c]==null?'':(''+r[c]);
-      return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;});
-    lines.push(parts.join(','));
+  var lmBtn=document.getElementById('loadMore');
+  if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
+  lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
+  var exBtn=document.getElementById('export');
+  if(exBtn){exBtn.addEventListener('click',function(){
+  var rows=state.cur||LEADS;
+  // export one row per variant so CSV stays flat but includes grouping key
+  var cols=['base','image','band','x','y','w','h','contrast','score','verdict','confidence','evidence_class','agrees','disagrees','area_px','flags','strip'];
+  var lines=[cols.join(',')];
+   rows.forEach(function(f){
+     var vars=f.variants||f.members||[f];
+     vars.forEach(function(r){
+       var rec={base:f.base||f.image, image:r.image||f.image, band:r.band||'', x:r.x||f.x, y:r.y||f.y, w:r.w||f.w, h:r.h||f.h, contrast:r.contrast, score:r.score, verdict:r.verdict||f.verdict, confidence:f.confidence, evidence_class:f.evidence_class, agrees:f.agrees, disagrees:f.disagrees, area_px:f.area_px, flags:r.flags||f.flags, strip:r.strip};
+       var parts=cols.map(function(c){var v=rec[c]==null?'':(''+rec[c]);
+         return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;});
+       lines.push(parts.join(','));
+     });
   });
- var blob=new Blob([lines.join('\n')],{type:'text/csv'});
- var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hirise_leads_export.csv';a.click();
- URL.revokeObjectURL(a.href);});}
+  var blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hirise_leads_grouped.csv';a.click();
+  URL.revokeObjectURL(a.href);});}
     document.querySelectorAll('.chip').forEach(function(ch){ch.addEventListener('click',function(){var v=ch.dataset.v;
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
   }
   function diverseOrder(arr){
-    var m={},keys=[];
-    arr.forEach(function(r){if(!m[r.image]){m[r.image]=[];keys.push(r.image);}m[r.image].push(r);});
-    keys.forEach(function(k){m[k].sort(function(a,b){return +b.score-+a.score;});});
-    var out=[],i=0,rem=true;
-    while(rem){rem=false;for(var j=0;j<keys.length;j++){var g=m[keys[j]];if(i<g.length){out.push(g[i]);rem=true;}}i++;}
+    // grouped already spread — just sort by score and interleave bases for visual variety
+    var byBase={}, bases=[];
+    arr.forEach(function(f){var b=f.base||f.image; if(!byBase[b]){byBase[b]=[]; bases.push(b);} byBase[b].push(f);});
+    bases.forEach(function(b){byBase[b].sort(function(a,b2){return (b2.max_score||b2.score)-(a.max_score||a.score);});});
+    // if each base only has one grouped feature (normal), just return arr sorted
+    if(bases.length===arr.length) return arr.slice().sort(function(a,b){return (b.max_score||b.score)-(a.max_score||a.score);});
+    var out=[], i=0, rem=true;
+    while(rem){rem=false; for(var j=0;j<bases.length;j++){var g=byBase[bases[j]]; if(i<g.length){out.push(g[i]); rem=true;}} i++;}
     return out;
   }
   function boot(){var url='assets/leads.json'+(window.LEADS_VER?('?v='+window.LEADS_VER):'');
     fetch(url).then(function(r){return r.json();}).then(function(d){
-      LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});DIVERSE=diverseOrder(LEADS);
+      // normalize: support both old flat payload and new grouped payload
+      LEADS=d;LEADMAP={};d.forEach(function(r){
+        var k=r.base||r.image;
+        LEADMAP[k]=r;
+        // also index by each member image so old #dossier links still resolve
+        if(r.variants) r.variants.forEach(function(v){LEADMAP[v.image]=r;});
+        if(r.members) r.members.forEach(function(v){LEADMAP[v.image]=r;});
+        LEADMAP[r.image]=r;
+      });DIVERSE=diverseOrder(LEADS);
         initExplorer();
         var h=location.hash||'';if(h.indexOf('dossier=')>=0){var img=decodeURIComponent(h.split('dossier=')[1]);if(LEADMAP[img]){openDossier(img);}}
         }).catch(function(e){console.error('leads load failed',e);

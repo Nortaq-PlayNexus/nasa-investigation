@@ -365,6 +365,12 @@ footer .sync{color:var(--accent);font-family:var(--mono);letter-spacing:.06em}
 .tchip{border:1px solid var(--border2);border-radius:20px;padding:.3rem .8rem;font-family:var(--mono);font-size:.78rem;
   color:var(--text);background:rgba(255,255,255,.03);letter-spacing:.04em}
 .tchip b{color:var(--accent)}
+.vcount{display:inline-flex;align-items:center;gap:.25rem;font-family:var(--mono);font-size:.64rem;font-weight:700;
+  background:rgba(255,196,48,.14);border:1px solid var(--border2);color:var(--accent);border-radius:20px;padding:.1rem .45rem;letter-spacing:.04em}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.6rem;margin:.7rem 0}
+.gallery figure{margin:0;background:#05070a;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+.gallery figure img{width:100%;height:110px;object-fit:cover;display:block}
+.gallery figcaption{font-family:var(--mono);font-size:.66rem;color:var(--muted);padding:.25rem .4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html.reveal-on section{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
 html.reveal-on section.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){html.reveal-on section{opacity:1!important;transform:none!important;transition:none!important}}
@@ -392,54 +398,105 @@ JS = r"""
       x.fillStyle='rgba(180,205,255,'+(0.4+Math.random()*0.5)+')';x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();}
       requestAnimationFrame(draw);}rs();draw();addEventListener('resize',rs);}
 
-  // lightbox / dossier
+  // lightbox / dossier — grouped: one distinct anomaly holds all band views
   var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
   var LEADMAP={};
+  function stripFrom(r){
+    // grouped feature may carry strip at top level or inside variants[0]
+    if(r.strip) return r.strip;
+    if(r.variants && r.variants[0] && r.variants[0].strip) return r.variants[0].strip;
+    if(r.members && r.members[0] && r.members[0].strip) return r.members[0].strip;
+    return '';
+  }
+  function cropFrom(r){
+    if(r.crop) return r.crop;
+    if(r.variants && r.variants[0] && r.variants[0].crop) return r.variants[0].crop;
+    if(r.members && r.members[0] && r.members[0].crop) return r.members[0].crop;
+    return null;
+  }
   function cropDiv(r){
-    var s=stripUrl(r.strip);
-    if(!s||!r.crop) return '<div class="ph">no strip</div>';
-    var c=r.crop, fw=c[2], fh=c[3];
+    var s=stripUrl(stripFrom(r)), c=cropFrom(r);
+    if(!s||!c) return '<div class="ph">no strip — enhancements pending</div>';
+    var fw=c[2], fh=c[3];
     var bx = fw>=1?0:(c[0]/(1-fw)*100);
     var by = fh>=1?0:(c[1]/(1-fh)*100);
     return '<div class="crop" style="background-image:url('+s+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%"></div>';
   }
+  function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function dossierHTML(r){
-    var strip=cropDiv(r);
-    var ctx = (stripUrl(r.strip)&&r.crop)
-      ? '<div class="db-ctx"><img src="'+stripUrl(r.strip)+'">'
-        +'<span class="box" style="left:'+(r.crop[0]*100)+'%;top:'+(r.crop[1]*100)
-        +'%;width:'+(r.crop[2]*100)+'%;height:'+(r.crop[3]*100)+'%"></span></div>'
+    // grouped vs legacy flat: support both
+    var variants = r.variants || r.members || [r];
+    var isGrouped = variants.length>1 || r.base;
+    var primaryStrip=cropDiv(r);
+    // build gallery of every image of this anomaly
+    var gallery='';
+    if(isGrouped && variants.length>1){
+      gallery='<div class="gallery">'+variants.map(function(v){
+        var su=stripUrl(v.strip||stripFrom(v));
+        var c=v.crop, style='';
+        if(su && c){
+          var fw=c[2],fh=c[3],bx=fw>=1?0:(c[0]/(1-fw)*100),by=fh>=1?0:(c[1]/(1-fh)*100);
+          style='background-image:url('+su+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%';
+        }
+        var thumb = (su&&c) ? '<div class="crop" style="'+style+'"></div>' : '<div class="ph" style="padding:18px">'+escH(v.image||v.band||'no strip')+'</div>';
+        return '<figure><div style="position:relative;aspect-ratio:16/9;background:#05070a;overflow:hidden">'+thumb+'</div><figcaption>'+escH(v.band||'')+' '+escH(v.image||'')+' — '+v.score+' / c'+v.contrast+'</figcaption></figure>';
+      }).join('')+'</div><div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:.35rem">All '+variants.length+' views of this physical anomaly are shown above — same crater/rock seen in '+(r.bands?r.bands.join(' / '):variants.map(function(v){return v.band;}).join(' / '))+' and nearby crops within 8 px. The grid now shows this as a single card.</div>';
+    } else {
+      gallery='';
+    }
+    var ctx = (stripUrl(stripFrom(r)) && cropFrom(r))
+      ? '<div class="db-ctx"><img src="'+stripUrl(stripFrom(r))+'">'
+        +'<span class="box" style="left:'+(cropFrom(r)[0]*100)+'%;top:'+(cropFrom(r)[1]*100)
+        +'%;width:'+(cropFrom(r)[2]*100)+'%;height:'+(cropFrom(r)[3]*100)+'%"></span></div>'
       : '';
-    var prod=(r.image||'').split('.')[0], pfx=prod.split('_')[0];
-    var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+prod+'/';
-    var view='https://www.uahirise.org/'+prod.toLowerCase();
+    var prod=(r.base||r.image||'').split('.')[0].split('_').slice(0,3).join('_'), pfx=(r.image||r.base||'').split('_')[0];
+    // for files like ESP_013236_1410 we want the full prod id as stored in base
+    var fullProd=(r.base||r.image||'').split('.')[0];
+    var extras='https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/'+pfx+'/'+fullProd+'/';
+    var view='https://www.uahirise.org/'+fullProd.toLowerCase();
     function f(k,v){return '<div class="df"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
-    var info='<h3>Dossier</h3>'
-      +f('VERDICT',r.verdict)+f('CONFIDENCE',r.confidence||'—')+f('SCORE',r.score)
+    var sc=r.max_score!=null?r.max_score:r.score, ct=r.max_contrast!=null?r.max_contrast:r.contrast;
+    var flagsDisp = r.flags ? (Array.isArray(r.flags)?r.flags.join(', '):r.flags) : (variants.map(function(v){return v.flags;}).filter(Boolean).join(', ')||'—');
+    var info='<h3>Dossier — '+(isGrouped? (variants.length+' views grouped'): 'single view')+'</h3>'
+      +f('ANOMALY', escH(r.base||r.image||'—') + (isGrouped?' <span class="vcount">'+variants.length+' variants — '+((r.bands||[]).join(' / ') || 'bands')+'</span>':''))
+      +f('VERDICT',r.verdict|| (r.verdicts?r.verdicts.join(' / '):'—'))+f('CONFIDENCE',r.confidence||'—')+f('SCORE (best)',sc)
       +f('POLARITY / CLASS',(r.polarity||'—')+' / '+(r.evidence_class||'—'))
-      +f('CONTRAST',r.contrast)+f('AREA (px)',r.area_px||'—')+f('SIZE',(r.w||'?')+'x'+(r.h||'?')+' px')
-      +f('PIXEL (x,y)','x'+r.x+' y'+r.y)
+      +f('CONTRAST (best)',ct)+f('AREA (px)',r.area_px||'—')+f('SIZE',(r.w||'?')+'×'+(r.h||'?')+' px')
+      +f('PIXEL (x,y)','x'+r.x+' y'+r.y + (isGrouped?' — representative':''))
       +f('AGREE / DISAGREE',(r.agrees||'?')+' / '+(r.disagrees||'?'))
       +f('PERSISTENCE',r.persistence||'—')+f('COMPACTNESS',r.compactness||'—')
       +f('EDGE SHARP',r.edge_sharpness||'—')+f('FDR Q',r.fdr_q||'—')
       +f('SOLAR EL/AZ',(r.solar_elevation_deg||'?')+'° / '+(r.solar_azimuth_deg||'?')+'°')
-      +f('FLAGS',r.flags||'—');
+      +f('FLAGS',flagsDisp);
+    // per-variant table
+    var perBand='';
+    if(isGrouped){
+      perBand='<div class="sect" style="margin-top:.9rem">Every image of this anomaly</div><table style="width:100%;font-size:.74rem;border-collapse:collapse"><tr style="color:var(--muted);font-family:var(--mono)"><th style="text-align:left;padding:.2rem .4rem">band</th><th>image</th><th>score</th><th>contrast</th><th>x,y</th><th>box</th></tr>'
+        +variants.map(function(v){return '<tr><td style="padding:.2rem .4rem">'+escH(v.band||'')+'</td><td style="font-family:var(--mono);font-size:.70rem;word-break:break-all">'+escH(v.image)+'</td><td>'+v.score+'</td><td>'+v.contrast+'</td><td>'+v.x+','+v.y+'</td><td>'+v.w+'×'+v.h+'</td></tr>';}).join('')
+        +'</table>';
+    }
     var verify='<div class="sect">Verify This Lead</div><ul class="verify">'
       +'<li>EDR original: hirise-pds.lpl.arizona.edu/EXTRAS</li>'
       +'<li>Mars Trek geolocate: trek.nasa.gov/mars</li>'
-      +'<li>Cross-band persistence: '+(r.agrees||'?')+' agree / '+(r.disagrees||'?')+' disagree</li>'
-      +'<li>Seek independent pass, different solar angle</li>'
+      +'<li>Cross-band persistence: '+(r.agrees||'?')+' agree / '+(r.disagrees||'?')+' disagree — now collapsed into one card</li>'
+      +'<li>Seek independent pass, different solar angle — see.gallery</li>'
       +'<li>FDR q='+(r.fdr_q||'?')+' vs negative-control baseline</li></ul>'
       +'<div class="src-chip">ORIGINAL: <a href="'+extras+'" target="_blank" rel="noopener">'+extras+'</a></div>'
         +'<div class="src-chip">VIEW: <a href="'+view+'" target="_blank" rel="noopener">'+view+'</a></div>'
+        +perBand
         +'<button id="copyLink" class="btn" style="margin-top:.6rem;width:100%">Copy shareable link</button>';
-        return '<div class="dossier-board"><div class="db-img">'+strip+'</div>'
-      +'<div class="db-cap">TARGET LOCK // '+r.image+'</div>'+ctx+'</div>'
+        return '<div class="dossier-board"><div class="db-img">'+primaryStrip+'</div>'
+      +'<div class="db-cap">TARGET LOCK // '+escH(r.base||r.image)+' — '+(isGrouped? variants.length+' views': '1 view')+'</div>'+ctx+gallery+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
- function openDossier(img){var r=LEADMAP[img];if(!r)return;
-  lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
-  lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(img));
+  function keyOf(r){return r.base || r.image || '';}
+  function openDossier(img){var r=LEADMAP[img];if(!r){
+    // try lookup by base as well
+    for(var k in LEADMAP){ if(LEADMAP[k] && (LEADMAP[k].base===img || LEADMAP[k].image===img)){ r=LEADMAP[k]; break; } }
+    if(!r) return;
+  }
+   lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
+   lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(keyOf(r)));
   var cb=lbBox.querySelector('#copyLink');
   if(cb){cb.addEventListener('click',function(e){e.stopPropagation();
     navigator.clipboard.writeText(location.href).then(function(){cb.textContent='Link copied';setTimeout(function(){cb.textContent='Copy shareable link';},1500);});
@@ -449,33 +506,59 @@ JS = r"""
   function closeLb(){lb.classList.remove('open');history.replaceState(null,'',location.pathname+location.search);}lb.addEventListener('click',closeLb);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 
-  // leads explorer (initialised after leads.json loads)
+  // leads explorer (initialised after leads.json loads) — now grouped features
   function initExplorer(){
     var grid=document.getElementById('leadsGrid');
     if(!grid)return;
     var state={q:'',minC:0,vs:new Set(),sort:'score',limit:200,cur:[]};
-    function verdictColor(v){return v;}
-    function card(r){var isCL=r.verdict.indexOf('CONFIRMED')===0;
-      var stamp=isCL?'<div class="stamp">CONFIRMED LEAD</div>':'';
+    function isCL(r){var v=r.verdict|| (r.verdicts&&r.verdicts[0]) ||''; return v.indexOf('CONFIRMED')===0;}
+    function card(r){
+      var cl=isCL(r);
+      var stamp=cl?'<div class="stamp">CONFIRMED LEAD</div>':'';
       var strip=cropDiv(r);
-      return '<div class="lead" data-img="'+r.image+'" data-strip="'+r.strip+'">'
+      var variants = r.variants || r.members || [];
+      var vc = variants.length>1 ? '<span class="vcount">'+variants.length+' views</span>' : '';
+      var bands = (r.bands||[]).map(function(b){return '<span class="pill p-'+r.verdict+'" style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d;font-size:.62rem">'+b+'</span>';}).join('');
+      // show base as title, with count; still index by base so dossier groups open
+      var title = escH(r.base||r.image);
+      var scoreDisp = r.max_score!=null?r.max_score:r.score;
+      var contrastDisp = r.max_contrast!=null?r.max_contrast:r.contrast;
+      var verdictDisp = r.verdict|| (r.verdicts?r.verdicts[0]:'');
+      return '<div class="lead" data-img="'+escH(r.base||r.image)+'" data-strip="'+escH(r.strip||'')+'">'
         +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
-        +'<div class="body"><div class="name">'+r.image+'</div>'
-        +'<div class="row"><span class="pill p-'+r.verdict+'">'+r.verdict+'</span><span>'+r.score+'</span></div>'
-        +'<div class="row"><span>contrast '+r.contrast+'</span><span>'+r.w+'x'+r.h+'</span></div></div></div>';}
+        +'<div class="body"><div class="name">'+title+' '+vc+'</div>'
+        +'<div class="row"><span class="pill p-'+verdictDisp+'">'+verdictDisp+'</span><span>'+scoreDisp+'</span></div>'
+        +'<div class="row" style="flex-wrap:wrap;gap:.25rem">'+bands+(r.bands&&r.bands.length?'':'')+'<span style="margin-left:auto;color:var(--muted)">c '+contrastDisp+' · '+r.w+'×'+r.h+(variants.length>1?' · '+variants.length+' images':'')+'</span></div></div></div>';}
+    function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function effScore(r){return r.max_score!=null?r.max_score: (+r.score||0);}
+    function effContrast(r){return r.max_contrast!=null?r.max_contrast: (+r.contrast||0);}
+    function effArea(r){return +r.area_px||0;}
     function baseRows(){if(state.q===''&&state.vs.size===0&&state.minC===0&&state.sort==='score')return DIVERSE;return LEADS;}
     function render(){var rows=baseRows().filter(function(r){
-      if(state.vs.size&&!state.vs.has(r.verdict))return false;
-      if(+r.contrast<state.minC)return false;
-      if(state.q){var q=state.q.toLowerCase();if((r.image+'').toLowerCase().indexOf(q)<0&&(r.flags+'').toLowerCase().indexOf(q)<0)return false;}
+      var vlist = r.verdicts||[r.verdict];
+      if(state.vs.size){var hit=false; for(var i=0;i<vlist.length;i++) if(state.vs.has(vlist[i])) hit=true; if(!hit) return false; }
+      if(effContrast(r)<state.minC)return false;
+      if(state.q){
+        var q=state.q.toLowerCase();
+        var hay=(r.base||'')+' '+(r.image||'')+' '+(r.flags||'')+' '+(r.verdict||'')+' '+(r.bands||[]).join(' ')+' '+((r.variants||r.members||[]).map(function(m){return m.image+' '+m.band+' '+m.flags;}).join(' '));
+        if(hay.toLowerCase().indexOf(q)<0) return false;
+      }
       return true;});
-      if(rows!==DIVERSE)rows.sort(function(a,b){return +b[state.sort]-+a[state.sort];});
+      if(rows!==DIVERSE){
+        rows.sort(function(a,b){
+          if(state.sort==='score') return effScore(b)-effScore(a);
+          if(state.sort==='contrast') return effContrast(b)-effContrast(a);
+          if(state.sort==='area_px') return effArea(b)-effArea(a);
+          if(state.sort==='w') return (+b.w||0)-(+a.w||0);
+          return 0;
+        });
+      }
       var note=document.getElementById('leadNote');
- var cap=Math.min(rows.length,state.limit);
- note.textContent = rows.length ? ('Showing '+cap+' of '+rows.length+' candidates (filtered). Click a card to enlarge.')
- : 'No candidates match the current filters - press Reset.';
- state.cur=rows;
- grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
+  var cap=Math.min(rows.length,state.limit);
+  note.innerHTML = rows.length ? ('Showing '+cap+' of '+rows.length+' distinct anomalies (one card = all views of that anomaly — '+(LEADS.length?LEADS.length:rows.length)+' grouped features total, dup bands collapsed). Click a card to see every image.')
+ : 'No anomalies match the current filters - press Reset.';
+  state.cur=rows;
+  grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
       var lm=document.getElementById('loadMore');
       if(lm)lm.style.display=(state.limit<rows.length)?'inline-block':'none';
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
@@ -490,37 +573,53 @@ JS = r"""
       sort.value='score';state.q='';state.minC=0;state.sort='score';state.vs.clear();state.limit=200;
       nl.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
       render();});}
- var lmBtn=document.getElementById('loadMore');
- if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
- lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
- var exBtn=document.getElementById('export');
- if(exBtn){exBtn.addEventListener('click',function(){
- var rows=state.cur||LEADS;
- var cols=['image','x','y','w','h','contrast','score','verdict','confidence','evidence_class','agrees','disagrees','area_px','flags','strip'];
- var lines=[cols.join(',')];
-  rows.forEach(function(r){
-    var parts=cols.map(function(c){var v=r[c]==null?'':(''+r[c]);
-      return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;});
-    lines.push(parts.join(','));
+  var lmBtn=document.getElementById('loadMore');
+  if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
+  lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
+  var exBtn=document.getElementById('export');
+  if(exBtn){exBtn.addEventListener('click',function(){
+  var rows=state.cur||LEADS;
+  // export one row per variant so CSV stays flat but includes grouping key
+  var cols=['base','image','band','x','y','w','h','contrast','score','verdict','confidence','evidence_class','agrees','disagrees','area_px','flags','strip'];
+  var lines=[cols.join(',')];
+   rows.forEach(function(f){
+     var vars=f.variants||f.members||[f];
+     vars.forEach(function(r){
+       var rec={base:f.base||f.image, image:r.image||f.image, band:r.band||'', x:r.x||f.x, y:r.y||f.y, w:r.w||f.w, h:r.h||f.h, contrast:r.contrast, score:r.score, verdict:r.verdict||f.verdict, confidence:f.confidence, evidence_class:f.evidence_class, agrees:f.agrees, disagrees:f.disagrees, area_px:f.area_px, flags:r.flags||f.flags, strip:r.strip};
+       var parts=cols.map(function(c){var v=rec[c]==null?'':(''+rec[c]);
+         return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;});
+       lines.push(parts.join(','));
+     });
   });
- var blob=new Blob([lines.join('\n')],{type:'text/csv'});
- var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hirise_leads_export.csv';a.click();
- URL.revokeObjectURL(a.href);});}
+  var blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hirise_leads_grouped.csv';a.click();
+  URL.revokeObjectURL(a.href);});}
     document.querySelectorAll('.chip').forEach(function(ch){ch.addEventListener('click',function(){var v=ch.dataset.v;
       if(state.vs.has(v)){state.vs.delete(v);ch.classList.remove('on');}else{state.vs.add(v);ch.classList.add('on');}render();});});
     render();
   }
   function diverseOrder(arr){
-    var m={},keys=[];
-    arr.forEach(function(r){if(!m[r.image]){m[r.image]=[];keys.push(r.image);}m[r.image].push(r);});
-    keys.forEach(function(k){m[k].sort(function(a,b){return +b.score-+a.score;});});
-    var out=[],i=0,rem=true;
-    while(rem){rem=false;for(var j=0;j<keys.length;j++){var g=m[keys[j]];if(i<g.length){out.push(g[i]);rem=true;}}i++;}
+    // grouped already spread — just sort by score and interleave bases for visual variety
+    var byBase={}, bases=[];
+    arr.forEach(function(f){var b=f.base||f.image; if(!byBase[b]){byBase[b]=[]; bases.push(b);} byBase[b].push(f);});
+    bases.forEach(function(b){byBase[b].sort(function(a,b2){return (b2.max_score||b2.score)-(a.max_score||a.score);});});
+    // if each base only has one grouped feature (normal), just return arr sorted
+    if(bases.length===arr.length) return arr.slice().sort(function(a,b){return (b.max_score||b.score)-(a.max_score||a.score);});
+    var out=[], i=0, rem=true;
+    while(rem){rem=false; for(var j=0;j<bases.length;j++){var g=byBase[bases[j]]; if(i<g.length){out.push(g[i]); rem=true;}} i++;}
     return out;
   }
   function boot(){var url='assets/leads.json'+(window.LEADS_VER?('?v='+window.LEADS_VER):'');
     fetch(url).then(function(r){return r.json();}).then(function(d){
-      LEADS=d;LEADMAP={};d.forEach(function(r){LEADMAP[r.image]=r;});DIVERSE=diverseOrder(LEADS);
+      // normalize: support both old flat payload and new grouped payload
+      LEADS=d;LEADMAP={};d.forEach(function(r){
+        var k=r.base||r.image;
+        LEADMAP[k]=r;
+        // also index by each member image so old #dossier links still resolve
+        if(r.variants) r.variants.forEach(function(v){LEADMAP[v.image]=r;});
+        if(r.members) r.members.forEach(function(v){LEADMAP[v.image]=r;});
+        LEADMAP[r.image]=r;
+      });DIVERSE=diverseOrder(LEADS);
         initExplorer();
         var h=location.hash||'';if(h.indexOf('dossier=')>=0){var img=decodeURIComponent(h.split('dossier=')[1]);if(LEADMAP[img]){openDossier(img);}}
         }).catch(function(e){console.error('leads load failed',e);
@@ -745,6 +844,118 @@ def acq_of(image: str) -> str:
     return m.group(1) if m else (image or "").split(".")[0]
 
 
+def band_of(image: str) -> str:
+    m = re.search(r"_(MIRB|MRGB|RED)\.", image or "")
+    return m.group(1) if m else ""
+
+
+def base_of(image: str) -> str:
+    """Strip band + variant suffix to get the shared base (one physical frame)."""
+    return re.sub(r"_(MIRB|MRGB|RED)\.(browse|abrowse|thumb)_enh\.png$", "", image or "") or (image or "").split(".")[0]
+
+
+def group_features(rows: list[dict], si) -> list[dict]:
+    """Group the same physical feature reported across band variants / nearby
+    detections.  Returns one entry per distinct anomaly; each entry holds all
+    band-variant members so the dossier can show every image of that anomaly.
+
+    Mirrors showcase/build_showcase.py grouping: same base + within 6 px.
+    This is what stops the explorer from looking like it is full of duplicates
+    - one anomaly = one card, clicking it reveals every view of it.
+    """
+    # first split by base (same HiRISE frame regardless of band)
+    bybase: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        bybase[base_of(r.get("image", ""))].append(r)
+
+    def union_find(items, close):
+        parent = list(range(len(items)))
+        def find(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+        def union(i, j):
+            ri, rj = find(i), find(j)
+            if ri != rj:
+                parent[rj] = ri
+        for i in range(len(items)):
+            for j in range(i + 1, len(items)):
+                if close(items[i], items[j]):
+                    union(i, j)
+        groups: dict[int, list] = {}
+        for i in range(len(items)):
+            groups.setdefault(find(i), []).append(items[i])
+        return list(groups.values())
+
+    features: list[dict] = []
+    for members in bybase.values():
+        for grp in union_find(
+            members,
+            lambda a, b: abs(int(round(num(a.get("x")))) - int(round(num(b.get("x"))))) <= 8
+            and abs(int(round(num(a.get("y")))) - int(round(num(b.get("y"))))) <= 8,
+        ):
+            grp.sort(key=lambda r: (-num(r.get("score")), r.get("image", "")))
+            rep = grp[0]
+            # collect all strips/crops for the dossier gallery
+            variants = []
+            bands_set = set()
+            for m in grp:
+                strip = si.get(m.get("image", ""))
+                bands_set.add(band_of(m.get("image", "")))
+                variants.append({
+                    "image": m.get("image", ""),
+                    "x": m.get("x"), "y": m.get("y"), "w": m.get("w"), "h": m.get("h"),
+                    "contrast": round(num(m.get("contrast")), 2),
+                    "score": round(num(m.get("score")), 1),
+                    "verdict": m.get("verdict", ""),
+                    "polarity": m.get("polarity", ""),
+                    "flags": m.get("flags", ""),
+                    "band": band_of(m.get("image", "")),
+                    "strip": strip.name if strip else "",
+                    "crop": crop_box(strip, m.get("x"), m.get("y"), m.get("w"), m.get("h")),
+                })
+            # sort variants by score desc for gallery
+            variants.sort(key=lambda v: -v["score"])
+            bands = sorted(b for b in bands_set if b)
+            # keep rep fields at top level for backwards-compat filtering/sorting
+            features.append({
+                "base": base_of(rep.get("image", "")),
+                "image": rep.get("image", ""),
+                "x": rep.get("x"), "y": rep.get("y"), "w": rep.get("w"), "h": rep.get("h"),
+                "contrast": round(num(rep.get("contrast")), 2),
+                "score": round(num(rep.get("score")), 1),
+                "max_score": max(v["score"] for v in variants),
+                "max_contrast": max(v["contrast"] for v in variants),
+                "verdict": rep.get("verdict", ""),
+                "verdicts": sorted({m.get("verdict", "") for m in grp if m.get("verdict")}),
+                "confidence": rep.get("confidence", ""),
+                "evidence_class": rep.get("evidence_class", ""),
+                "polarity": rep.get("polarity", ""),
+                "flags": rep.get("flags", ""),
+                "area_px": rep.get("area_px", ""),
+                "agrees": rep.get("agrees", ""),
+                "disagrees": rep.get("disagrees", ""),
+                "persistence": rep.get("persistence", ""),
+                "compactness": rep.get("compactness", ""),
+                "edge_sharpness": rep.get("edge_sharpness", ""),
+                "fdr_q": rep.get("fdr_q", ""),
+                "pixel_scale_m": rep.get("pixel_scale_m", ""),
+                "size_m": rep.get("size_m", ""),
+                "solar_elevation_deg": rep.get("solar_elevation_deg", ""),
+                "solar_azimuth_deg": rep.get("solar_azimuth_deg", ""),
+                "inferred_height_m": rep.get("inferred_height_m", ""),
+                "bands": bands,
+                "members": variants,
+                "variants": variants,
+                "strip": variants[0]["strip"] if variants else "",
+                "crop": variants[0]["crop"] if variants else None,
+                "variant_count": len(variants),
+            })
+    features.sort(key=lambda f: -f["max_score"])
+    return features
+
+
 def diverse_preview(top, n=60, max_per_image=2):
     """Spread preview cards across distinct source images for visual variety."""
     groups = defaultdict(list)
@@ -806,58 +1017,49 @@ def build_leads_data(rows, si) -> str:
 
 
 def lead_json(rows, si, max_per_image=8) -> str:
-    """Build leads JSON, capping candidates per source image for visual variety.
+    """Build grouped leads JSON: one entry per distinct physical anomaly.
 
-    Groups by strip image, keeps top-scored candidates per image so the
-    explorer grid shows genuinely different views rather than the same
-    strip repeated dozens of times.
+    The same crater/rock that is seen in RED/MIRB/MRGB (and as nearby
+    detections within 8 px) is collapsed into a single ``feature`` with a
+    ``members`` / ``variants`` array so the dossier can display *every* image
+    of that anomaly.  This is the user-requested dedup: the grid no longer
+    looks like it is full of copies - one anomaly = one card, click to see
+    all angles/bands that captured it.
     """
-    by_img = defaultdict(list)
-    for r in rows:
-        by_img[r.get("image", "")].append(r)
-    for img_rows in by_img.values():
-        img_rows.sort(key=lambda r: num(r.get("score")), reverse=True)
-    out = []
-    for img in sorted(by_img, key=lambda k: -num(by_img[k][0].get("score"))):
-        for r in by_img[img][:max_per_image]:
-            strip = si.get(img)
-            out.append({
-                "image": img,
-                "x": r.get("x"), "y": r.get("y"), "w": r.get("w"), "h": r.get("h"),
-                "contrast": round(num(r.get("contrast")), 2),
-                "score": round(num(r.get("score")), 1),
-                "verdict": r.get("verdict", ""),
-                "confidence": r.get("confidence", ""),
-                "evidence_class": r.get("evidence_class", ""),
-                "agrees": r.get("agrees", ""), "disagrees": r.get("disagrees", ""),
-                "area_px": r.get("area_px", ""),
-                "polarity": r.get("polarity", ""),
-                "flags": r.get("flags", ""),
-                "persistence": r.get("persistence", ""),
-                "compactness": r.get("compactness", ""),
-                "edge_sharpness": r.get("edge_sharpness", ""),
-                "fdr_q": r.get("fdr_q", ""),
-                "pixel_scale_m": r.get("pixel_scale_m", ""),
-                "size_m": r.get("size_m", ""),
-                "solar_elevation_deg": r.get("solar_elevation_deg", ""),
-                "solar_azimuth_deg": r.get("solar_azimuth_deg", ""),
-                "inferred_height_m": r.get("inferred_height_m", ""),
-                "strip": strip.name if strip else "",
-                "crop": crop_box(strip, r.get("x"), r.get("y"), r.get("w"), r.get("h")),
-            })
+    feats = group_features(rows, si)
+    # Cap for visual variety: at most `max_per_image` distinct features per
+    # *base* frame so the explorer does not show 200 cards from one swath.
+    by_base: dict[str, list] = defaultdict(list)
+    for f in feats:
+        by_base[f["base"]].append(f)
+    for lst in by_base.values():
+        lst.sort(key=lambda f: -f["max_score"])
+    out: list[dict] = []
+    for base in sorted(by_base, key=lambda k: -by_base[k][0]["max_score"]):
+        for f in by_base[base][:max_per_image]:
+            out.append(f)
+    # final global sort by score desc so grid is ranked
+    out.sort(key=lambda f: -f["max_score"])
     return json.dumps(out, ensure_ascii=False).replace("</", "<\\/")
 
 
 def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver: str) -> None:
     counts = verdict_counts(rows)
-    # Count candidates that will actually appear in the explorer (per-image capped)
-    by_img_count = defaultdict(int)
+    # Grouped display count: one card per distinct anomaly (band variants collapsed)
+    # Matches lead_json() capping: at most 8 grouped features per base frame.
+    grouped_all = group_features(rows, si)
+    by_base = defaultdict(list)
+    for f in grouped_all:
+        by_base[f["base"]].append(f)
     displayed = 0
+    distinct_bases = len(by_base)
+    for lst in by_base.values():
+        lst.sort(key=lambda f: -f["max_score"])
+        displayed += min(len(lst), 8)
+    # keep legacy by_img_count for fallback but new hint uses grouped
+    by_img_count = defaultdict(int)
     for r in rows:
-        img = r.get("image", "")
-        by_img_count[img] += 1
-        if by_img_count[img] <= 8:
-            displayed += 1
+        by_img_count[r.get("image", "")] += 1
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
     fcards = ""
     for f in findings:
@@ -957,7 +1159,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 </div></section>
 
 <section id='explorer'><div class='wrap'>
-  <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>top {displayed} candidates across {len(by_img_count)} source images</span></div>
+  <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>{displayed} distinct anomalies (one card = all views) - {len(grouped_all)} grouped from {len(rows)} band-variant rows - {distinct_bases} base frames - click any card to view every image</span></div>
   <div class='controls'>
     <input id='q' type='search' placeholder='Search image or flag&hellip;'>
     <label style='color:var(--muted);font-size:.85rem'>min contrast
