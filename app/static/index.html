@@ -190,17 +190,32 @@ async function loadStats(){
     $('healthDot').style.background='var(--green)'; $('healthDot').style.boxShadow='0 0 6px var(--green)'; $('healthTxt').textContent='API online';
   }catch(e){ $('healthDot').style.background='var(--red)'; $('healthTxt').textContent='offline: '+e.message; }}
 async function checkHealth(){ try{ await jget('/api/health'); $('healthDot').style.background='var(--green)'; $('healthTxt').textContent='API online'; }catch(e){ $('healthDot').style.background='var(--red)'; $('healthTxt').textContent='offline'; } }
-async function loadLeads(){
+let loopOffset=0;
+async function loadLeads(loopDir=0){
   const q=$('q').value.trim(), verdict=$('fVerdict').value, sort=$('fSort').value;
-  const url=`/api/features?limit=60&offset=0&sort=${encodeURIComponent(sort)}${verdict?'&verdict='+encodeURIComponent(verdict):''}${q?'&q='+encodeURIComponent(q):''}`;
-  $('leadsMeta').textContent='loading…';
+  // LOOP: offset wraps circularly (infinite carousel) — prev/next loops
+  if(loopDir!==0){ loopOffset = (loopOffset + loopDir*60) % Math.max(1, 6760); if(loopOffset<0) loopOffset+=6760; }
+  else if(!q && !verdict) { /* keep current offset for paging */ } else { loopOffset=0; }
+  const url=`/api/features?limit=60&offset=${loopOffset}&sort=${encodeURIComponent(sort)}${verdict?'&verdict='+encodeURIComponent(verdict):''}${q?'&q='+encodeURIComponent(q):''}&grouped=1`;
+  $('leadsMeta').textContent='loading… loop '+loopOffset+'…';
   try{
     const d=await jget(url);
-    $('leadsMeta').textContent=`${fmt(d.total)} total — showing ${d.rows.length}`;
+    const isGrouped = d.grouped;
+    $('leadsMeta').innerHTML=`${fmt(d.total)} distinct anomalies (grouped — one card = all band views) — showing ${d.rows.length} <span class=muted>(loop offset ${d.offset}, wraps)</span> <button class=btn onclick="loadLeads(-1)">‹ Loop prev</button> <button class=btn onclick="loadLeads(1)">Loop next ›</button> <button class=btn onclick="loopOffset=0;loadLeads()">↺ Reset loop</button>`;
     $('leadsBody').innerHTML=d.rows.map(r=>{
-      const c=(v)=> v==='CONFIRMED-LEAD'?'b-green': v==='PROMISING'?'b-amber':'b-blue';
-      return `<tr><td style=\"font-family:var(--mono);font-size:11px;word-break:break-all\">${r.image||''}</td><td><span class=\"badge ${c(r.verdict)}\">${r.verdict||'-'}</span></td><td>${r.score||''}</td><td>${r.contrast||''}</td><td>${r.area_px||''}</td><td>${r.x},${r.y}</td></tr>`;
-    }).join('') || '<tr><td colspan=6 class=muted style=\"text-align:center\">no rows</td></tr>';
+      if(isGrouped){
+        const c=(v)=> v==='CONFIRMED-LEAD'?'b-green': v==='PROMISING'?'b-amber':'b-blue';
+        const vc = r.variant_count>1 ? `<span class=badge style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d">${r.variant_count} views</span>` : '';
+        const bands=(r.bands||[]).map(b=>`<span class=badge style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d">${b}</span>`).join('');
+        const gallery = (r.variants||[]).slice(0,3).map(v=>v.band+':'+(v.image||'').split('_').pop()).join(' • ');
+        return `<tr><td style="font-family:var(--mono);font-size:11px;word-break:break-all">${r.base||r.image} ${vc}<div class=muted style="font-size:10px">${bands} ${gallery}</div></td><td><span class="badge ${c(r.verdict)}">${r.verdict||'-'}</span><div class=muted style="font-size:10px">${(r.verdicts||[]).join('/')}</div></td><td>${r.max_score||r.score||''}</td><td>${r.max_contrast||r.contrast||''}</td><td>${r.area_px||''}</td><td>${r.x},${r.y} <span class=muted>• ${r.variant_count} imgs</span></td></tr>`;
+      } else {
+        const c=(v)=> v==='CONFIRMED-LEAD'?'b-green': v==='PROMISING'?'b-amber':'b-blue';
+        return `<tr><td style="font-family:var(--mono);font-size:11px;word-break:break-all">${r.image||''}</td><td><span class="badge ${c(r.verdict)}">${r.verdict||'-'}</span></td><td>${r.score||''}</td><td>${r.contrast||''}</td><td>${r.area_px||''}</td><td>${r.x},${r.y}</td></tr>`;
+      }
+    }).join('') || '<tr><td colspan=6 class=muted style="text-align:center">no rows</td></tr>';
+    // auto-loop hint
+    if(d.rows.length) loopOffset = (d.offset + 60) % d.total;
   }catch(e){ $('leadsMeta').textContent='error: '+e.message; }
 }
 async function loadCatalog(){
