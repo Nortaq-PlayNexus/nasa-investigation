@@ -89,8 +89,64 @@ def _safe_read_csv(path: Path, limit: int | None = None) -> list[dict]:
         return []
 
 
+def _num(v, default=0.0):
+    try:
+        return float(v or default)
+    except Exception:
+        return default
+
+def _band_of(image: str) -> str:
+    import re
+    m = re.search(r"_(MIRB|MRGB|RED)\.", image or "")
+    return m.group(1) if m else ""
+
+def _base_of(image: str) -> str:
+    import re
+    return re.sub(r"_(MIRB|MRGB|RED)\.(browse|abrowse|thumb)_enh\.png$", "", image or "") or (image or "").split(".")[0]
+
+def _group_features(rows: list[dict]) -> list[dict]:
+    """Group same physical anomaly across band variants / nearby detections (<=8 px, same base). Mirrors site grouping — one anomaly = one card with all views."""
+    from collections import defaultdict
+    bybase: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        bybase[_base_of(r.get("image", ""))].append(r)
+    def union_find(items, close):
+        parent = list(range(len(items)))
+        def find(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+        def union(i, j):
+            ri, rj = find(i), find(j)
+            if ri != rj:
+                parent[rj] = ri
+        for i in range(len(items)):
+            for j in range(i+1, len(items)):
+                if close(items[i], items[j]):
+                    union(i, j)
+        groups: dict[int, list] = {}
+        for i in range(len(items)):
+            groups.setdefault(find(i), []).append(items[i])
+        return list(groups.values())
+    features: list[dict] = []
+    for members in bybase.values():
+        for grp in union_find(members, lambda a,b: abs(int(round(_num(a.get("x")))) - int(round(_num(b.get("x"))))) <= 8 and abs(int(round(_num(a.get("y")))) - int(round(_num(b.get("y"))))) <= 8):
+            grp.sort(key=lambda r: (-_num(r.get("score")), r.get("image","")))
+            rep = grp[0]
+            variants=[]
+            bands=set()
+            for m in grp:
+                bands.add(_band_of(m.get("image","")))
+                variants.append({"image": m.get("image",""), "x": m.get("x"), "y": m.get("y"), "w": m.get("w"), "h": m.get("h"), "contrast": round(_num(m.get("contrast")),2), "score": round(_num(m.get("score")),1), "verdict": m.get("verdict",""), "polarity": m.get("polarity",""), "flags": m.get("flags",""), "band": _band_of(m.get("image",""))})
+            variants.sort(key=lambda v: -v["score"])
+            bands_list=sorted(b for b in bands if b)
+            features.append({"base": _base_of(rep.get("image","")), "image": rep.get("image",""), "x": rep.get("x"), "y": rep.get("y"), "w": rep.get("w"), "h": rep.get("h"), "contrast": round(_num(rep.get("contrast")),2), "score": round(_num(rep.get("score")),1), "max_score": max(v["score"] for v in variants), "max_contrast": max(v["contrast"] for v in variants), "verdict": rep.get("verdict",""), "verdicts": sorted({m.get("verdict","") for m in grp if m.get("verdict")}), "confidence": rep.get("confidence",""), "evidence_class": rep.get("evidence_class",""), "polarity": rep.get("polarity",""), "flags": rep.get("flags",""), "area_px": rep.get("area_px",""), "agrees": rep.get("agrees",""), "disagrees": rep.get("disagrees",""), "bands": bands_list, "members": variants, "variants": variants, "variant_count": len(variants)})
+    features.sort(key=lambda f: -f["max_score"])
+    return features
+
 def _build_stats() -> dict:
-    """Compute stats from leads.csv / showcase-style grouping."""
+    """Compute stats — now grouped: one distinct anomaly = one entry with all band views (loops)."""
     leads_path = ROOT / "data" / "anomalies" / "conclusions" / "leads.csv"
     adj_path = ROOT / "data" / "anomalies" / "conclusions" / "adjudicated.csv"
     eval_path = ROOT / "data" / "anomalies" / "analysis" / "evaluated.csv"
@@ -103,13 +159,16 @@ def _build_stats() -> dict:
     adj = _safe_read_csv(adj_path)
     catalog = _safe_read_csv(catalog_path)
 
+    # grouped distinct anomalies (dedup band variants)
+    adj_grouped = _group_features(adj) if adj else []
+    leads_grouped = _group_features(leads) if leads else []
+
     verdicts: dict[str, int] = {}
     bodies: dict[str, int] = {}
     bands: dict[str, int] = {}
     for r in leads:
         v = r.get("verdict", "UNKNOWN")
         verdicts[v] = verdicts.get(v, 0) + 1
-        # infer bodies/bands from path/image
         img = r.get("image", "")
         path = r.get("path", "")
         body = "Mars" if "mars" in path.lower() or "ESP_" in img else ("Moon" if "moon" in path.lower() or img.startswith("M") else "")
@@ -132,8 +191,10 @@ def _build_stats() -> dict:
 
     return {
         "leads_total": len(leads),
-        "features": len(leads),  # prior to grouping, showcase groups into ~8599; we report raw here + grouped elsewhere
+        "features": len(leads_grouped) or len(leads),
         "adjudicated_total": len(adj),
+        "distinct_anomalies": len(adj_grouped),
+        "grouped_features": len(leads_grouped),
         "verdicts": verdicts,
         "bodies": bodies,
         "bands": bands,
@@ -142,6 +203,7 @@ def _build_stats() -> dict:
         "catalog_rows": catalog_rows,
         "audit_recent": audit,
         "evaluated_total": len(_safe_read_csv(eval_path)),
+        "loop": "grouped + infinite carousel",
     }
 
 
@@ -249,8 +311,8 @@ def create_fastapi_app():
 
     app = FastAPI(
         title="NASA Moon & Mars Investigation — Full Stack",
-        description="Acquire, catalog, enhance, analyze & adjudicate Moon/Mars imagery. Full pipeline + dashboard in one EXE.",
-        version="1.0.95",
+        description="Acquire, catalog, enhance, analyze & adjudicate Moon/Mars imagery. Grouped anomalies (one card = all band views) + looping carousels. Full pipeline + dashboard in one EXE.",
+        version="1.5.0",
     )
     app.add_middleware(
         CORSMiddleware,
@@ -275,15 +337,45 @@ def create_fastapi_app():
 
     @app.get("/api/features")
     def features(limit: int = 50, offset: int = 0, verdict: str | None = None,
-                 q: str | None = None, sort: str = "score"):
+                 q: str | None = None, sort: str = "score", grouped: int = 1):
+        """Grouped (default): one distinct anomaly per entry with all band views (loops). Set grouped=0 for flat rows."""
         leads_path = ROOT / "data" / "anomalies" / "conclusions" / "leads.csv"
-        rows = _safe_read_csv(leads_path)
+        adj_path = ROOT / "data" / "anomalies" / "conclusions" / "adjudicated.csv"
+        # prefer leads.csv, fallback to adjudicated
+        rows = _safe_read_csv(leads_path) or _safe_read_csv(adj_path)
+        if grouped:
+            feats = _group_features(rows)
+            # filter/sort on grouped
+            if verdict:
+                feats = [f for f in feats if verdict in (f.get("verdicts") or [f.get("verdict")])]
+            if q:
+                ql = q.lower()
+                def hay(f):
+                    return (f.get("base","")+" "+f.get("image","")+" "+json.dumps(f.get("bands",[]))+" "+json.dumps([v.get("image","") for v in f.get("variants",[])])).lower()
+                feats = [f for f in feats if ql in hay(f) or ql in json.dumps(f).lower()]
+            if sort == "score":
+                feats.sort(key=lambda r: float(r.get("max_score", r.get("score",0)) or 0), reverse=True)
+            elif sort == "contrast":
+                feats.sort(key=lambda r: float(r.get("max_contrast", r.get("contrast",0)) or 0), reverse=True)
+            elif sort == "area":
+                feats.sort(key=lambda r: int(r.get("area_px",0) or 0), reverse=True)
+            total = len(feats)
+            # LOOP: offset wraps around (infinite loop pagination)
+            if total:
+                offset = offset % total
+            sliced = []
+            # circular slice that loops
+            for i in range(limit):
+                if not total:
+                    break
+                sliced.append(feats[(offset+i) % total])
+            return {"total": total, "limit": limit, "offset": offset, "rows": sliced, "grouped": True, "loop": True}
+        # flat fallback
         if verdict:
             rows = [r for r in rows if r.get("verdict") == verdict]
         if q:
             ql = q.lower()
             rows = [r for r in rows if ql in json.dumps(r).lower()]
-        # sort
         if sort == "score":
             rows.sort(key=lambda r: float(r.get("score", 0) or 0), reverse=True)
         elif sort == "contrast":
@@ -291,8 +383,10 @@ def create_fastapi_app():
         elif sort == "area":
             rows.sort(key=lambda r: int(r.get("area_px", 0) or 0), reverse=True)
         total = len(rows)
-        sliced = rows[offset: offset + limit]
-        return {"total": total, "limit": limit, "offset": offset, "rows": sliced}
+        if total:
+            offset = offset % total
+        sliced = [rows[(offset+i)%total] for i in range(min(limit,total))] if total else []
+        return {"total": total, "limit": limit, "offset": offset, "rows": sliced, "grouped": False, "loop": True}
 
     @app.get("/api/audit")
     def audit(limit: int = 100):
