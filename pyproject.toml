@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nasa-hirise-anomaly-investigation"
-version = "1.4.94"
+version = "1.4.95"
 description = "Automated detection, adjudication, and public dossier of anomalous structures in NASA HiRISE imagery of Mars."
 readme = "README.md"
 requires-python = ">=3.10"
