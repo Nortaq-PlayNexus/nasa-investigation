@@ -423,15 +423,31 @@ JS = r"""
     return '<div class="crop" style="background-image:url('+s+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%"></div>';
   }
   function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  // --- LOOP STATE for gallery carousel ---
+  var GLOOP={i:0,timer:null};
+  function cycleGallery(dir){
+    var figs=document.querySelectorAll('#galLoop figure');
+    if(!figs.length) return;
+    figs[GLOOP.i].style.outline='';
+    GLOOP.i=(GLOOP.i+dir+figs.length)%figs.length;
+    figs.forEach(function(f,j){ f.style.display=j===GLOOP.i?'block':'none'; f.style.outline=j===GLOOP.i?'2px solid var(--accent)':''; });
+    var cap=document.getElementById('galCap'); if(cap) cap.textContent=(GLOOP.i+1)+'/'+figs.length+' — '+figs[GLOOP.i].getAttribute('data-label');
+  }
+  function startGalLoop(){ stopGalLoop(); GLOOP.timer=setInterval(function(){ cycleGallery(1); }, 2600); }
+  function stopGalLoop(){ if(GLOOP.timer){ clearInterval(GLOOP.timer); GLOOP.timer=null; } }
+
   function dossierHTML(r){
     // grouped vs legacy flat: support both
     var variants = r.variants || r.members || [r];
     var isGrouped = variants.length>1 || r.base;
     var primaryStrip=cropDiv(r);
-    // build gallery of every image of this anomaly
+    // build LOOPING gallery of every image of this anomaly
     var gallery='';
     if(isGrouped && variants.length>1){
-      gallery='<div class="gallery">'+variants.map(function(v){
+      // carousel that LOOPS infinitely (wrap-around) — auto-cycles every 2.6s, manual prev/next also loop
+      gallery='<div id="galWrap" style="position:relative">'
+        +'<div id="galLoop" class="gallery" style="display:block">'
+        +variants.map(function(v,idx){
         var su=stripUrl(v.strip||stripFrom(v));
         var c=v.crop, style='';
         if(su && c){
@@ -439,8 +455,17 @@ JS = r"""
           style='background-image:url('+su+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%';
         }
         var thumb = (su&&c) ? '<div class="crop" style="'+style+'"></div>' : '<div class="ph" style="padding:18px">'+escH(v.image||v.band||'no strip')+'</div>';
-        return '<figure><div style="position:relative;aspect-ratio:16/9;background:#05070a;overflow:hidden">'+thumb+'</div><figcaption>'+escH(v.band||'')+' '+escH(v.image||'')+' — '+v.score+' / c'+v.contrast+'</figcaption></figure>';
-      }).join('')+'</div><div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:.35rem">All '+variants.length+' views of this physical anomaly are shown above — same crater/rock seen in '+(r.bands?r.bands.join(' / '):variants.map(function(v){return v.band;}).join(' / '))+' and nearby crops within 8 px. The grid now shows this as a single card.</div>';
+        var disp=idx===0?'block':'none';
+        var outl=idx===0?'2px solid var(--accent)':'';
+        return '<figure data-label="'+escH(v.band||'')+' '+escH(v.image||'')+' — '+v.score+' / c'+v.contrast+'" style="display:'+disp+';outline:'+outl+'"><div style="position:relative;aspect-ratio:16/9;background:#05070a;overflow:hidden">'+thumb+'</div><figcaption>'+escH(v.band||'')+' '+escH(v.image||'')+' — '+v.score+' / c'+v.contrast+'</figcaption></figure>';
+      }).join('')+'</div>'
+        +'<div style="display:flex;gap:.5rem;justify-content:center;margin:.45rem 0">'
+        +'<button class="btn" onclick="cycleGallery(-1);event.stopPropagation();" style="padding:.25rem .7rem">‹ Prev</button>'
+        +'<span id="galCap" style="font-family:var(--mono);font-size:.72rem;color:var(--muted);align-self:center">1/'+variants.length+' — '+escH(variants[0].band||'')+' '+escH(variants[0].image||'')+'</span>'
+        +'<button class="btn" onclick="cycleGallery(1);event.stopPropagation();" style="padding:.25rem .7rem">Next ›</button>'
+        +'<button class="btn" id="galPlay" onclick="if(GLOOP.timer){stopGalLoop();this.textContent=\'▶ Auto-loop\';}else{startGalLoop();this.textContent=\'⏸ Pause\';}event.stopPropagation();" style="padding:.25rem .7rem">⏸ Pause</button>'
+        +'</div>'
+        +'<div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:.35rem">Looping gallery: all '+variants.length+' views of this physical anomaly cycle infinitely (same crater/rock seen in '+(r.bands?r.bands.join(' / '):variants.map(function(v){return v.band;}).join(' / '))+' ). The grid shows this as one card.</div></div>';
     } else {
       gallery='';
     }
@@ -489,22 +514,31 @@ JS = r"""
       +'<div class="db-cap">TARGET LOCK // '+escH(r.base||r.image)+' — '+(isGrouped? variants.length+' views': '1 view')+'</div>'+ctx+gallery+'</div>'
       +'<div class="dossier-info">'+info+verify+'</div>';
   }
-  function keyOf(r){return r.base || r.image || '';}
+   function keyOf(r){return r.base || r.image || '';}
   function openDossier(img){var r=LEADMAP[img];if(!r){
-    // try lookup by base as well
     for(var k in LEADMAP){ if(LEADMAP[k] && (LEADMAP[k].base===img || LEADMAP[k].image===img)){ r=LEADMAP[k]; break; } }
     if(!r) return;
   }
-   lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
+   GLOOP.i=0; lbBox.innerHTML=dossierHTML(r);lbBox.addEventListener('click',function(e){e.stopPropagation();});
    lb.classList.add('open');history.replaceState(null,'','#dossier='+encodeURIComponent(keyOf(r)));
+   // start looping gallery auto-cycle — loops infinitely, wrap-around
+   setTimeout(function(){ GLOOP.i=0; startGalLoop(); }, 400);
   var cb=lbBox.querySelector('#copyLink');
   if(cb){cb.addEventListener('click',function(e){e.stopPropagation();
     navigator.clipboard.writeText(location.href).then(function(){cb.textContent='Link copied';setTimeout(function(){cb.textContent='Copy shareable link';},1500);});
-  });}}
+  });}
+  // keyboard loop: ← / → cycles gallery, Esc closes
+  }
   window.openDossier=openDossier;
   window.openLightbox=function(src,cap){openDossier(cap&&cap.indexOf('//')<0?cap:'');};
-  function closeLb(){lb.classList.remove('open');history.replaceState(null,'',location.pathname+location.search);}lb.addEventListener('click',closeLb);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
+  function closeLb(){stopGalLoop(); lb.classList.remove('open');history.replaceState(null,'',location.pathname+location.search);}lb.addEventListener('click',closeLb);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape') closeLb();
+    if(lb.classList.contains('open')){
+      if(e.key==='ArrowLeft'){ cycleGallery(-1); }
+      if(e.key==='ArrowRight'){ cycleGallery(1); }
+    }
+  });
 
   // leads explorer (initialised after leads.json loads) — now grouped features
   function initExplorer(){
@@ -560,7 +594,12 @@ JS = r"""
   state.cur=rows;
   grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
       var lm=document.getElementById('loadMore');
-      if(lm)lm.style.display=(state.limit<rows.length)?'inline-block':'none';
+      if(lm){
+        lm.style.display = rows.length ? 'inline-block' : 'none';
+        // LOOP label: continuous — at end show wrap option
+        if(state.limit>=rows.length) lm.textContent='↺ Loop to start — '+rows.length+' total (click to restart at top)';
+        else lm.textContent='Load more — '+cap+' / '+rows.length+' (loops at end)';
+      }
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
         el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});});}
     var q=document.getElementById('q'),mc=document.getElementById('minC'),sort=document.getElementById('sort');
@@ -574,8 +613,19 @@ JS = r"""
       nl.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
       render();});}
   var lmBtn=document.getElementById('loadMore');
-  if(lmBtn){lmBtn.addEventListener('click',function(){state.limit+=200;render();
-  lmBtn.scrollIntoView({behavior:'smooth',block:'center'});});}
+  if(lmBtn){lmBtn.addEventListener('click',function(){
+    // LOOP: when at end, wrap back to start instead of stopping
+    if(state.limit>=state.cur.length){
+      state.limit=200; grid.scrollIntoView({behavior:'smooth'});
+    } else {
+      state.limit+=200;
+      lmBtn.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+    render();
+    // update label to show looping state
+    var rows=state.cur.length;
+    lmBtn.textContent = state.limit>=rows ? '↺ Loop to start ('+rows+' total)' : 'Load more ('+Math.min(state.limit+200,rows)+' / '+rows+')';
+  });}
   var exBtn=document.getElementById('export');
   if(exBtn){exBtn.addEventListener('click',function(){
   var rows=state.cur||LEADS;
