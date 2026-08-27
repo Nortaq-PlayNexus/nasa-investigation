@@ -22,7 +22,9 @@ import sys
 import numpy as np
 from PIL import Image
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline")
+)
 
 import common
 import stereo
@@ -54,16 +56,19 @@ def main():
     right = common.load_gray(a.right)
     if left.shape != right.shape:
         print("resizing right %s -> %s" % (right.shape, left.shape))
-        right = np.asarray(Image.fromarray(right).resize((left.shape[1], left.shape[0])), dtype=np.float32)
+        right = np.asarray(
+            Image.fromarray(right).resize((left.shape[1], left.shape[0])), dtype=np.float32
+        )
 
     H, W = left.shape
     margin = int(0.5 * max(w, h)) + 16
     x0, y0 = max(0, x - margin), max(0, y - margin)
     x1, y1 = min(W, x + w + margin), min(H, y + h + margin)
     if x1 - x0 < w or y1 - y0 < h or x1 <= x0 or y1 <= y0:
-        print("candidate box (%d,%d %dx%d) does not fit the pair images (%dx%d); "
-              "candidates must come from the same framing as the stereo pair."
-              % (x, y, w, h, W, H))
+        print(
+            "candidate box (%d,%d %dx%d) does not fit the pair images (%dx%d); "
+            "candidates must come from the same framing as the stereo pair." % (x, y, w, h, W, H)
+        )
         return 1
     crop_l = left[y0:y1, x0:x1]
     crop_r = right[y0:y1, x0:x1]
@@ -88,16 +93,25 @@ def main():
     dh = stereo.height_from_disparity(relief, altitude, baseline, a.focal_px)
 
     print("candidate: image=%s box=%s,%s %sx%s" % (row["image"], x, y, w, h))
-    print("disparity: mean in-box=%.2f px, out-of-box=%.2f px, relief=%.2f px"
-          % ((mean_in or 0.0), (mean_out or 0.0), (relief or 0.0)))
+    print(
+        "disparity: mean in-box=%.2f px, out-of-box=%.2f px, relief=%.2f px"
+        % ((mean_in or 0.0), (mean_out or 0.0), (relief or 0.0))
+    )
     print("implied height difference: %s m" % ("n/a" if dh is None else "%.1f" % dh))
     if relief is not None:
         if abs(relief) >= 0.6:
-            print("VERDICT: consistent with a real 3D topographic feature (relief %.2f px)." % relief)
+            print(
+                "VERDICT: consistent with a real 3D topographic feature (relief %.2f px)." % relief
+            )
         elif abs(relief) < 0.3:
-            print("VERDICT: ~flat disparity — consistent with a 2D albedo/shadow/artifact, NOT elevated.")
+            print(
+                "VERDICT: ~flat disparity — consistent with a 2D albedo/shadow/artifact, NOT elevated."
+            )
         else:
-            print("VERDICT: weak relief (%.2f px) — inconclusive, re-check with the full-res pair." % relief)
+            print(
+                "VERDICT: weak relief (%.2f px) — inconclusive, re-check with the full-res pair."
+                % relief
+            )
     print("outputs ->", a.out)
     return 0
 

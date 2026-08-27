@@ -150,6 +150,7 @@ def _crop_bbox(src_img, box, dst, dry_run):
 def _load_font(size):
     """Best-effort TrueType font with a safe fallback."""
     from PIL import ImageFont
+
     for name in ("arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf"):
         try:
             return ImageFont.truetype(name, size)
@@ -163,6 +164,7 @@ def _load_font(size):
 
 def _open_rgb(path):
     from PIL import Image
+
     try:
         im = Image.open(path)
         im.load()
@@ -209,6 +211,7 @@ def _make_montage(images, out, dry_run, tile_h=220, gap=8, bg=(20, 20, 24)):
 def _wrap(text, font, max_w):
     """Wrap text to max_w pixels using the given PIL font."""
     from PIL import Image, ImageDraw
+
     if not text:
         return [""]
     words = text.split()
@@ -227,10 +230,10 @@ def _wrap(text, font, max_w):
     return lines
 
 
-def _polaroid(im, caption, target_w, border, font, bg=(245, 245, 248),
-             cap_fg=(20, 20, 24)):
+def _polaroid(im, caption, target_w, border, font, bg=(245, 245, 248), cap_fg=(20, 20, 24)):
     """White-bordered 'evidence photo' panel with a caption strip."""
     from PIL import Image, ImageDraw
+
     w, h = im.size
     tw = max(1, int(round(target_w)))
     th = max(1, int(round(target_w * h / w)))
@@ -246,6 +249,7 @@ def _polaroid(im, caption, target_w, border, font, bg=(245, 245, 248),
 def _target_panel(im, box, target_w, caption, font, red, acc):
     """Zoomed 'target lock' view of the anomaly with a boxed reticle + ticks."""
     from PIL import Image, ImageDraw
+
     x, y, w, h = [int(v) for v in box]
     iw, ih = im.size
     pad = max(w, h) * 7 + 1
@@ -264,8 +268,12 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
     d = ImageDraw.Draw(crop)
     d.rectangle([bx0, by0, bx1, by1], outline=red, width=4)
     t = 16
-    for (tx, ty, dx, dy) in [(bx0, by0, 1, 1), (bx1, by0, -1, 1),
-                             (bx0, by1, 1, -1), (bx1, by1, -1, -1)]:
+    for tx, ty, dx, dy in [
+        (bx0, by0, 1, 1),
+        (bx1, by0, -1, 1),
+        (bx0, by1, 1, -1),
+        (bx1, by1, -1, -1),
+    ]:
         d.line([(tx, ty), (tx + dx * t, ty)], fill=acc, width=3)
         d.line([(tx, ty), (tx, ty + dy * t)], fill=acc, width=3)
     mxc = (bx0 + bx1) / 2
@@ -276,15 +284,24 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
     tw = d.textlength(lbl, font=font)
     d.rectangle([bx0, by0 - 24, bx0 + tw + 14, by0 - 4], fill=red + (200,))
     d.text((bx0 + 7, by0 - 21), lbl, fill=(255, 255, 255), font=font)
-    panel = _polaroid(crop, caption, target_w, 18, font,
-                      bg=(248, 247, 244), cap_fg=(150, 40, 38))
+    panel = _polaroid(crop, caption, target_w, 18, font, bg=(248, 247, 244), cap_fg=(150, 40, 38))
     pd = ImageDraw.Draw(panel)
     pd.rectangle([2, 2, panel.width - 3, panel.height - 3], outline=red, width=4)
     return panel
 
 
-def _make_social_card(src_images, crop_images, primary, product, box, out, dry_run,
-                      width=1600, leads_count=1, meta=None):
+def _make_social_card(
+    src_images,
+    crop_images,
+    primary,
+    product,
+    box,
+    out,
+    dry_run,
+    width=1600,
+    leads_count=1,
+    meta=None,
+):
     """Big 'classified dossier' collage: overlapping styled imagery + crops + metadata."""
     from PIL import Image, ImageDraw
     import random
@@ -316,9 +333,9 @@ def _make_social_card(src_images, crop_images, primary, product, box, out, dry_r
             continue
         cap = os.path.splitext(os.path.basename(p))[0]
         if i == 0:
-            src_panels.append(_target_panel(im, box, 520,
-                                            "TARGET LOCK // " + product,
-                                            mono_sm, red, acc))
+            src_panels.append(
+                _target_panel(im, box, 520, "TARGET LOCK // " + product, mono_sm, red, acc)
+            )
         else:
             src_panels.append(_polaroid(im, cap, 440, 16, mono_sm))
     crop_panels = []
@@ -338,7 +355,7 @@ def _make_social_card(src_images, crop_images, primary, product, box, out, dry_r
     canvas = Image.new("RGBA", (width, canvas_h), bg + (255,))
     d = ImageDraw.Draw(canvas)
 
-    rnd = random.Random(abs(hash((product, box))) & 0xffffffff)
+    rnd = random.Random(abs(hash((product, box))) & 0xFFFFFFFF)
 
     # faint grid backdrop
     for gx in range(0, width, 48):
@@ -366,8 +383,13 @@ def _make_social_card(src_images, crop_images, primary, product, box, out, dry_r
     d.rectangle([0, 0, width, 9], fill=red, width=0)
     d.rectangle([0, 9, width, 15], fill=acc, width=0)
     d.text((40, 34), "CLASSIFIED  //  ANOMALY DOSSIER", fill=red, font=title_f)
-    d.text((44, 100), "SUBJECT: %s    REF GRID x=%d y=%d  BOX %dx%d px    SERIAL %s" % (
-        product, x, y, w, h, serial), fill=fg, font=mono)
+    d.text(
+        (44, 100),
+        "SUBJECT: %s    REF GRID x=%d y=%d  BOX %dx%d px    SERIAL %s"
+        % (product, x, y, w, h, serial),
+        fill=fg,
+        font=mono,
+    )
     tab = "EYES ONLY"
     tw = d.textlength(tab, font=mono_sm)
     d.rectangle([width - 40 - tw - 24, 30, width - 40, 64], outline=acc, width=2)
@@ -404,13 +426,23 @@ def _make_social_card(src_images, crop_images, primary, product, box, out, dry_r
     fields = [
         ("VERDICT", _fmt(primary.get("verdict", ""))),
         ("CONFIDENCE", _fmt(primary.get("confidence", ""))),
-        ("SCORE / INTEREST", "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", "")))),
-        ("POLARITY / CLASS", "%s / %s" % (_fmt(primary.get("polarity", "")), _fmt(primary.get("evidence_class", "")))),
+        (
+            "SCORE / INTEREST",
+            "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", ""))),
+        ),
+        (
+            "POLARITY / CLASS",
+            "%s / %s"
+            % (_fmt(primary.get("polarity", "")), _fmt(primary.get("evidence_class", ""))),
+        ),
         ("PIXEL SCALE (m)", _fmt(m.get("eff_pixel_scale_m") or m.get("pixel_scale_m"))),
         ("SIZE (m)", _fmt(m.get("size_m"))),
         ("SOLAR ELEV (deg)", _fmt(m.get("solar_elevation_deg"))),
         ("SOLAR AZIM (deg)", _fmt(m.get("solar_azimuth_deg"))),
-        ("INFERRED H (m)", ("≈ " + _fmt(m.get("inferred_height_m"))) if m.get("inferred_height_m") else "—"),
+        (
+            "INFERRED H (m)",
+            ("≈ " + _fmt(m.get("inferred_height_m"))) if m.get("inferred_height_m") else "—",
+        ),
         ("LEADS MERGED", _fmt(leads_count)),
     ]
     ty = my
@@ -449,13 +481,20 @@ def _make_social_card(src_images, crop_images, primary, product, box, out, dry_r
         ("ACQUISITION", m.get("acq_date") or "—"),
         ("ORBIT", _fmt(m.get("orbit"))),
         ("BAND VARIANTS", ", ".join(bands) if bands else "—"),
-        ("SITE LAT/LON", ("%.3f, %.3f" % (m["site_lat"], m["site_lon"]))
-         if (m.get("site_lat") is not None and m.get("site_lon") is not None) else "—"),
+        (
+            "SITE LAT/LON",
+            ("%.3f, %.3f" % (m["site_lat"], m["site_lon"]))
+            if (m.get("site_lat") is not None and m.get("site_lon") is not None)
+            else "—",
+        ),
         ("LOCAL SOL TIME", _fmt(m.get("local_time"))),
         ("BOUNDING BOX", "x=%d y=%d w=%d h=%d" % (x, y, w, h)),
         ("VERDICT", _fmt(primary.get("verdict", ""))),
         ("CONFIDENCE", _fmt(primary.get("confidence", ""))),
-        ("SCORE / INTEREST", "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", "")))),
+        (
+            "SCORE / INTEREST",
+            "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", ""))),
+        ),
     ]
     ly = my2 + 40
     for k, v in left:
@@ -479,7 +518,10 @@ def _make_social_card(src_images, crop_images, primary, product, box, out, dry_r
         ("FDR Q-VALUE", _fmt(primary.get("fdr_q", ""))),
         ("NEAR EDGE", _fmt(primary.get("near_edge", ""))),
         ("MATCHES COORD", _fmt(primary.get("matches_coord", ""))),
-        ("AGREE / DISAGREE", "%s / %s" % (_fmt(primary.get("agrees", "")), _fmt(primary.get("disagrees", "")))),
+        (
+            "AGREE / DISAGREE",
+            "%s / %s" % (_fmt(primary.get("agrees", "")), _fmt(primary.get("disagrees", ""))),
+        ),
         ("FLAGS", _fmt(primary.get("flags", ""))),
     ]
     ry2 = my2 + 40
@@ -576,9 +618,18 @@ def _parse_lbl(path):
             text = f.read()
     except Exception:
         return out
-    want = {"INCIDENCE_ANGLE", "SUB_SOLAR_AZIMUTH", "CENTER_LATITUDE",
-            "CENTER_LONGITUDE", "LOCAL_TIME", "MAP_SCALE", "LINE_SAMPLES",
-            "ORBIT_NUMBER", "START_TIME", "MRO:OBSERVATION_START_TIME"}
+    want = {
+        "INCIDENCE_ANGLE",
+        "SUB_SOLAR_AZIMUTH",
+        "CENTER_LATITUDE",
+        "CENTER_LONGITUDE",
+        "LOCAL_TIME",
+        "MAP_SCALE",
+        "LINE_SAMPLES",
+        "ORBIT_NUMBER",
+        "START_TIME",
+        "MRO:OBSERVATION_START_TIME",
+    }
     for ln in text.split("\n"):
         m = re.match(r"^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.+)$", ln)
         if not m:
@@ -636,16 +687,27 @@ def main(argv=None):
         prog="package_anomalies.py",
         description="Build a deduplicated, self-contained package folder per unique anomaly.",
     )
-    ap.add_argument("--leads-csv", default=LEADS_CSV,
-                    help="CSV of leads (default: data/anomalies/conclusions/leads.csv)")
-    ap.add_argument("--out-dir", default=DEFAULT_OUT,
-                    help="Where to write the packages (default: data/anomalies/packages)")
-    ap.add_argument("--verdict", default="CONFIRMED-LEAD",
-                    help="Only package leads whose `verdict` equals this (default CONFIRMED-LEAD)")
-    ap.add_argument("--force", action="store_true",
-                    help="Rebuild packages even if the folder already exists")
-    ap.add_argument("--dry-run", action="store_true",
-                    help="Print what would be done without writing files")
+    ap.add_argument(
+        "--leads-csv",
+        default=LEADS_CSV,
+        help="CSV of leads (default: data/anomalies/conclusions/leads.csv)",
+    )
+    ap.add_argument(
+        "--out-dir",
+        default=DEFAULT_OUT,
+        help="Where to write the packages (default: data/anomalies/packages)",
+    )
+    ap.add_argument(
+        "--verdict",
+        default="CONFIRMED-LEAD",
+        help="Only package leads whose `verdict` equals this (default CONFIRMED-LEAD)",
+    )
+    ap.add_argument(
+        "--force", action="store_true", help="Rebuild packages even if the folder already exists"
+    )
+    ap.add_argument(
+        "--dry-run", action="store_true", help="Print what would be done without writing files"
+    )
     args = ap.parse_args(argv if argv is not None else sys.argv[1:])
 
     if not os.path.exists(args.leads_csv):
@@ -671,8 +733,10 @@ def main(argv=None):
             groups[key] = []
             order.append(key)
         groups[key].append(r)
-    common.log("info", "%d %s rows -> %d unique anomalies (deduped)" % (
-        len(targets), args.verdict, len(groups)))
+    common.log(
+        "info",
+        "%d %s rows -> %d unique anomalies (deduped)" % (len(targets), args.verdict, len(groups)),
+    )
 
     crops_by_box = _index_crops()
     common.log("info", "indexed %d crop boxes from %s" % (len(crops_by_box), CROPS_DIR))
@@ -741,8 +805,7 @@ def main(argv=None):
             evidence_files.append(os.path.relpath(montage_dst, pkg_dir))
 
         # --- single social-media "full diagram": imagery + crops + metadata ---
-        src_only = [s for s in seen_imgs
-                    if not os.path.dirname(s).lower().endswith("marked")]
+        src_only = [s for s in seen_imgs if not os.path.dirname(s).lower().endswith("marked")]
 
         # --- enrich metadata from the PDS label + lead feature metrics ---
         meta = {}
@@ -769,6 +832,7 @@ def main(argv=None):
         if prim_src and os.path.exists(prim_src):
             try:
                 from PIL import Image as _Im
+
                 W = _Im.open(prim_src).size[0]
             except Exception:
                 W = None
@@ -780,22 +844,32 @@ def main(argv=None):
             meta["size_m"] = round(max(box[2], box[3]) * eff, 1)
         if meta.get("solar_elevation_deg") and meta.get("size_m"):
             meta["inferred_height_m"] = round(
-                meta["size_m"] * math.tan(math.radians(meta["solar_elevation_deg"])), 1)
+                meta["size_m"] * math.tan(math.radians(meta["solar_elevation_deg"])), 1
+            )
 
         card_dst = card_path
         if args.force or not os.path.exists(card_dst):
             _card_fn = _make_social_card_4k or _make_social_card
-            if _card_fn(src_only, crop_imgs, primary, product, box,
-                        card_dst, args.dry_run, leads_count=len(rows),
-                        meta=meta):
+            if _card_fn(
+                src_only,
+                crop_imgs,
+                primary,
+                product,
+                box,
+                card_dst,
+                args.dry_run,
+                leads_count=len(rows),
+                meta=meta,
+            ):
                 evidence_files.append(os.path.relpath(card_dst, pkg_dir))
         elif os.path.exists(card_dst):
             evidence_files.append(os.path.relpath(card_dst, pkg_dir))
 
         # --- evidence/ : cropped bbox per source image + matching crops + reports ---
         for src_img in seen_imgs:
-            if src_img.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff")) and \
-               os.path.dirname(src_img).lower().endswith("marked"):
+            if src_img.lower().endswith(
+                (".png", ".jpg", ".jpeg", ".tif", ".tiff")
+            ) and os.path.dirname(src_img).lower().endswith("marked"):
                 continue  # don't crop the overlay itself; only the source imagery
             stem = os.path.splitext(os.path.basename(src_img))[0]
             crop_dst = os.path.join(pkg_dir, "evidence", "lead_crop__%s.png" % _sanitize(stem))
@@ -836,8 +910,10 @@ def main(argv=None):
         for src, name in (
             (args.leads_csv, "data/leads.csv"),
             (os.path.join(CONCLUSIONS_DIR, "adjudicated.csv"), "data/adjudicated.csv"),
-            (os.path.join(ROOT, "data", "anomalies", "candidates_filtered.csv"),
-             "data/candidates_filtered.csv"),
+            (
+                os.path.join(ROOT, "data", "anomalies", "candidates_filtered.csv"),
+                "data/candidates_filtered.csv",
+            ),
         ):
             if os.path.exists(src):
                 dst = os.path.join(pkg_dir, name)
@@ -854,8 +930,10 @@ def main(argv=None):
             mpath = os.path.join(pkg_dir, "sources", "manifest.jsonl")
             count = 0
             if not args.dry_run:
-                with open(RAW_MANIFEST, encoding="utf-8") as f, \
-                        open(mpath, "w", encoding="utf-8") as out:
+                with (
+                    open(RAW_MANIFEST, encoding="utf-8") as f,
+                    open(mpath, "w", encoding="utf-8") as out,
+                ):
                     for line in f:
                         try:
                             rec = json.loads(line)
@@ -879,59 +957,113 @@ def main(argv=None):
                 if _copy(src, dst, args.dry_run):
                     sources_files.append(name)
 
-        readme = _package_readme(primary, product, box, rows, seen_imgs,
-                                 imagery_files, evidence_files, data_files, sources_files)
+        readme = _package_readme(
+            primary,
+            product,
+            box,
+            rows,
+            seen_imgs,
+            imagery_files,
+            evidence_files,
+            data_files,
+            sources_files,
+        )
         if not args.dry_run:
             common.atomic_text_write(os.path.join(pkg_dir, "README.md"), readme)
 
-        common.audit({
-            "step": "package_anomalies",
-            "package": pkg_id,
-            "product": product,
-            "box": list(box),
-            "verdict": primary.get("verdict"),
-            "confidence": primary.get("confidence"),
-            "leads_in_package": len(rows),
-            "imagery": len(imagery_files),
-            "evidence": len(evidence_files),
-            "data": len(data_files),
-            "sources": len(sources_files),
-        })
+        common.audit(
+            {
+                "step": "package_anomalies",
+                "package": pkg_id,
+                "product": product,
+                "box": list(box),
+                "verdict": primary.get("verdict"),
+                "confidence": primary.get("confidence"),
+                "leads_in_package": len(rows),
+                "imagery": len(imagery_files),
+                "evidence": len(evidence_files),
+                "data": len(data_files),
+                "sources": len(sources_files),
+            }
+        )
 
-        manifest_rows.append({
-            "package": pkg_id,
-            "product": product,
-            "x": box[0], "y": box[1], "w": box[2], "h": box[3],
-            "verdict": primary.get("verdict"),
-            "confidence": primary.get("confidence"),
-            "score": primary.get("score"),
-            "leads_in_package": len(rows),
-            "imagery": imagery_files,
-            "evidence": evidence_files,
-            "data": data_files,
-            "sources": sources_files,
-            "dir": os.path.relpath(pkg_dir, ROOT),
-        })
+        manifest_rows.append(
+            {
+                "package": pkg_id,
+                "product": product,
+                "x": box[0],
+                "y": box[1],
+                "w": box[2],
+                "h": box[3],
+                "verdict": primary.get("verdict"),
+                "confidence": primary.get("confidence"),
+                "score": primary.get("score"),
+                "leads_in_package": len(rows),
+                "imagery": imagery_files,
+                "evidence": evidence_files,
+                "data": data_files,
+                "sources": sources_files,
+                "dir": os.path.relpath(pkg_dir, ROOT),
+            }
+        )
         built += 1
-        common.log("ok", "packaged %s (%d leads, %d img / %d ev / %d data / %d src)" % (
-            pkg_id, len(rows), len(imagery_files), len(evidence_files),
-            len(data_files), len(sources_files)))
+        common.log(
+            "ok",
+            "packaged %s (%d leads, %d img / %d ev / %d data / %d src)"
+            % (
+                pkg_id,
+                len(rows),
+                len(imagery_files),
+                len(evidence_files),
+                len(data_files),
+                len(sources_files),
+            ),
+        )
 
     if not args.dry_run:
         common.atomic_text_write(
             os.path.join(out_dir, "MANIFEST.jsonl"),
-            "".join(json.dumps(r) + "\n" for r in manifest_rows))
+            "".join(json.dumps(r) + "\n" for r in manifest_rows),
+        )
         with open(os.path.join(out_dir, "index.csv"), "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["package", "product", "x", "y", "w", "h", "verdict",
-                        "confidence", "score", "leads_in_package", "dir"])
+            w.writerow(
+                [
+                    "package",
+                    "product",
+                    "x",
+                    "y",
+                    "w",
+                    "h",
+                    "verdict",
+                    "confidence",
+                    "score",
+                    "leads_in_package",
+                    "dir",
+                ]
+            )
             for r in manifest_rows:
-                w.writerow([r["package"], r["product"], r["x"], r["y"], r["w"], r["h"],
-                            r["verdict"], r["confidence"], r["score"],
-                            r["leads_in_package"], r["dir"]])
+                w.writerow(
+                    [
+                        r["package"],
+                        r["product"],
+                        r["x"],
+                        r["y"],
+                        r["w"],
+                        r["h"],
+                        r["verdict"],
+                        r["confidence"],
+                        r["score"],
+                        r["leads_in_package"],
+                        r["dir"],
+                    ]
+                )
 
-    common.log("done", "built %d packages (from %d leads), skipped %d -> %s" % (
-        built, len(targets), skipped, out_dir))
+    common.log(
+        "done",
+        "built %d packages (from %d leads), skipped %d -> %s"
+        % (built, len(targets), skipped, out_dir),
+    )
     return 0
 
 
@@ -949,8 +1081,14 @@ def _package_readme(primary, product, box, rows, seen_imgs, imagery, evidence, d
     lines.append("- **Bounding box:** x=%d y=%d w=%d h=%d (px in source image)" % (x, y, w, h))
     lines.append("- **Verdict:** %s" % primary.get("verdict", ""))
     lines.append("- **Confidence:** %s" % primary.get("confidence", ""))
-    lines.append("- **Top score / interest:** %s / %s" % (primary.get("score", ""), primary.get("interest", "")))
-    lines.append("- **Polarity / class:** %s / %s" % (primary.get("polarity", ""), primary.get("evidence_class", "")))
+    lines.append(
+        "- **Top score / interest:** %s / %s"
+        % (primary.get("score", ""), primary.get("interest", ""))
+    )
+    lines.append(
+        "- **Polarity / class:** %s / %s"
+        % (primary.get("polarity", ""), primary.get("evidence_class", ""))
+    )
     lines.append("- **Leads merged into this package:** %d" % len(rows))
     lines.append("")
     lines.append("## Recommendation (from adjudication)")
@@ -964,9 +1102,15 @@ def _package_readme(primary, product, box, rows, seen_imgs, imagery, evidence, d
     lines.append("")
     lines.append("## Contents")
     lines.append("")
-    lines.append("- `imagery/` — every distinct source image the feature appears in (+ marked overlays)")
-    lines.append("- `evidence/` — `lead_crop__*.png` (bbox crops), `anomaly_montage.png` (side-by-side crops), `social_card.png` (classified dossier), and reports")
-    lines.append("- `data/` — all sibling lead records (CSV), primary record (JSON), full provenance CSVs")
+    lines.append(
+        "- `imagery/` — every distinct source image the feature appears in (+ marked overlays)"
+    )
+    lines.append(
+        "- `evidence/` — `lead_crop__*.png` (bbox crops), `anomaly_montage.png` (side-by-side crops), `social_card.png` (classified dossier), and reports"
+    )
+    lines.append(
+        "- `data/` — all sibling lead records (CSV), primary record (JSON), full provenance CSVs"
+    )
     lines.append("- `sources/` — sources.yaml, raw-download manifest slice, catalog")
     lines.append("")
     lines.append("## Verification steps")

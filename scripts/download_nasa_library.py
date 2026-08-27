@@ -9,7 +9,18 @@ from _common import download, fetch_json, log, safe_name
 
 BODIES = {
     "moon": ["moon", "lunar", "lro", "apollo", "crater", "regolith", "tranquility", "selene"],
-    "mars": ["mars", "martian", "mro", "hirise", "perseverance", "curiosity", "opportunity", "spirit", "deimos", "phobos"],
+    "mars": [
+        "mars",
+        "martian",
+        "mro",
+        "hirise",
+        "perseverance",
+        "curiosity",
+        "opportunity",
+        "spirit",
+        "deimos",
+        "phobos",
+    ],
 }
 
 
@@ -49,8 +60,14 @@ def main(argv=None):
     page = 1
     seen = 0
     while seen < a.max:
-        q = urllib.parse.urlencode({"q": a.query, "media_type": a.media_type, "page": page,
-                                    "page_size": min(a.page_size, a.max - seen)})
+        q = urllib.parse.urlencode(
+            {
+                "q": a.query,
+                "media_type": a.media_type,
+                "page": page,
+                "page_size": min(a.page_size, a.max - seen),
+            }
+        )
         url = "https://images-api.nasa.gov/search?" + q
         try:
             data = fetch_json(url)
@@ -67,8 +84,12 @@ def main(argv=None):
             href = pick_asset(item.get("links", []))
             if not href:
                 continue
-            ext = os.path.splitext(href.split("?")[0])[1] or (".mp4" if a.media_type == "video" else ".bin")
-            body = detect_body((meta.get("title", "") or "") + " " + (meta.get("description", "") or ""))
+            ext = os.path.splitext(href.split("?")[0])[1] or (
+                ".mp4" if a.media_type == "video" else ".bin"
+            )
+            body = detect_body(
+                (meta.get("title", "") or "") + " " + (meta.get("description", "") or "")
+            )
             stem = safe_name(meta.get("nasa_id") or meta.get("title") or "item") + ext
             dest = os.path.join(a.out, body, stem)
             try:

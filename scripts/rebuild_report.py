@@ -1,4 +1,5 @@
 """Regenerate conclusions/report.html from current CSVs + strips."""
+
 from __future__ import annotations
 
 import csv
@@ -66,7 +67,7 @@ def main():
             f"<div class='card'><h3>{html.escape(r['image'])} "
             f"<span class='cls'>{html.escape(r['verdict'])}</span></h3>"
             f"<p><b>verdict</b> {html.escape(r['verdict'])} &middot; "
-            f"<b>confidence</b> {html.escape(r.get('confidence',''))} &middot; "
+            f"<b>confidence</b> {html.escape(r.get('confidence', ''))} &middot; "
             f"<b>score</b> {float(r['score']):.0f}</p>"
             f"<table><tr><td>x,y</td><td>{r['x']}, {r['y']}</td></tr>"
             f"<tr><td>size</td><td>{r['w']} x {r['h']} px</td></tr>"
@@ -75,11 +76,11 @@ def main():
             f"<tr><td>persistence</td><td>{r['persistence']}</td></tr>"
             f"<tr><td>compactness</td><td>{r['compactness']}</td></tr>"
             f"<tr><td>contrast</td><td>{r['contrast']}</td></tr>"
-            f"<tr><td>area</td><td>{r.get('area_px','')} px</td></tr>"
-            f"<tr><td>polarity</td><td>{r.get('polarity','')}</td></tr>"
+            f"<tr><td>area</td><td>{r.get('area_px', '')} px</td></tr>"
+            f"<tr><td>polarity</td><td>{r.get('polarity', '')}</td></tr>"
             f"<tr><td>flags</td><td><ul>{flag_html}</ul></td></tr></table>"
             f"{img_tag}"
-            f"<p>{html.escape(r.get('recommendation',''))}</p></div>"
+            f"<p>{html.escape(r.get('recommendation', ''))}</p></div>"
         )
 
     # finding summary
@@ -132,7 +133,7 @@ def main():
     )
 
     # top leads section
-    body += f"<h2>Top leads <span style='font-weight:normal;font-size:.9rem;color:#8b949e'>({min(60,len(top))} of {len(top)})</span></h2>"
+    body += f"<h2>Top leads <span style='font-weight:normal;font-size:.9rem;color:#8b949e'>({min(60, len(top))} of {len(top)})</span></h2>"
     body += "<p>Cross-band confirmed, contrast &ge; 1.50, off-border, 200&ndash;50000 px.</p>"
     body += "<div class='grid'>" + "".join(cards) + "</div>"
 
@@ -147,7 +148,9 @@ def main():
 
     out = CONC / "report.html"
     out.write_text(body, encoding="utf-8")
-    print(f"Written {out}  ({len(rows)} candidates, {len(leads)} leads, {len(top)} top leads, {finding_count} findings)")
+    print(
+        f"Written {out}  ({len(rows)} candidates, {len(leads)} leads, {len(top)} top leads, {finding_count} findings)"
+    )
 
 
 if __name__ == "__main__":

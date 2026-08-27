@@ -28,6 +28,7 @@ from pathlib import Path
 
 try:
     from PIL import Image
+
     _HAVE_PIL = True
 except Exception:
     _HAVE_PIL = False
@@ -52,12 +53,16 @@ except Exception:
 def timer_html() -> str:
     if not TIMER_END:
         return ""
-    return ("<div id='uplink' class='uplink'>UPLINK WINDOW // <span id='uplinkClock'>--:--:--</span> REMAINING</div>")
+    return "<div id='uplink' class='uplink'>UPLINK WINDOW // <span id='uplinkClock'>--:--:--</span> REMAINING</div>"
 
 
 def _git_rev() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT).decode().strip()
+        return (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT)
+            .decode()
+            .strip()
+        )
     except Exception:
         return "n/a"
 
@@ -106,6 +111,7 @@ def crop_style(url, crop):
         "background-size:%.2f%% %.2f%%;background-position:%.2f%% %.2f%%"
         % (url, 100.0 / fw, 100.0 / fh, bx, by)
     )
+
 
 REPO = "Nortaq-PlayNexus/nasa-investigation"
 BASE = f"https://github.com/{REPO}"
@@ -763,6 +769,7 @@ def _ver(s: str) -> str:
 CSS_VER = _ver(CSS)
 JS_VER = _ver(JS)
 
+
 # --------------------------------------------------------------------------
 # markdown -> html (lightweight)
 # --------------------------------------------------------------------------
@@ -901,7 +908,10 @@ def band_of(image: str) -> str:
 
 def base_of(image: str) -> str:
     """Strip band + variant suffix to get the shared base (one physical frame)."""
-    return re.sub(r"_(MIRB|MRGB|RED)\.(browse|abrowse|thumb)_enh\.png$", "", image or "") or (image or "").split(".")[0]
+    return (
+        re.sub(r"_(MIRB|MRGB|RED)\.(browse|abrowse|thumb)_enh\.png$", "", image or "")
+        or (image or "").split(".")[0]
+    )
 
 
 def group_features(rows: list[dict], si) -> list[dict]:
@@ -920,15 +930,18 @@ def group_features(rows: list[dict], si) -> list[dict]:
 
     def union_find(items, close):
         parent = list(range(len(items)))
+
         def find(i):
             while parent[i] != i:
                 parent[i] = parent[parent[i]]
                 i = parent[i]
             return i
+
         def union(i, j):
             ri, rj = find(i), find(j)
             if ri != rj:
                 parent[rj] = ri
+
         for i in range(len(items)):
             for j in range(i + 1, len(items)):
                 if close(items[i], items[j]):
@@ -953,55 +966,65 @@ def group_features(rows: list[dict], si) -> list[dict]:
             for m in grp:
                 strip = si.get(m.get("image", ""))
                 bands_set.add(band_of(m.get("image", "")))
-                variants.append({
-                    "image": m.get("image", ""),
-                    "x": m.get("x"), "y": m.get("y"), "w": m.get("w"), "h": m.get("h"),
-                    "contrast": round(num(m.get("contrast")), 2),
-                    "score": round(num(m.get("score")), 1),
-                    "verdict": m.get("verdict", ""),
-                    "polarity": m.get("polarity", ""),
-                    "flags": m.get("flags", ""),
-                    "band": band_of(m.get("image", "")),
-                    "strip": strip.name if strip else "",
-                    "crop": crop_box(strip, m.get("x"), m.get("y"), m.get("w"), m.get("h")),
-                })
+                variants.append(
+                    {
+                        "image": m.get("image", ""),
+                        "x": m.get("x"),
+                        "y": m.get("y"),
+                        "w": m.get("w"),
+                        "h": m.get("h"),
+                        "contrast": round(num(m.get("contrast")), 2),
+                        "score": round(num(m.get("score")), 1),
+                        "verdict": m.get("verdict", ""),
+                        "polarity": m.get("polarity", ""),
+                        "flags": m.get("flags", ""),
+                        "band": band_of(m.get("image", "")),
+                        "strip": strip.name if strip else "",
+                        "crop": crop_box(strip, m.get("x"), m.get("y"), m.get("w"), m.get("h")),
+                    }
+                )
             # sort variants by score desc for gallery
             variants.sort(key=lambda v: -v["score"])
             bands = sorted(b for b in bands_set if b)
             # keep rep fields at top level for backwards-compat filtering/sorting
-            features.append({
-                "base": base_of(rep.get("image", "")),
-                "image": rep.get("image", ""),
-                "x": rep.get("x"), "y": rep.get("y"), "w": rep.get("w"), "h": rep.get("h"),
-                "contrast": round(num(rep.get("contrast")), 2),
-                "score": round(num(rep.get("score")), 1),
-                "max_score": max(v["score"] for v in variants),
-                "max_contrast": max(v["contrast"] for v in variants),
-                "verdict": rep.get("verdict", ""),
-                "verdicts": sorted({m.get("verdict", "") for m in grp if m.get("verdict")}),
-                "confidence": rep.get("confidence", ""),
-                "evidence_class": rep.get("evidence_class", ""),
-                "polarity": rep.get("polarity", ""),
-                "flags": rep.get("flags", ""),
-                "area_px": rep.get("area_px", ""),
-                "agrees": rep.get("agrees", ""),
-                "disagrees": rep.get("disagrees", ""),
-                "persistence": rep.get("persistence", ""),
-                "compactness": rep.get("compactness", ""),
-                "edge_sharpness": rep.get("edge_sharpness", ""),
-                "fdr_q": rep.get("fdr_q", ""),
-                "pixel_scale_m": rep.get("pixel_scale_m", ""),
-                "size_m": rep.get("size_m", ""),
-                "solar_elevation_deg": rep.get("solar_elevation_deg", ""),
-                "solar_azimuth_deg": rep.get("solar_azimuth_deg", ""),
-                "inferred_height_m": rep.get("inferred_height_m", ""),
-                "bands": bands,
-                "members": variants,
-                "variants": variants,
-                "strip": variants[0]["strip"] if variants else "",
-                "crop": variants[0]["crop"] if variants else None,
-                "variant_count": len(variants),
-            })
+            features.append(
+                {
+                    "base": base_of(rep.get("image", "")),
+                    "image": rep.get("image", ""),
+                    "x": rep.get("x"),
+                    "y": rep.get("y"),
+                    "w": rep.get("w"),
+                    "h": rep.get("h"),
+                    "contrast": round(num(rep.get("contrast")), 2),
+                    "score": round(num(rep.get("score")), 1),
+                    "max_score": max(v["score"] for v in variants),
+                    "max_contrast": max(v["contrast"] for v in variants),
+                    "verdict": rep.get("verdict", ""),
+                    "verdicts": sorted({m.get("verdict", "") for m in grp if m.get("verdict")}),
+                    "confidence": rep.get("confidence", ""),
+                    "evidence_class": rep.get("evidence_class", ""),
+                    "polarity": rep.get("polarity", ""),
+                    "flags": rep.get("flags", ""),
+                    "area_px": rep.get("area_px", ""),
+                    "agrees": rep.get("agrees", ""),
+                    "disagrees": rep.get("disagrees", ""),
+                    "persistence": rep.get("persistence", ""),
+                    "compactness": rep.get("compactness", ""),
+                    "edge_sharpness": rep.get("edge_sharpness", ""),
+                    "fdr_q": rep.get("fdr_q", ""),
+                    "pixel_scale_m": rep.get("pixel_scale_m", ""),
+                    "size_m": rep.get("size_m", ""),
+                    "solar_elevation_deg": rep.get("solar_elevation_deg", ""),
+                    "solar_azimuth_deg": rep.get("solar_azimuth_deg", ""),
+                    "inferred_height_m": rep.get("inferred_height_m", ""),
+                    "bands": bands,
+                    "members": variants,
+                    "variants": variants,
+                    "strip": variants[0]["strip"] if variants else "",
+                    "crop": variants[0]["crop"] if variants else None,
+                    "variant_count": len(variants),
+                }
+            )
     features.sort(key=lambda f: -f["max_score"])
     return features
 
@@ -1037,8 +1060,7 @@ def dedupe(rows: list[dict]) -> list[dict]:
     (highest score) representative."""
     best: dict[tuple, dict] = {}
     for r in rows:
-        key = (acq_of(r.get("image", "")), int(round(num(r.get("x")))),
-               int(round(num(r.get("y")))))
+        key = (acq_of(r.get("image", "")), int(round(num(r.get("x")))), int(round(num(r.get("y")))))
         cur = best.get(key)
         if cur is None or num(r.get("score")) > num(cur.get("score")):
             best[key] = r
@@ -1122,19 +1144,21 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
         txt = f.read_text(encoding="utf-8")
         v, p = finding_meta(txt)
         stamp = "<span class='f-stamp'>CONFIRMED LEAD</span>" if v.startswith("CONFIRMED") else ""
-        sub = f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
+        sub = (
+            f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
+        )
         fcards += (
             f"<div class='finding-card' data-search='{html.escape(f.name)} {html.escape(v)} {html.escape(p)}'>"
             f"<div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>{stamp}"
             f"<span class='ft'>+</span></div>{sub}<div class='fc-body prose'>{md_to_html(txt)}</div></div>"
         )
     chips = "".join(
-        f"<span class='chip' data-v='{v}'>{v}</span>" for v in
-        ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
+        f"<span class='chip' data-v='{v}'>{v}</span>"
+        for v in ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
     )
     legend_html = "".join(
-        f"<span class='pill p-{v}' style='font-size:.68rem;padding:.1rem .5rem'>{v}</span>" for v in
-        ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
+        f"<span class='pill p-{v}' style='font-size:.68rem;padding:.1rem .5rem'>{v}</span>"
+        for v in ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "EXPLAINED-ARTIFACT", "NOISE", "WEAK"]
     )
     ac = Counter(acq_of(r.get("image", "")) for r in rows)
     target_chips = "".join(
@@ -1145,9 +1169,11 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     for k, v in sorted(counts.items(), key=lambda kv: -kv[1]):
         pct = v / total * 100.0
         cls = "v-conf" if k.startswith("CONFIRMED") else "v-other"
-        vbars += (f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
-                  f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
-                  f"<span class='vc'>{v}</span></div>")
+        vbars += (
+            f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
+            f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
+            f"<span class='vc'>{v}</span></div>"
+        )
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta name='theme-color' content='#020617'>
@@ -1277,16 +1303,19 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     for k, v in sorted(counts.items(), key=lambda kv: -kv[1]):
         pct = v / total * 100.0
         cls = "v-conf" if k.startswith("CONFIRMED") else "v-other"
-        vbars += (f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
-                  f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
-                  f"<span class='vc'>{v}</span></div>")
+        vbars += (
+            f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
+            f"<span class='vbar'><span class='vfill {cls}' style='width:{pct:.1f}%'></span></span>"
+            f"<span class='vc'>{v}</span></div>"
+        )
     # top-acquisition leaderboard
     total = len(rows) or 1
     acq = Counter(acq_of(r.get("image", "")) for r in rows)
     acq_bars = "".join(
         f"<div class='vrow'><span class='vl'>{html.escape(k)}</span>"
-        f"<span class='vbar'><span class='vfill v-other' style='width:{v/total*100:.1f}%'></span></span>"
-        f"<span class='vc'>{v}</span></div>" for k, v in acq.most_common(12)
+        f"<span class='vbar'><span class='vfill v-other' style='width:{v / total * 100:.1f}%'></span></span>"
+        f"<span class='vc'>{v}</span></div>"
+        for k, v in acq.most_common(12)
     )
     # top-lead cards (server rendered) — zoomed target-lock crop per feature, spread across source images
     cards = []
@@ -1295,18 +1324,20 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
         if strip:
             crop = crop_box(strip, r.get("x"), r.get("y"), r.get("w"), r.get("h"))
             cs = crop_style(f"../results/strips/{strip.name}", crop)
-            img = f"<div class='crop' style='{cs}'></div>" if cs else "<div class='ph'>no strip</div>"
+            img = (
+                f"<div class='crop' style='{cs}'></div>" if cs else "<div class='ph'>no strip</div>"
+            )
         else:
             img = "<div class='ph'>no strip</div>"
-        flags = (r["flags"].split(",") if r.get("flags") else [])
+        flags = r["flags"].split(",") if r.get("flags") else []
         fh = "".join(f"<li>{html.escape(f)}</li>" for f in flags) or "<li>none</li>"
         cards.append(
             f"<div class='lead' onclick=\"openDossier('{html.escape(r['image'])}')\">"
             f"<div class='thumb'>{img}{('<div class=stamp>CONFIRMED LEAD</div>' if r['verdict'].startswith('CONFIRMED') else '')}"
             f"<div class='corner-ref'>x{r.get('x')} y{r.get('y')}</div></div><div class='body'>"
-            f"<div class='name'>{i+1}. {html.escape(r['image'])}</div>"
+            f"<div class='name'>{i + 1}. {html.escape(r['image'])}</div>"
             f"<div class='row'><span class='pill p-{r['verdict']}'>{r['verdict']}</span><span>{round(num(r['score']))}</span></div>"
-            f"<div class='row'><span>contrast {round(num(r['contrast']),2)}</span><span>{r['w']}x{r['h']}</span></div>"
+            f"<div class='row'><span>contrast {round(num(r['contrast']), 2)}</span><span>{r['w']}x{r['h']}</span></div>"
             f"<div class='row'><span>flags</span></div><ul style='margin:.1rem 0 0 1rem;color:var(--muted);font-size:.75rem'>{fh}</ul>"
             f"</div></div>"
         )
@@ -1315,11 +1346,11 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     for i, r in enumerate(top):
         trs.append(
             f"<tr onclick=\"openDossier('{html.escape(r['image'])}')\" style='cursor:pointer'>"
-            f"<td>{i+1}</td><td>{html.escape(r['image'])}</td><td>{round(num(r['score']))}</td>"
-            f"<td>{r['x']},{r['y']}</td><td>{html.escape(r.get('evidence_class',''))}</td>"
+            f"<td>{i + 1}</td><td>{html.escape(r['image'])}</td><td>{round(num(r['score']))}</td>"
+            f"<td>{r['x']},{r['y']}</td><td>{html.escape(r.get('evidence_class', ''))}</td>"
             f"<td class='p-{r['verdict']}' style='color:inherit'>{html.escape(r['verdict'])}</td>"
-            f"<td>{round(num(r['contrast']),2)}</td><td>{r.get('agrees','')}/{r.get('disagrees','')}</td>"
-            f"<td>{r.get('area_px','')}</td></tr>"
+            f"<td>{round(num(r['contrast']), 2)}</td><td>{r.get('agrees', '')}/{r.get('disagrees', '')}</td>"
+            f"<td>{r.get('area_px', '')}</td></tr>"
         )
     findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
     fhtml = ""
@@ -1327,7 +1358,9 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
         txt = f.read_text(encoding="utf-8")
         v, p = finding_meta(txt)
         stamp = "<span class='f-stamp'>CONFIRMED LEAD</span>" if v.startswith("CONFIRMED") else ""
-        sub = f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
+        sub = (
+            f"<div class='fc-sub'>PRODUCT {html.escape(p)} &middot; VERDICT {html.escape(v)}</div>"
+        )
         fhtml += (
             f"<div class='finding-card'><div class='fc-head'><span class='fid'>{html.escape(f.name)}</span>{stamp}"
             f"<span class='ft'>+</span></div>{sub}<div class='fc-body prose'>{md_to_html(txt)}</div></div>"
@@ -1368,8 +1401,8 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 </div></section>
 
 <section><div class='wrap'>
-  <div class='sec-head'><h2>Top leads preview</h2><span class='hint'>{min(60,len(top))} of {len(top)} with strips &mdash; click to enlarge</span></div>
-  <div class='grid'>{''.join(cards)}</div>
+  <div class='sec-head'><h2>Top leads preview</h2><span class='hint'>{min(60, len(top))} of {len(top)} with strips &mdash; click to enlarge</span></div>
+  <div class='grid'>{"".join(cards)}</div>
 </div></section>
 
 <section><div class='wrap'>
@@ -1378,7 +1411,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     <th data-key='#'>#</th><th data-key='image'>image</th><th data-key='score'>score</th>
     <th data-key='xy'>xy</th><th data-key='class'>class</th><th data-key='verdict'>verdict</th>
     <th data-key='contrast'>contrast</th><th data-key='xb'>X-band</th><th data-key='area'>area</th></tr></thead>
-    <tbody>{''.join(trs)}</tbody></table>
+    <tbody>{"".join(trs)}</tbody></table>
 </div></section>
 
 <section><div class='wrap'>
@@ -1388,7 +1421,7 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
 
 <section><div class='wrap'>
   <div class='sec-head'><h2>Adjudication summary</h2></div>
-  <div class='prose'>{md_to_html(summary_md) if summary_md else ''}</div>
+  <div class='prose'>{md_to_html(summary_md) if summary_md else ""}</div>
 </div></section>
 
 <section><div class='wrap'>
@@ -1431,9 +1464,19 @@ def main() -> None:
     si = strip_index()
     rows = read_csv(CONC / "adjudicated.csv")
     leads = read_csv(CONC / "leads.csv")
-    summary_md = (CONC / "SUMMARY.md").read_text(encoding="utf-8") if (CONC / "SUMMARY.md").exists() else ""
-    meth = md_to_html((DOCS / "METHODOLOGY.md").read_text(encoding="utf-8")) if (DOCS / "METHODOLOGY.md").exists() else ""
-    art = md_to_html((DOCS / "ARTIFACTS.md").read_text(encoding="utf-8")) if (DOCS / "ARTIFACTS.md").exists() else ""
+    summary_md = (
+        (CONC / "SUMMARY.md").read_text(encoding="utf-8") if (CONC / "SUMMARY.md").exists() else ""
+    )
+    meth = (
+        md_to_html((DOCS / "METHODOLOGY.md").read_text(encoding="utf-8"))
+        if (DOCS / "METHODOLOGY.md").exists()
+        else ""
+    )
+    art = (
+        md_to_html((DOCS / "ARTIFACTS.md").read_text(encoding="utf-8"))
+        if (DOCS / "ARTIFACTS.md").exists()
+        else ""
+    )
 
     if SITE.exists():
         shutil.rmtree(SITE)
@@ -1451,15 +1494,18 @@ def main() -> None:
     build_results()
 
     size = sum(f.stat().st_size for f in SITE.rglob("*") if f.is_file())
-    print(f"Built site/ ({size//1024} KB): landing+explorer + report + {len(rows_d)} candidates + "
-          f"{len(top)} top leads + {len(list(LEADS_DIR.glob('F-*.md')))} findings + "
-          f"{len(list((SITE/'results'/'strips').glob('*.jpg')))} strips")
+    print(
+        f"Built site/ ({size // 1024} KB): landing+explorer + report + {len(rows_d)} candidates + "
+        f"{len(top)} top leads + {len(list(LEADS_DIR.glob('F-*.md')))} findings + "
+        f"{len(list((SITE / 'results' / 'strips').glob('*.jpg')))} strips"
+    )
 
 
 def selftest() -> int:
     """Lightweight offline checks for the dossier helpers (no HiRISE data needed)."""
     import tempfile
     from PIL import Image
+
     fails = 0
 
     def ok(cond, msg):
@@ -1487,9 +1533,36 @@ def selftest() -> int:
 
     # dedupe: same (acq,x,y) across bands collapses to one, highest score kept
     rows = [
-        {"image": "ESP_013236_1410_MIRB.abrowse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "80", "x": "5", "y": "5", "w": "10", "h": "10", "contrast": "2"},
-        {"image": "ESP_013236_1410_RED.browse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "100", "x": "5", "y": "5", "w": "10", "h": "10", "contrast": "2"},
-        {"image": "ESP_013948_1410_RED.browse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "90", "x": "9", "y": "9", "w": "10", "h": "10", "contrast": "2"},
+        {
+            "image": "ESP_013236_1410_MIRB.abrowse_enh.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": "80",
+            "x": "5",
+            "y": "5",
+            "w": "10",
+            "h": "10",
+            "contrast": "2",
+        },
+        {
+            "image": "ESP_013236_1410_RED.browse_enh.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": "100",
+            "x": "5",
+            "y": "5",
+            "w": "10",
+            "h": "10",
+            "contrast": "2",
+        },
+        {
+            "image": "ESP_013948_1410_RED.browse_enh.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": "90",
+            "x": "9",
+            "y": "9",
+            "w": "10",
+            "h": "10",
+            "contrast": "2",
+        },
     ]
     dd = dedupe(rows)
     ok(len(dd) == 2, "dedupe collapses same (acq,x,y) to one row")
@@ -1499,10 +1572,21 @@ def selftest() -> int:
     # diverse_preview: spreads across images, respects cap
     big = []
     for i in range(20):
-        big.append({"image": f"IMG_{i % 3}.png", "verdict": "CONFIRMED-LEAD", "score": str(i),
-                    "x": "1", "y": "1", "w": "4", "h": "4", "contrast": "2"})
+        big.append(
+            {
+                "image": f"IMG_{i % 3}.png",
+                "verdict": "CONFIRMED-LEAD",
+                "score": str(i),
+                "x": "1",
+                "y": "1",
+                "w": "4",
+                "h": "4",
+                "contrast": "2",
+            }
+        )
     prev = diverse_preview(big, 6, 2)
     from collections import Counter
+
     cnt = Counter(r["image"] for r in prev)
     ok(len(prev) == 6, "diverse_preview returns requested count")
     ok(all(v <= 2 for v in cnt.values()), "diverse_preview respects per-image cap")
@@ -1511,7 +1595,7 @@ def selftest() -> int:
     tc = verdict_counts(rows)
     ok(tc.get("CONFIRMED-LEAD", 0) == 3, "verdict_counts tallies correctly")
 
-    print(f"selftest: {'ALL PASS' if fails == 0 else str(fails)+' FAILED'}")
+    print(f"selftest: {'ALL PASS' if fails == 0 else str(fails) + ' FAILED'}")
     return fails
 
 

@@ -1,4 +1,5 @@
 """Capture screenshots for repository documentation."""
+
 import os
 from playwright.sync_api import sync_playwright
 
@@ -7,10 +8,32 @@ OUT = os.path.join(ROOT, "assets", "screenshots")
 os.makedirs(OUT, exist_ok=True)
 
 PAGES = [
-    ("dashboard.png", "file:///" + os.path.join(ROOT, "app", "static", "index.html").replace("\\", "/"), 1280, 800),
-    ("showcase.png", "file:///" + os.path.join(ROOT, "showcase", "index.html").replace("\\", "/"), 1280, 800),
-    ("triage.png", "file:///" + os.path.join(ROOT, "data", "anomalies", "triage", "index.html").replace("\\", "/"), 1280, 800),
-    ("report.png", "file:///" + os.path.join(ROOT, "data", "anomalies", "analysis", "report.html").replace("\\", "/"), 1280, 2000),
+    (
+        "dashboard.png",
+        "file:///" + os.path.join(ROOT, "app", "static", "index.html").replace("\\", "/"),
+        1280,
+        800,
+    ),
+    (
+        "showcase.png",
+        "file:///" + os.path.join(ROOT, "showcase", "index.html").replace("\\", "/"),
+        1280,
+        800,
+    ),
+    (
+        "triage.png",
+        "file:///"
+        + os.path.join(ROOT, "data", "anomalies", "triage", "index.html").replace("\\", "/"),
+        1280,
+        800,
+    ),
+    (
+        "report.png",
+        "file:///"
+        + os.path.join(ROOT, "data", "anomalies", "analysis", "report.html").replace("\\", "/"),
+        1280,
+        2000,
+    ),
 ]
 
 with sync_playwright() as p:

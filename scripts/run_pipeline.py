@@ -22,7 +22,9 @@ if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
     _exe_dir = os.path.dirname(os.path.abspath(sys.executable))
     _bundle = os.path.abspath(sys._MEIPASS)
     # Prefer exe_dir if it has project markers, else bundle
-    if os.path.exists(os.path.join(_exe_dir, "config", "pipeline.json")) or os.path.exists(os.path.join(_exe_dir, "data")):
+    if os.path.exists(os.path.join(_exe_dir, "config", "pipeline.json")) or os.path.exists(
+        os.path.join(_exe_dir, "data")
+    ):
         ROOT = _exe_dir
     else:
         ROOT = _bundle
@@ -45,8 +47,18 @@ import mark  # noqa: E402
 import triage  # noqa: E402
 import verify_downloads  # noqa: E402
 
-STEPS = ["download", "catalog", "verify", "enhance", "detect", "mark",
-         "analyze", "triage", "benchmark", "adjudicate"]
+STEPS = [
+    "download",
+    "catalog",
+    "verify",
+    "enhance",
+    "detect",
+    "mark",
+    "analyze",
+    "triage",
+    "benchmark",
+    "adjudicate",
+]
 
 # Extra enhancement flags you can enable with --enhance-flags (e.g.
 # "--native16 --destripe"). Deep CLAHE/bilateral processing needs opencv.
@@ -75,25 +87,38 @@ def step_args(step, a):
             args += EXTRA_ENHANCE.split()
         return args
     if step == "detect":
-        return ["--dir", "data/processed", "--out", "data/anomalies",
-                "--scales", "4", "--z", "3.0", "--min-size", "12"]
+        return [
+            "--dir",
+            "data/processed",
+            "--out",
+            "data/anomalies",
+            "--scales",
+            "4",
+            "--z",
+            "3.0",
+            "--min-size",
+            "12",
+        ]
     if step == "mark":
-        return ["--candidates", "data/anomalies/candidates.csv",
-                "--out", "data/anomalies/marked"]
+        return ["--candidates", "data/anomalies/candidates.csv", "--out", "data/anomalies/marked"]
     if step == "analyze":
-        return ["--candidates", "data/anomalies/candidates.csv",
-                "--out", "data/anomalies/analysis"]
+        return ["--candidates", "data/anomalies/candidates.csv", "--out", "data/anomalies/analysis"]
     if step == "triage":
-        return ["--candidates", "data/anomalies/candidates.csv",
-                "--out", "data/anomalies/triage"]
+        return ["--candidates", "data/anomalies/candidates.csv", "--out", "data/anomalies/triage"]
     if step == "benchmark":
         return ["--out", "data/anomalies/benchmark"]
     # adjudicate -- --metadata joins solar geometry/pixel scale from the
     # catalog so each candidate gets a physical size and shadow-alignment score.
-    return ["--candidates", "data/anomalies/candidates.csv",
-            "--evaluated", "data/anomalies/analysis/evaluated.csv",
-            "--metadata", "data/catalog/catalog.csv",
-            "--out", "data/anomalies/conclusions"]
+    return [
+        "--candidates",
+        "data/anomalies/candidates.csv",
+        "--evaluated",
+        "data/anomalies/analysis/evaluated.csv",
+        "--metadata",
+        "data/catalog/catalog.csv",
+        "--out",
+        "data/anomalies/conclusions",
+    ]
 
 
 MODULES = {
@@ -116,10 +141,16 @@ def main():
     p.add_argument("--to", dest="end", choices=STEPS, default=STEPS[-1])
     p.add_argument("--query", default="moon")
     p.add_argument("--raw", default="data/raw")
-    p.add_argument("--no-enhance-flags", action="store_true",
-                   help="do not add the default native-16-bit enhancement flag")
-    p.add_argument("--selftest", action="store_true",
-                   help="run the unit test suite and exit (no pipeline steps)")
+    p.add_argument(
+        "--no-enhance-flags",
+        action="store_true",
+        help="do not add the default native-16-bit enhancement flag",
+    )
+    p.add_argument(
+        "--selftest",
+        action="store_true",
+        help="run the unit test suite and exit (no pipeline steps)",
+    )
     a = p.parse_args()
 
     if a.selftest:
@@ -127,6 +158,7 @@ def main():
         if getattr(sys, "frozen", False):
             import importlib.util
             import unittest
+
             test_path = os.path.join(ROOT, "tests", "test_pipeline.py")
             # fallback: try bundled test file, else discover
             if os.path.exists(test_path):
@@ -138,6 +170,7 @@ def main():
                 # no test file bundled (excluded) — run minimal smoke test
                 print("selftest: no tests/test_pipeline.py bundled; running import smoke test")
                 import detect  # noqa: F401
+
                 print("smoke: common + detect imports ok")
                 sys.exit(0)
             runner = unittest.TextTestRunner(verbosity=2)
@@ -147,7 +180,7 @@ def main():
         sys.exit(code)
 
     start_i, end_i = STEPS.index(a.start), STEPS.index(a.end)
-    for s in STEPS[start_i:end_i + 1]:
+    for s in STEPS[start_i : end_i + 1]:
         if s == "verify":
             # verify integrity, then make sure data/raw still matches the
             # ingest-time snapshot before analysis is trusted.
@@ -156,8 +189,11 @@ def main():
                 sys.exit(1)
             code = build_catalog.main(["--root", a.raw, "--check-immutable"])
             if code:
-                print("FATAL: data/raw differs from the ingest snapshot; "
-                      "investigate before continuing.", flush=True)
+                print(
+                    "FATAL: data/raw differs from the ingest snapshot; "
+                    "investigate before continuing.",
+                    flush=True,
+                )
                 sys.exit(code)
         else:
             rc = run(MODULES[s].main, step_args(s, a))

@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _common import download_many, log, safe_name
 
 HREF = re.compile(r'<a href="([^"]+)">.*?</a>(.*?)\n', re.I)
-SIZE_CELL = re.compile(r'indexcolsize[^>]*>([^<]*)</td>', re.I)
+SIZE_CELL = re.compile(r"indexcolsize[^>]*>([^<]*)</td>", re.I)
 
 
 def parse_size(text):
@@ -22,7 +22,7 @@ def parse_size(text):
         pass
     m = re.match(r"^(\d+(?:\.\d+)?)([KMG]?)$", text, re.I)
     if m:
-        mult = {"": 1, "K": 1024, "M": 1024 ** 2, "G": 1024 ** 3}.get(m.group(2).upper(), 1)
+        mult = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3}.get(m.group(2).upper(), 1)
         try:
             return int(float(m.group(1)) * mult)
         except ValueError:
@@ -34,7 +34,10 @@ def list_dir(url, attempts=3):
     last = None
     for i in range(attempts):
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "nasa-investigation/1.0"}), timeout=60) as r:
+            with urllib.request.urlopen(
+                urllib.request.Request(url, headers={"User-Agent": "nasa-investigation/1.0"}),
+                timeout=60,
+            ) as r:
                 html = r.read().decode("utf-8", "ignore")
             base = url.rstrip("/")
             out = []
@@ -56,8 +59,19 @@ def list_dir(url, attempts=3):
     raise last
 
 
-def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
-          max_dirs=50, workers=4, manifest=None, source=""):
+def crawl(
+    volume,
+    pattern,
+    depth,
+    maxcount,
+    out,
+    suffix="",
+    max_size=None,
+    max_dirs=50,
+    workers=4,
+    manifest=None,
+    source="",
+):
     """Crawl a PDS HTTP directory tree and download files matching a pattern.
 
     Directory discovery stays sequential (the listing HTML is light); the
@@ -107,8 +121,7 @@ def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
     if not tasks:
         log(f"no matching files found under {volume}", logpath)
         return 0
-    results = download_many(tasks[:maxcount], workers=workers,
-                            manifest=manifest, source=source)
+    results = download_many(tasks[:maxcount], workers=workers, manifest=manifest, source=source)
     count = 0
     for url, dest, status in results:
         if status == "downloaded":
@@ -118,20 +131,35 @@ def crawl(volume, pattern, depth, maxcount, out, suffix="", max_size=None,
 
 
 def main():
-    p = argparse.ArgumentParser(description="Crawl a PDS HTTP directory listing and download files matching a pattern")
+    p = argparse.ArgumentParser(
+        description="Crawl a PDS HTTP directory listing and download files matching a pattern"
+    )
     p.add_argument("--volume", required=True, help="root listing URL")
     p.add_argument("--pattern", required=True, help="regex matched against file names")
     p.add_argument("--depth", type=int, default=2)
     p.add_argument("--max", type=int, default=20)
-    p.add_argument("--max-size-mb", type=float, default=None, help="skip files larger than this many MB")
-    p.add_argument("--max-dirs", type=int, default=50, help="stop after visiting this many directories")
+    p.add_argument(
+        "--max-size-mb", type=float, default=None, help="skip files larger than this many MB"
+    )
+    p.add_argument(
+        "--max-dirs", type=int, default=50, help="stop after visiting this many directories"
+    )
     p.add_argument("--workers", type=int, default=4, help="parallel downloads")
     p.add_argument("--manifest", default="data/raw/manifest.jsonl", help="provenance JSONL")
     p.add_argument("--out", required=True)
     a = p.parse_args()
     max_size = int(a.max_size_mb * 1024 * 1024) if a.max_size_mb else None
-    n = crawl(a.volume, a.pattern, a.depth, a.max, a.out, max_size=max_size,
-              max_dirs=a.max_dirs, workers=a.workers, manifest=a.manifest)
+    n = crawl(
+        a.volume,
+        a.pattern,
+        a.depth,
+        a.max,
+        a.out,
+        max_size=max_size,
+        max_dirs=a.max_dirs,
+        workers=a.workers,
+        manifest=a.manifest,
+    )
     print(f"downloaded {n}")
 
 

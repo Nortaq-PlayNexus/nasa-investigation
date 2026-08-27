@@ -49,6 +49,7 @@ def log(msg, logpath=None):
 # verified downloads + manifest
 # --------------------------------------------------------------------------
 
+
 def _fetch_once(url, tmp, attempts=3, timeout=120):
     last = None
     for i in range(attempts):
@@ -101,8 +102,11 @@ def download(url, dest, attempts=3, expected_sha=None, manifest=None, source="")
 def append_manifest(path, url, dest, sha, nbytes, source=""):
     os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
     rec = {
-        "url": url, "file": os.path.abspath(dest), "sha256": sha,
-        "bytes": nbytes, "source": source,
+        "url": url,
+        "file": os.path.abspath(dest),
+        "sha256": sha,
+        "bytes": nbytes,
+        "source": source,
         "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     with open(path, "a", encoding="utf-8") as f:

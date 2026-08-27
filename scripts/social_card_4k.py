@@ -36,8 +36,11 @@ from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 # fonts / image helpers
 # --------------------------------------------------------------------------- #
 def _load_font(size, bold=False):
-    names = (["DejaVuSans-Bold.ttf", "arialbd.ttf", "LiberationSans-Bold.ttf"]
-             if bold else ["DejaVuSans.ttf", "arial.ttf", "LiberationSans-Regular.ttf"])
+    names = (
+        ["DejaVuSans-Bold.ttf", "arialbd.ttf", "LiberationSans-Bold.ttf"]
+        if bold
+        else ["DejaVuSans.ttf", "arial.ttf", "LiberationSans-Regular.ttf"]
+    )
     for n in names:
         try:
             return ImageFont.truetype(n, size)
@@ -97,8 +100,7 @@ def _vgradient(w, h, c1, c2):
     return img
 
 
-def _polaroid(im, caption, target_w, border, font,
-              bg=(245, 245, 248), cap_fg=(20, 20, 24)):
+def _polaroid(im, caption, target_w, border, font, bg=(245, 245, 248), cap_fg=(20, 20, 24)):
     w, h = im.size
     tw = max(1, int(round(target_w)))
     th = max(1, int(round(target_w * h / w)))
@@ -132,8 +134,12 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
     lw = max(4, int(target_w / 150))
     d.rectangle([bx0, by0, bx1, by1], outline=red, width=lw)
     t = int(target_w / 36) + 8
-    for (tx, ty, dx, dy) in [(bx0, by0, 1, 1), (bx1, by0, -1, 1),
-                             (bx0, by1, 1, -1), (bx1, by1, -1, -1)]:
+    for tx, ty, dx, dy in [
+        (bx0, by0, 1, 1),
+        (bx1, by0, -1, 1),
+        (bx0, by1, 1, -1),
+        (bx1, by1, -1, -1),
+    ]:
         d.line([(tx, ty), (tx + dx * t, ty)], fill=acc, width=lw)
         d.line([(tx, ty), (tx, ty + dy * t)], fill=acc, width=lw)
     mxc = (bx0 + bx1) / 2
@@ -144,8 +150,7 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
     tw = d.textlength(lbl, font=font)
     d.rectangle([bx0, by0 - 28, bx0 + tw + 18, by0 - 4], fill=red + (210,))
     d.text((bx0 + 9, by0 - 24), lbl, fill=(255, 255, 255), font=font)
-    panel = _polaroid(crop, caption, target_w, 16, font,
-                      bg=(248, 247, 244), cap_fg=(150, 40, 38))
+    panel = _polaroid(crop, caption, target_w, 16, font, bg=(248, 247, 244), cap_fg=(150, 40, 38))
     pd = ImageDraw.Draw(panel)
     pd.rectangle([2, 2, panel.width - 3, panel.height - 3], outline=red, width=5)
     return panel
@@ -153,8 +158,9 @@ def _target_panel(im, box, target_w, caption, font, red, acc):
 
 def _panel(d, box, fill, outline, width, radius=18, shadow=True):
     if shadow:
-        d.rounded_rectangle([box[0] + 8, box[1] + 10, box[2] + 8, box[3] + 10],
-                            radius=radius, fill=(0, 0, 0, 150))
+        d.rounded_rectangle(
+            [box[0] + 8, box[1] + 10, box[2] + 8, box[3] + 10], radius=radius, fill=(0, 0, 0, 150)
+        )
     d.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
@@ -169,8 +175,18 @@ def _bullets(d, x, y, items, font, color, gap=30, bullet="•  "):
 # --------------------------------------------------------------------------- #
 # main card
 # --------------------------------------------------------------------------- #
-def make_card(src_images, crop_images, primary, product, box, out, dry_run,
-              width=3840, leads_count=1, meta=None):
+def make_card(
+    src_images,
+    crop_images,
+    primary,
+    product,
+    box,
+    out,
+    dry_run,
+    width=3840,
+    leads_count=1,
+    meta=None,
+):
     from PIL import Image, ImageDraw
 
     x, y, w, h = [int(v) for v in box]
@@ -197,7 +213,7 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
     prefix = product.split("_")[0]
     extras_url = "https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/%s/%s/" % (prefix, product)
     view_url = "https://www.uahirise.org/%s" % product.lower()
-    rnd = random.Random(abs(hash((product, box)) & 0xffffffff))
+    rnd = random.Random(abs(hash((product, box)) & 0xFFFFFFFF))
     m = meta or {}
     bands = m.get("bands") or []
     lat = m.get("site_lat")
@@ -226,9 +242,13 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
     d.rectangle([0, 0, W, 8], fill=red)
     d.rectangle([0, 8, W, 15], fill=acc)
     d.text((60, 36), "CLASSIFIED  //  ANOMALY DOSSIER", fill=red, font=title_f)
-    d.text((64, 126),
-           "SUBJECT: %s    ·    REF GRID x=%d y=%d    ·    BOX %dx%d px    ·    SERIAL %s"
-           % (product, x, y, w, h, serial), fill=fg, font=sub_f)
+    d.text(
+        (64, 126),
+        "SUBJECT: %s    ·    REF GRID x=%d y=%d    ·    BOX %dx%d px    ·    SERIAL %s"
+        % (product, x, y, w, h, serial),
+        fill=fg,
+        font=sub_f,
+    )
     tab = "EYES ONLY"
     tw = d.textlength(tab, font=mono_sm)
     d.rounded_rectangle([W - 60 - tw - 32, 44, W - 60, 88], radius=9, outline=acc, width=3)
@@ -237,8 +257,7 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
     # ---- evidence board (left) ----
     board = [60, 186, 2360, 1500]
     _panel(d, board, (11, 15, 24, 230), (255, 255, 255, 40), 2, radius=18)
-    d.text((board[0] + 28, board[1] + 22), "E V I D E N C E   B O A R D",
-           fill=acc, font=sect_f)
+    d.text((board[0] + 28, board[1] + 22), "E V I D E N C E   B O A R D", fill=acc, font=sect_f)
 
     src_panels = []
     for i, p in enumerate(src_images):
@@ -247,13 +266,25 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
             continue
         cap = os.path.splitext(os.path.basename(p))[0]
         if i == 0:
-            src_panels.append((_target_panel(im, box, 1020,
-                              "TARGET LOCK // " + product, mono_sm, red, acc), 96, 250, 0))
+            src_panels.append(
+                (
+                    _target_panel(im, box, 1020, "TARGET LOCK // " + product, mono_sm, red, acc),
+                    96,
+                    250,
+                    0,
+                )
+            )
         else:
             is_marked = os.path.basename(p).lower().startswith("marked_")
             cap2 = ("MARKED // " + cap) if is_marked else cap
-            src_panels.append((_polaroid(im, cap2, 500, 16, mono_sm),
-                               1230 + (len(src_panels) - 1) * 560, 270, rnd.uniform(-2, 2)))
+            src_panels.append(
+                (
+                    _polaroid(im, cap2, 500, 16, mono_sm),
+                    1230 + (len(src_panels) - 1) * 560,
+                    270,
+                    rnd.uniform(-2, 2),
+                )
+            )
 
     placements = []
     if src_panels:
@@ -304,13 +335,23 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
     fields = [
         ("VERDICT", _fmt(primary.get("verdict", ""))),
         ("CONFIDENCE", _fmt(primary.get("confidence", ""))),
-        ("SCORE / INTEREST", "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", "")))),
-        ("POLARITY / CLASS", "%s / %s" % (_fmt(primary.get("polarity", "")), _fmt(primary.get("evidence_class", "")))),
+        (
+            "SCORE / INTEREST",
+            "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", ""))),
+        ),
+        (
+            "POLARITY / CLASS",
+            "%s / %s"
+            % (_fmt(primary.get("polarity", "")), _fmt(primary.get("evidence_class", ""))),
+        ),
         ("PIXEL SCALE (m)", _fmt(m.get("eff_pixel_scale_m") or m.get("pixel_scale_m"))),
         ("SIZE (m)", _fmt(m.get("size_m"))),
         ("SOLAR ELEV (deg)", _fmt(m.get("solar_elevation_deg"))),
         ("SOLAR AZIM (deg)", _fmt(m.get("solar_azimuth_deg"))),
-        ("INFERRED H (m)", ("≈ " + _fmt(m.get("inferred_height_m"))) if m.get("inferred_height_m") else "—"),
+        (
+            "INFERRED H (m)",
+            ("≈ " + _fmt(m.get("inferred_height_m"))) if m.get("inferred_height_m") else "—",
+        ),
         ("LEADS MERGED", _fmt(leads_count)),
     ]
     ty = py0 + 84
@@ -330,7 +371,11 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
     vy = ry + 18
     d.text((px0 + 30, vy), "VERIFY THIS LEAD", fill=acc, font=sect_f)
     vy += 36
-    trek = ("Mars Trek @ %.3f, %.3f" % (lat, lon)) if (lat is not None and lon is not None) else "Mars Trek (geolocate via catalog)"
+    trek = (
+        ("Mars Trek @ %.3f, %.3f" % (lat, lon))
+        if (lat is not None and lon is not None)
+        else "Mars Trek (geolocate via catalog)"
+    )
     verify = [
         "EDR original: hirise-pds.lpl.arizona.edu/EXTRAS",
         trek,
@@ -358,12 +403,18 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
         ("ACQUISITION", m.get("acq_date") or "—"),
         ("ORBIT", _fmt(m.get("orbit"))),
         ("BAND VARIANTS", ", ".join(bands) if bands else "—"),
-        ("SITE LAT/LON", ("%.3f, %.3f" % (lat, lon)) if (lat is not None and lon is not None) else "—"),
+        (
+            "SITE LAT/LON",
+            ("%.3f, %.3f" % (lat, lon)) if (lat is not None and lon is not None) else "—",
+        ),
         ("LOCAL SOL TIME", _fmt(m.get("local_time"))),
         ("BOUNDING BOX", "x=%d y=%d w=%d h=%d" % (x, y, w, h)),
         ("VERDICT", _fmt(primary.get("verdict", ""))),
         ("CONFIDENCE", _fmt(primary.get("confidence", ""))),
-        ("SCORE / INTEREST", "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", "")))),
+        (
+            "SCORE / INTEREST",
+            "%s / %s" % (_fmt(primary.get("score", "")), _fmt(primary.get("interest", ""))),
+        ),
     ]
     ly = by0 + 66
     for k, v in left:
@@ -382,7 +433,10 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
         ("FDR Q-VALUE", _fmt(primary.get("fdr_q", ""))),
         ("NEAR EDGE", _fmt(primary.get("near_edge", ""))),
         ("MATCHES COORD", _fmt(primary.get("matches_coord", ""))),
-        ("AGREE / DISAGREE", "%s / %s" % (_fmt(primary.get("agrees", "")), _fmt(primary.get("disagrees", "")))),
+        (
+            "AGREE / DISAGREE",
+            "%s / %s" % (_fmt(primary.get("agrees", "")), _fmt(primary.get("disagrees", ""))),
+        ),
         ("FLAGS", _fmt(primary.get("flags", ""))),
     ]
     ry2 = by0 + 66
@@ -439,17 +493,42 @@ def make_card(src_images, crop_images, primary, product, box, out, dry_run,
 
 if __name__ == "__main__":
     import tempfile
+
     out = os.path.join(tempfile.gettempdir(), "social_card_test.png")
-    row = {"verdict": "CONFIRMED-LEAD", "confidence": "high", "score": "100.0",
-           "interest": "60.9", "polarity": "dark", "evidence_class": "3",
-           "contrast": "3.77", "area_px": "336", "aspect": "2.33",
-           "persistence": "1.0", "compactness": "1.0", "edge_sharpness": "1.26",
-           "contrast_stability": "0.97", "fdr_q": "0.025", "near_edge": "False",
-           "matches_coord": "2", "agrees": "2", "disagrees": "0", "flags": "small_blob",
-           "recommendation": "Real feature confirmed at the same pixels in the corresponding band variant(s) of one acquisition."}
-    meta = {"bands": ["MIRB", "RED"], "site_lat": -8.5, "site_lon": 140.2,
-            "acq_date": "2023-04-12", "orbit": 81234, "local_time": "14:32",
-            "eff_pixel_scale_m": 0.5, "size_m": 14.0, "solar_elevation_deg": 45.0,
-            "solar_azimuth_deg": 130.0, "inferred_height_m": 14.0}
+    row = {
+        "verdict": "CONFIRMED-LEAD",
+        "confidence": "high",
+        "score": "100.0",
+        "interest": "60.9",
+        "polarity": "dark",
+        "evidence_class": "3",
+        "contrast": "3.77",
+        "area_px": "336",
+        "aspect": "2.33",
+        "persistence": "1.0",
+        "compactness": "1.0",
+        "edge_sharpness": "1.26",
+        "contrast_stability": "0.97",
+        "fdr_q": "0.025",
+        "near_edge": "False",
+        "matches_coord": "2",
+        "agrees": "2",
+        "disagrees": "0",
+        "flags": "small_blob",
+        "recommendation": "Real feature confirmed at the same pixels in the corresponding band variant(s) of one acquisition.",
+    }
+    meta = {
+        "bands": ["MIRB", "RED"],
+        "site_lat": -8.5,
+        "site_lon": 140.2,
+        "acq_date": "2023-04-12",
+        "orbit": 81234,
+        "local_time": "14:32",
+        "eff_pixel_scale_m": 0.5,
+        "size_m": 14.0,
+        "solar_elevation_deg": 45.0,
+        "solar_azimuth_deg": 130.0,
+        "inferred_height_m": 14.0,
+    }
     ok = make_card([], [], row, "ESP_013236_1410", (752, 5296, 12, 28), out, False, meta=meta)
     print("self-test ok:", ok, "->", out)

@@ -10,6 +10,7 @@ assumptions). A live stopwatch is written to .loop/timer.json and .loop/status.h
     python scripts/continuous_upgrade.py --hours 6
     python scripts/continuous_upgrade.py --minutes 20 --no-push
 """
+
 import argparse
 import datetime
 import json
@@ -41,15 +42,24 @@ def write_timer(iteration, phase, end_ts):
     now = time.time()
     remaining = max(0, end_ts - now)
     elapsed = now - START.timestamp()
-    pct = min(100, elapsed / (end_ts - START.timestamp()) * 100) if end_ts > START.timestamp() else 0
+    pct = (
+        min(100, elapsed / (end_ts - START.timestamp()) * 100) if end_ts > START.timestamp() else 0
+    )
+
     def hms(s):
         return f"{int(s // 3600):02d}:{int((s % 3600) // 60):02d}:{int(s % 60):02d}"
+
     data = {
-        "start": START.isoformat(), "end": datetime.datetime.fromtimestamp(end_ts).isoformat(),
+        "start": START.isoformat(),
+        "end": datetime.datetime.fromtimestamp(end_ts).isoformat(),
         "now": datetime.datetime.now().isoformat(),
-        "elapsed_sec": int(elapsed), "elapsed_hms": hms(elapsed),
-        "remaining_sec": int(remaining), "remaining_hms": hms(remaining),
-        "pct": round(pct, 2), "iteration": iteration, "phase": phase,
+        "elapsed_sec": int(elapsed),
+        "elapsed_hms": hms(elapsed),
+        "remaining_sec": int(remaining),
+        "remaining_hms": hms(remaining),
+        "pct": round(pct, 2),
+        "iteration": iteration,
+        "phase": phase,
     }
     TIMER_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
     html = f"""<!doctype html><html><head><meta charset=utf-8><meta http-equiv="refresh" content="1">
@@ -60,14 +70,14 @@ def write_timer(iteration, phase, end_ts):
 .log{{background:#0b1120;border:1px solid #1e293b;border-radius:8px;padding:10px;max-height:360px;overflow:auto;white-space:pre-wrap;font-size:12px}}
 </style></head><body>
 <h1>&#9889; NASA HiRISE Dossier &mdash; Continuous Upgrade Loop</h1>
-<div class="big">{data['remaining_hms']} <span style="font-size:16px;color:#94a3b8">remaining</span> / {data['elapsed_hms']} elapsed</div>
+<div class="big">{data["remaining_hms"]} <span style="font-size:16px;color:#94a3b8">remaining</span> / {data["elapsed_hms"]} elapsed</div>
 <div class="bar"><div class="fill"></div></div>
-<div>{pct:.2f}% &mdash; iteration #{iteration} &mdash; <b>{phase}</b> &mdash; ends {datetime.datetime.fromtimestamp(end_ts).strftime('%H:%M:%S')}</div>
+<div>{pct:.2f}% &mdash; iteration #{iteration} &mdash; <b>{phase}</b> &mdash; ends {datetime.datetime.fromtimestamp(end_ts).strftime("%H:%M:%S")}</div>
 <div class="grid">
 <div class="card"><div class="k">Iteration</div><div class="v">#{iteration}</div></div>
 <div class="card"><div class="k">Phase</div><div class="v">{phase}</div></div>
-<div class="card"><div class="k">Elapsed</div><div class="v">{data['elapsed_hms']}</div></div>
-<div class="card"><div class="k">Remaining</div><div class="v">{data['remaining_hms']}</div></div>
+<div class="card"><div class="k">Elapsed</div><div class="v">{data["elapsed_hms"]}</div></div>
+<div class="card"><div class="k">Remaining</div><div class="v">{data["remaining_hms"]}</div></div>
 </div>
 <div class="card"><div class="k">Log (tail)</div><div class="log" id="log">loading&hellip;</div></div>
 <script>
@@ -85,7 +95,10 @@ def run(cmd):
 
 UPGRADES = [
     ("ruff", ["-m", "ruff", "check", "scripts", "tests", "--fix"]),
-    ("bump-version", None),  # handled inline below
+    ("ruff-format", ["-m", "ruff", "format", "scripts", "tests"]),
+    ("bump-version", None),
+    ("showcase", None),  # build showcase catalogue (grouped view)
+    ("site-selftest", None),
 ]
 
 
@@ -94,6 +107,7 @@ def bump_version():
         p = ROOT / "pyproject.toml"
         txt = p.read_text(encoding="utf-8")
         import re
+
         m = re.search(r'version = "(\d+)\.(\d+)\.(\d+)"', txt)
         if m:
             maj, mi, pa = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -107,16 +121,27 @@ def bump_version():
 
 
 def upgrade_everything(iteration, py):
-    log(f"=== ITERATION {iteration} — UPGRADE ===")
+    log(f"=== ITERATION {iteration} — UPGRADE (LOOP) ===")
     for name, args in UPGRADES:
         try:
-            if args is None:
+            if name == "bump-version":
                 bump_version()
+                continue
+            if name == "showcase":
+                log("upgrade: showcase (grouped + loop gallery)")
+                run([py, "scripts/build_showcase.py"])
+                continue
+            if name == "site-selftest":
+                log("upgrade: site grouping + loop selftest")
+                run([py, "scripts/build_site.py", "--selftest"])
                 continue
             log(f"upgrade: {name}")
             run([py, *args])
         except Exception as e:
             log(f"upgrade {name} warn: {e}")
+    # LOOP INVARIANT: ensure grouping stays loop-safe — rebuild site every iter
+    log("upgrade: rebuild site (grouped loop gallery)")
+    run([py, "scripts/build_site.py"])
 
 
 def test_all(py):
@@ -142,8 +167,11 @@ def build_site(py):
 
 def verify(py):
     log("=== VERIFY ===")
-    need = [ROOT / "site" / "index.html", ROOT / "site" / "report" / "index.html",
-            ROOT / "site" / "assets" / "leads.json"]
+    need = [
+        ROOT / "site" / "index.html",
+        ROOT / "site" / "report" / "index.html",
+        ROOT / "site" / "assets" / "leads.json",
+    ]
     for f in need:
         if not f.exists():
             log(f"VERIFY FAIL missing {f}")
@@ -194,6 +222,7 @@ def main():
                     push()
         except Exception as e:
             import traceback
+
             log(f"ITER {iteration} EXCEPTION {e}")
             log(traceback.format_exc()[:800])
         iteration += 1

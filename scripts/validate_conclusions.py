@@ -7,6 +7,7 @@ Run in CI / before publishing the dossier:
 
 Exits non-zero if any hard error is found.
 """
+
 from __future__ import annotations
 
 import csv
@@ -20,8 +21,13 @@ CONC = ROOT / "data" / "anomalies" / "conclusions"
 REQUIRED = ["image", "verdict", "score", "x", "y", "w", "h", "contrast"]
 NUMERIC = ["score", "x", "y", "w", "h", "contrast"]
 ALLOWED = {
-    "CONFIRMED-LEAD", "PROMISING", "TERRAIN",
-    "EXPLAINED-ARTIFACT", "NOISE", "WEAK", "UNKNOWN",
+    "CONFIRMED-LEAD",
+    "PROMISING",
+    "TERRAIN",
+    "EXPLAINED-ARTIFACT",
+    "NOISE",
+    "WEAK",
+    "UNKNOWN",
 }
 _ACQ = re.compile(r"^([A-Za-z]+_\d+_\d+)")
 

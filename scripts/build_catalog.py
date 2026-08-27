@@ -15,7 +15,9 @@ import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline")
+)
 
 import common
 import metadata
@@ -65,16 +67,36 @@ def guess_mission(name, low):
     return "unknown"
 
 
-FIELDS = ["path", "body", "mission", "name", "bytes", "sha256", "width", "height",
-          "label_path", "observation_id", "target", "instrument", "band",
-          "start_time", "incidence_angle", "emission_angle", "phase_angle",
-          "solar_azimuth", "solar_elevation", "pixel_scale_m",
-          "spacecraft_altitude_km"]
+FIELDS = [
+    "path",
+    "body",
+    "mission",
+    "name",
+    "bytes",
+    "sha256",
+    "width",
+    "height",
+    "label_path",
+    "observation_id",
+    "target",
+    "instrument",
+    "band",
+    "start_time",
+    "incidence_angle",
+    "emission_angle",
+    "phase_angle",
+    "solar_azimuth",
+    "solar_elevation",
+    "pixel_scale_m",
+    "spacecraft_altitude_km",
+]
 
 
 def process_file(root, path):
     name = os.path.basename(path)
-    if name.endswith((".meta.json", ".log", ".part", ".LBL", ".lbl", ".XML", ".xml", ".J2I", ".LBL.json")):
+    if name.endswith(
+        (".meta.json", ".log", ".part", ".LBL", ".lbl", ".XML", ".xml", ".J2I", ".LBL.json")
+    ):
         return None
     rel = os.path.relpath(path, root)
     body = rel.split(os.sep)[0].lower()
@@ -107,14 +129,22 @@ def process_file(root, path):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Build a searchable catalog of downloaded imagery with hashes and metadata")
+    p = argparse.ArgumentParser(
+        description="Build a searchable catalog of downloaded imagery with hashes and metadata"
+    )
     p.add_argument("--root", default="data/raw")
     p.add_argument("--out", default="data/catalog/catalog.csv")
     p.add_argument("--workers", type=int, default=8)
-    p.add_argument("--snapshot", action="store_true",
-                   help="write data/catalog/immutable.json (sha256 of every file) after cataloging")
-    p.add_argument("--check-immutable", action="store_true",
-                   help="fail if any file under --root differs from the snapshot")
+    p.add_argument(
+        "--snapshot",
+        action="store_true",
+        help="write data/catalog/immutable.json (sha256 of every file) after cataloging",
+    )
+    p.add_argument(
+        "--check-immutable",
+        action="store_true",
+        help="fail if any file under --root differs from the snapshot",
+    )
     a = p.parse_args(argv)
 
     if a.check_immutable:

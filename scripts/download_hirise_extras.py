@@ -74,6 +74,7 @@ Usage
   # crawl entire EXTRAS tree (bounded)
   python scripts/download_hirise_extras.py --crawl --max-sets 20 --max-size-mb 15
 """
+
 from __future__ import annotations
 
 import argparse
@@ -112,6 +113,7 @@ HREF_RX = re.compile(r'<a href="([^"]+)">', re.I)
 # ---------------------------------------------------------------------------
 # Provenance helpers
 # ---------------------------------------------------------------------------
+
 
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -193,6 +195,7 @@ def _download(url: str, dest: Path, manifest_path: Path | None, max_retries: int
 # VariantSet discovery
 # ---------------------------------------------------------------------------
 
+
 def _classify_variant(filename: str) -> str:
     """Human taxonomy label for a single file."""
     low = filename.lower()
@@ -242,13 +245,17 @@ def discover_exemplar(out_root: Path, manifest: Path, max_size_mb: float | None)
     count = 0
     # DTM directory itself (all DTEEC/DTFEC/ORTHO siblings)
     dtm_url = EXTRAS_BASE + "DTM/" + EXEMPLAR_DIR + "/"
-    count += _fetch_directory_set(dtm_url, out_root / EXEMPLAR_DTM, manifest, max_size_mb, label="DTM exemplar")
+    count += _fetch_directory_set(
+        dtm_url, out_root / EXEMPLAR_DTM, manifest, max_size_mb, label="DTM exemplar"
+    )
     # Parent RDR observations
     for obs in EXEMPLAR_OBS:
         # RDR is sharded by ORB range, discover by crawling RDR/ESP/ORB_013900*
         rdr_url = _find_rdr_observation_url(obs)
         if rdr_url:
-            count += _fetch_directory_set(rdr_url, out_root / obs, manifest, max_size_mb, label=f"RDR {obs}")
+            count += _fetch_directory_set(
+                rdr_url, out_root / obs, manifest, max_size_mb, label=f"RDR {obs}"
+            )
         else:
             print(f"[warn] could not locate RDR directory for {obs}", file=sys.stderr)
     return count
@@ -275,7 +282,9 @@ def _find_rdr_observation_url(obs: str) -> str | None:
     return None
 
 
-def _fetch_directory_set(url: str, out_dir: Path, manifest: Path, max_size_mb: float | None, label: str = "") -> int:
+def _fetch_directory_set(
+    url: str, out_dir: Path, manifest: Path, max_size_mb: float | None, label: str = ""
+) -> int:
     print(f"[extras] {label or url}  <-  {url}")
     _enforce_extras(url)
     hrefs = _list_dir(url)
@@ -295,24 +304,40 @@ def _fetch_directory_set(url: str, out_dir: Path, manifest: Path, max_size_mb: f
             # We skip only if we can't confirm size; the caller sets max_size_mb
             # to gate; browses/JPGs are always allowed (few MB).
             print(f"  skip (JP2 size-gated) {fname}")
-            variant_manifest.append({"file": fname, "taxonomy": _classify_variant(fname), "status": "skipped-size-gate", "url": file_url})
+            variant_manifest.append(
+                {
+                    "file": fname,
+                    "taxonomy": _classify_variant(fname),
+                    "status": "skipped-size-gate",
+                    "url": file_url,
+                }
+            )
             continue
         dest = out_dir / fname
         try:
             status = _download(file_url, dest, manifest)
             downloaded += 1 if status == "downloaded" else 0
             print(f"  {status:10s} {fname:45s}  [{_classify_variant(fname)}]")
-            variant_manifest.append({
-                "file": fname,
-                "taxonomy": _classify_variant(fname),
-                "status": status,
-                "url": file_url,
-                "sha256": _sha256(dest) if dest.exists() else None,
-                "bytes": dest.stat().st_size if dest.exists() else 0,
-            })
+            variant_manifest.append(
+                {
+                    "file": fname,
+                    "taxonomy": _classify_variant(fname),
+                    "status": status,
+                    "url": file_url,
+                    "sha256": _sha256(dest) if dest.exists() else None,
+                    "bytes": dest.stat().st_size if dest.exists() else 0,
+                }
+            )
         except Exception as e:  # noqa: BLE001
             print(f"  error   {fname}: {e}", file=sys.stderr)
-            variant_manifest.append({"file": fname, "taxonomy": _classify_variant(fname), "status": f"error: {e}", "url": file_url})
+            variant_manifest.append(
+                {
+                    "file": fname,
+                    "taxonomy": _classify_variant(fname),
+                    "status": f"error: {e}",
+                    "url": file_url,
+                }
+            )
     # Write per-footprint variant manifest (the comparison contract's index)
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "_variant_manifest.json", "w", encoding="utf-8") as f:
@@ -327,11 +352,15 @@ def _fetch_directory_set(url: str, out_dir: Path, manifest: Path, max_size_mb: f
             f,
             indent=2,
         )
-    print(f"  -> {downloaded} downloaded, {len(variant_manifest)} catalogued -> {out_dir}/_variant_manifest.json")
+    print(
+        f"  -> {downloaded} downloaded, {len(variant_manifest)} catalogued -> {out_dir}/_variant_manifest.json"
+    )
     return downloaded
 
 
-def crawl_extras(out_root: Path, manifest: Path, max_sets: int, max_size_mb: float | None, max_dirs: int) -> int:
+def crawl_extras(
+    out_root: Path, manifest: Path, max_sets: int, max_size_mb: float | None, max_dirs: int
+) -> int:
     """Bounded crawl of EXTRAS/ tree, collecting bounded number of variant sets."""
     # Walk RDR + DTM roots breadth-first
     roots = [EXTRAS_BASE + "RDR/", EXTRAS_BASE + "DTM/"]
@@ -352,7 +381,9 @@ def crawl_extras(out_root: Path, manifest: Path, max_sets: int, max_size_mb: flo
             print(f"[warn] list {url}: {e}", file=sys.stderr)
             continue
         # Distinguish leaf observation dirs (contain browse JPGs) from branch dirs
-        has_variant = any(RDR_VARIANTS.match(h) or DTM_VARIANTS.match(h) for h in hrefs if not h.endswith("/"))
+        has_variant = any(
+            RDR_VARIANTS.match(h) or DTM_VARIANTS.match(h) for h in hrefs if not h.endswith("/")
+        )
         subdirs = [h for h in hrefs if h.endswith("/")]
         if has_variant and depth >= 2:
             # This is a leaf footprint — fetch as a complete variant set
@@ -380,24 +411,64 @@ def crawl_extras(out_root: Path, manifest: Path, max_sets: int, max_size_mb: flo
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="HiRISE PDS EXTRAS exclusive acquisition — variant-set downloader (the only sanctioned source)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    p.add_argument("--out", default="data/raw/mars/hirise_extras", help="output root (variant sets become subdirs)")
-    p.add_argument("--manifest", default="data/raw/manifest.jsonl", help="provenance JSONL (appended)")
-    p.add_argument("--max-size-mb", type=float, default=15.0, help="skip JP2s larger than this (browse JPGs always fetched); 0=allow all")
+    p.add_argument(
+        "--out",
+        default="data/raw/mars/hirise_extras",
+        help="output root (variant sets become subdirs)",
+    )
+    p.add_argument(
+        "--manifest", default="data/raw/manifest.jsonl", help="provenance JSONL (appended)"
+    )
+    p.add_argument(
+        "--max-size-mb",
+        type=float,
+        default=15.0,
+        help="skip JP2s larger than this (browse JPGs always fetched); 0=allow all",
+    )
     p.add_argument("--max-sets", type=int, default=5, help="max variant sets when crawling")
-    p.add_argument("--max-dirs", type=int, default=60, help="max directory listings visited when crawling")
+    p.add_argument(
+        "--max-dirs", type=int, default=60, help="max directory listings visited when crawling"
+    )
     # Focused modes
-    p.add_argument("--exemplar", action="store_true", help="fetch the canonical DTM exemplar + its two parent RDR observations")
-    p.add_argument("--observation", default="", help="single observation id, e.g. ESP_013948_1410 (fetches all BW/color variants)")
-    p.add_argument("--dtm", default="", help="stereo pair id, e.g. ESP_013948_1410_ESP_013236_1410 (fetches DTM + orthos + shaded)")
-    p.add_argument("--crawl", action="store_true", help="bounded crawl of EXTRAS/RDR and EXTRAS/DTM (use --max-sets to bound)")
-    p.add_argument("--enforce-extras", action="store_true", default=True, help="reject any URL outside EXTRAS_BASE (default: on)")
-    p.add_argument("--no-enforce", dest="enforce_extras", action="store_false", help="disable enforcement (not recommended)")
+    p.add_argument(
+        "--exemplar",
+        action="store_true",
+        help="fetch the canonical DTM exemplar + its two parent RDR observations",
+    )
+    p.add_argument(
+        "--observation",
+        default="",
+        help="single observation id, e.g. ESP_013948_1410 (fetches all BW/color variants)",
+    )
+    p.add_argument(
+        "--dtm",
+        default="",
+        help="stereo pair id, e.g. ESP_013948_1410_ESP_013236_1410 (fetches DTM + orthos + shaded)",
+    )
+    p.add_argument(
+        "--crawl",
+        action="store_true",
+        help="bounded crawl of EXTRAS/RDR and EXTRAS/DTM (use --max-sets to bound)",
+    )
+    p.add_argument(
+        "--enforce-extras",
+        action="store_true",
+        default=True,
+        help="reject any URL outside EXTRAS_BASE (default: on)",
+    )
+    p.add_argument(
+        "--no-enforce",
+        dest="enforce_extras",
+        action="store_false",
+        help="disable enforcement (not recommended)",
+    )
     args = p.parse_args(argv)
 
     out_root = Path(args.out)
@@ -426,7 +497,9 @@ def main(argv: list[str] | None = None) -> int:
             # try direct guess: search all ORB ranges quickly
             print(f"[error] could not locate RDR dir for observation {obs}", file=sys.stderr)
             return 2
-        total += _fetch_directory_set(url, out_root / obs, manifest, args.max_size_mb, label=f"RDR {obs}")
+        total += _fetch_directory_set(
+            url, out_root / obs, manifest, args.max_size_mb, label=f"RDR {obs}"
+        )
     if args.dtm:
         pair = args.dtm.strip()
         # Try every ORB range under DTM/
@@ -448,7 +521,9 @@ def main(argv: list[str] | None = None) -> int:
         if not found:
             print(f"[error] DTM pair dir not found for {pair}", file=sys.stderr)
             return 2
-        total += _fetch_directory_set(found, out_root / pair, manifest, args.max_size_mb, label=f"DTM {pair}")
+        total += _fetch_directory_set(
+            found, out_root / pair, manifest, args.max_size_mb, label=f"DTM {pair}"
+        )
     if args.crawl:
         total += crawl_extras(out_root, manifest, args.max_sets, args.max_size_mb, args.max_dirs)
 

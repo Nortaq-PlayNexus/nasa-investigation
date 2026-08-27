@@ -33,9 +33,36 @@ def test_crop_box_missing_file():
 
 def test_dedupe_collapses_and_keeps_best():
     rows = [
-        {"image": "ESP_013236_1410_MIRB.abrowse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "80", "x": "5", "y": "5", "w": "10", "h": "10", "contrast": "2"},
-        {"image": "ESP_013236_1410_RED.browse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "100", "x": "5", "y": "5", "w": "10", "h": "10", "contrast": "2"},
-        {"image": "ESP_013948_1410_RED.browse_enh.png", "verdict": "CONFIRMED-LEAD", "score": "90", "x": "9", "y": "9", "w": "10", "h": "10", "contrast": "2"},
+        {
+            "image": "ESP_013236_1410_MIRB.abrowse_enh.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": "80",
+            "x": "5",
+            "y": "5",
+            "w": "10",
+            "h": "10",
+            "contrast": "2",
+        },
+        {
+            "image": "ESP_013236_1410_RED.browse_enh.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": "100",
+            "x": "5",
+            "y": "5",
+            "w": "10",
+            "h": "10",
+            "contrast": "2",
+        },
+        {
+            "image": "ESP_013948_1410_RED.browse_enh.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": "90",
+            "x": "9",
+            "y": "9",
+            "w": "10",
+            "h": "10",
+            "contrast": "2",
+        },
     ]
     dd = bs.dedupe(rows)
     assert len(dd) == 2
@@ -45,8 +72,16 @@ def test_dedupe_collapses_and_keeps_best():
 
 def test_diverse_preview_spreads_and_caps():
     big = [
-        {"image": f"IMG_{i % 3}.png", "verdict": "CONFIRMED-LEAD", "score": str(i),
-         "x": "1", "y": "1", "w": "4", "h": "4", "contrast": "2"}
+        {
+            "image": f"IMG_{i % 3}.png",
+            "verdict": "CONFIRMED-LEAD",
+            "score": str(i),
+            "x": "1",
+            "y": "1",
+            "w": "4",
+            "h": "4",
+            "contrast": "2",
+        }
         for i in range(20)
     ]
     prev = bs.diverse_preview(big, 6, 2)

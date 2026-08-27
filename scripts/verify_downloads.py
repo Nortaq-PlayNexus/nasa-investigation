@@ -28,7 +28,9 @@ def check_file(args):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Verify integrity of downloaded files against the catalog")
+    p = argparse.ArgumentParser(
+        description="Verify integrity of downloaded files against the catalog"
+    )
     p.add_argument("--root", default="data/raw")
     p.add_argument("--catalog", default="data/catalog/catalog.csv")
     p.add_argument("--out", default="data/catalog/verify_report.txt")

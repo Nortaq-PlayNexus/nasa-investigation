@@ -20,13 +20,21 @@ def main():
     p = argparse.ArgumentParser(description="Download from a curated obscure-source archive")
     p.add_argument("--source", help="archive name from scripts/sources.py")
     p.add_argument("--list", action="store_true", help="list known archives and exit")
-    p.add_argument("--mode", choices=("browse", "edr"), default="browse",
-                   help="browse = preview JPEGs; edr = lossless originals (can be huge)")
+    p.add_argument(
+        "--mode",
+        choices=("browse", "edr"),
+        default="browse",
+        help="browse = preview JPEGs; edr = lossless originals (can be huge)",
+    )
     p.add_argument("--volume", default=None, help="override the registry volume URL")
     p.add_argument("--max", type=int, default=20)
     p.add_argument("--depth", type=int, default=None)
-    p.add_argument("--max-size-mb", type=float, default=None,
-                   help="skip files larger than this (strongly recommended for EDR mode)")
+    p.add_argument(
+        "--max-size-mb",
+        type=float,
+        default=None,
+        help="skip files larger than this (strongly recommended for EDR mode)",
+    )
     p.add_argument("--max-dirs", type=int, default=None)
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--manifest", default="data/raw/manifest.jsonl", help="provenance JSONL")
@@ -51,9 +59,18 @@ def main():
     if max_size is None and a.mode == "edr" and src["target"] == "mars":
         print("   NOTE: EDR mode without --max-size-mb; CTX/MOC EDRs can be GBs.")
     out = os.path.join(a.out, src["target"], a.source)
-    n = crawl(volume, pattern, depth, a.max, out, max_size=max_size,
-              max_dirs=max_dirs, workers=a.workers, manifest=a.manifest,
-              source=a.source)
+    n = crawl(
+        volume,
+        pattern,
+        depth,
+        a.max,
+        out,
+        max_size=max_size,
+        max_dirs=max_dirs,
+        workers=a.workers,
+        manifest=a.manifest,
+        source=a.source,
+    )
     print(f"downloaded {n} -> {out}")
 
 

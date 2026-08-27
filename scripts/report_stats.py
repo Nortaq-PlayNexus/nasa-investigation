@@ -6,6 +6,7 @@ conclusions CSVs directly and never touches the raw imagery.
     python scripts/report_stats.py                 # print to stdout
     python scripts/report_stats.py --out stats.json # write file
 """
+
 from __future__ import annotations
 
 import csv
@@ -61,11 +62,18 @@ def main() -> int:
     }
     text = json.dumps(out, indent=2)
     if "--markdown" in sys.argv:
-        md = ["# HiRISE Conclusions Summary", "",
-              f"- Candidates: **{len(rows)}**", f"- Leads: **{len(lead_rows)}**",
-              f"- Confirmed leads: **{len(conf)}**", f"- Avg contrast: **{round(avg_contrast, 3)}**",
-              f"- Finding reports: **{out['findings']}**", "",
-              "## Verdicts", ""]
+        md = [
+            "# HiRISE Conclusions Summary",
+            "",
+            f"- Candidates: **{len(rows)}**",
+            f"- Leads: **{len(lead_rows)}**",
+            f"- Confirmed leads: **{len(conf)}**",
+            f"- Avg contrast: **{round(avg_contrast, 3)}**",
+            f"- Finding reports: **{out['findings']}**",
+            "",
+            "## Verdicts",
+            "",
+        ]
         for k, v in verdicts.most_common():
             md.append(f"- {k}: {v}")
         md += ["", "## Top acquisitions", "", "| Acquisition | Candidates |", "|---|---|"]

@@ -8,7 +8,9 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline")
+)
 
 import adjudicate
 import benchmark
@@ -23,6 +25,7 @@ class TestOverlay(unittest.TestCase):
 
     def _text_scene(self, size=512):
         from PIL import ImageDraw, ImageFont
+
         rng = np.random.default_rng(4)
         arr = rng.normal(110.0, 6.0, (size, size)).astype(np.float32)
         im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
@@ -38,16 +41,18 @@ class TestOverlay(unittest.TestCase):
 
     def test_text_scene_flagged(self):
         res = overlay.text_overlay_score(self._text_scene())
-        self.assertTrue(res["flagged"],
-                        msg="annotated scene must be flagged, got %.2f" % res["score"])
+        self.assertTrue(
+            res["flagged"], msg="annotated scene must be flagged, got %.2f" % res["score"]
+        )
         self.assertGreaterEqual(res["lines"], 1)
         self.assertTrue(res["boxes"])
 
     def test_terrain_scene_not_flagged(self):
         arr = benchmark.synthetic_scene((512, 512), seed=9)
         res = overlay.text_overlay_score(arr)
-        self.assertFalse(res["flagged"],
-                         msg="clean terrain must not be flagged, got %.2f" % res["score"])
+        self.assertFalse(
+            res["flagged"], msg="clean terrain must not be flagged, got %.2f" % res["score"]
+        )
 
     def test_flat_scene_not_flagged(self):
         res = overlay.text_overlay_score(np.full((256, 256), 80.0, np.float32))
@@ -66,37 +71,46 @@ class TestBorderExclusion(unittest.TestCase):
     def _scene(self):
         arr = np.full((400, 400), 40.0, dtype=np.float32)
         yy, xx = np.mgrid[0:400, 0:400]
-        arr[(xx - 200) ** 2 + (yy - 200) ** 2 <= 18 ** 2] = 220.0  # centre blob
-        arr[4:22, 300:340] = 220.0                                 # edge blob
+        arr[(xx - 200) ** 2 + (yy - 200) ** 2 <= 18**2] = 220.0  # centre blob
+        arr[4:22, 300:340] = 220.0  # edge blob
         return arr
 
     def test_edge_blob_dropped_with_border_frac(self):
-        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000,
-                                     border_frac=0.05)
-        self.assertTrue(any(b["x"] < 150 for b in found) is False or
-                        all(b["y"] >= 20 for b in found),
-                        msg="no candidate may sit inside the border band")
+        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000, border_frac=0.05)
+        self.assertTrue(
+            any(b["x"] < 150 for b in found) is False or all(b["y"] >= 20 for b in found),
+            msg="no candidate may sit inside the border band",
+        )
         for b in found:
             self.assertGreaterEqual(b["y"], 20)
             self.assertLessEqual(b["y"] + b["h"], 380)
 
     def test_centre_blob_kept(self):
-        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000,
-                                     border_frac=0.05)
-        self.assertTrue(any(b["x"] <= 200 <= b["x"] + b["w"] and
-                            b["y"] <= 200 <= b["y"] + b["h"] for b in found))
+        found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000, border_frac=0.05)
+        self.assertTrue(
+            any(
+                b["x"] <= 200 <= b["x"] + b["w"] and b["y"] <= 200 <= b["y"] + b["h"] for b in found
+            )
+        )
 
     def test_no_border_frac_keeps_edge(self):
         found = detect.analyze_array(self._scene(), [1], 3.0, 12, 8_000_000)
-        self.assertTrue(any(b["y"] < 20 for b in found),
-                        msg="without border_frac the edge blob must still be found")
+        self.assertTrue(
+            any(b["y"] < 20 for b in found),
+            msg="without border_frac the edge blob must still be found",
+        )
 
     def test_exclude_boxes(self):
         arr = self._scene()
-        found = detect.analyze_array(arr, [1], 3.0, 12, 8_000_000,
-                                     exclude_boxes=[(180, 180, 40, 40)])
-        self.assertFalse(any(b["x"] + b["w"] > 180 and b["x"] < 220 and
-                             b["y"] + b["h"] > 180 and b["y"] < 220 for b in found))
+        found = detect.analyze_array(
+            arr, [1], 3.0, 12, 8_000_000, exclude_boxes=[(180, 180, 40, 40)]
+        )
+        self.assertFalse(
+            any(
+                b["x"] + b["w"] > 180 and b["x"] < 220 and b["y"] + b["h"] > 180 and b["y"] < 220
+                for b in found
+            )
+        )
 
 
 class TestZPvalue(unittest.TestCase):
@@ -175,6 +189,7 @@ class TestAtomicAndHash(unittest.TestCase):
             rows = [{"a": 1, "b": 2}, {"a": 3, "b": 4}]
             common.atomic_csv_write(p, rows, ["a", "b"])
             import csv
+
             with open(p, newline="", encoding="utf-8") as f:
                 got = list(csv.DictReader(f))
             self.assertEqual([(int(r["a"]), int(r["b"])) for r in got], [(1, 2), (3, 4)])
@@ -217,6 +232,7 @@ class TestDetect(unittest.TestCase):
     def _write_img(self, d, arr):
         p = os.path.join(d, "img.png")
         from PIL import Image
+
         Image.fromarray(arr.astype(np.uint8)).save(p)
         return p
 
@@ -224,13 +240,14 @@ class TestDetect(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             arr = np.full((512, 512), 30.0, dtype=np.float32)
             yy, xx = np.mgrid[0:512, 0:512]
-            arr[(xx - 200) ** 2 + (yy - 200) ** 2 <= 20 ** 2] = 200.0
+            arr[(xx - 200) ** 2 + (yy - 200) ** 2 <= 20**2] = 200.0
             p = self._write_img(d, arr)
             boxes = detect.analyze(p, [2], 3.0, 12, 8_000_000)
             self.assertTrue(boxes)
             cx, cy = 200, 200
-            hit = any(b["x"] <= cx <= b["x"] + b["w"] and
-                      b["y"] <= cy <= b["y"] + b["h"] for b in boxes)
+            hit = any(
+                b["x"] <= cx <= b["x"] + b["w"] and b["y"] <= cy <= b["y"] + b["h"] for b in boxes
+            )
             self.assertTrue(hit)
 
     def test_flat_scene_no_detections(self):
@@ -243,8 +260,7 @@ class TestDetect(unittest.TestCase):
     def test_benchmark_recall_floor(self):
         with tempfile.TemporaryDirectory() as d:
             arr = benchmark.synthetic_scene((600, 600), seed=11)
-            recall, neg, _ = benchmark.run_bench(
-                arr, [24, 64], [4], 3.0, 12, 11, d, "unit")
+            recall, neg, _ = benchmark.run_bench(arr, [24, 64], [4], 3.0, 12, 11, d, "unit")
             self.assertEqual(neg, 0)
             for size in (24, 64):
                 hit_n, n = recall[size]
@@ -255,7 +271,7 @@ class TestAdjudicate(unittest.TestCase):
     def _crop(self, size=64, disk_r=8, peak=90.0):
         crop = np.full((size, size), 100.0, dtype=np.float32)
         yy, xx = np.mgrid[0:size, 0:size]
-        crop[(xx - size / 2) ** 2 + (yy - size / 2) ** 2 <= disk_r ** 2] += peak
+        crop[(xx - size / 2) ** 2 + (yy - size / 2) ** 2 <= disk_r**2] += peak
         return crop
 
     def test_roundness_disk(self):
@@ -282,18 +298,12 @@ class TestAdjudicate(unittest.TestCase):
         self.assertLess(persist, 0.35, msg="a lone hot pixel must not survive denoising")
 
     def test_verdict_funnel(self):
-        self.assertEqual(adjudicate.verdict(80, 1, 0, 0.9, 1.0, "", 500),
-                         "EXPLAINED-ARTIFACT")
-        self.assertEqual(adjudicate.verdict(80, 3, 1, 0.9, 1.0, "", 500),
-                         "CONFIRMED-LEAD")
-        self.assertEqual(adjudicate.verdict(80, 3, 1, 0.9, 1.0, "streak", 500),
-                         "TERRAIN")
-        self.assertEqual(adjudicate.verdict(50, 3, 0, 0.9, 1.0, "", 500),
-                         "PROMISING")
-        self.assertEqual(adjudicate.verdict(30, 3, 0, 0.3, 4.0, "", 500),
-                         "WEAK")
-        self.assertEqual(adjudicate.verdict(10, 3, 0, 0.3, 4.0, "", 500),
-                         "NOISE")
+        self.assertEqual(adjudicate.verdict(80, 1, 0, 0.9, 1.0, "", 500), "EXPLAINED-ARTIFACT")
+        self.assertEqual(adjudicate.verdict(80, 3, 1, 0.9, 1.0, "", 500), "CONFIRMED-LEAD")
+        self.assertEqual(adjudicate.verdict(80, 3, 1, 0.9, 1.0, "streak", 500), "TERRAIN")
+        self.assertEqual(adjudicate.verdict(50, 3, 0, 0.9, 1.0, "", 500), "PROMISING")
+        self.assertEqual(adjudicate.verdict(30, 3, 0, 0.3, 4.0, "", 500), "WEAK")
+        self.assertEqual(adjudicate.verdict(10, 3, 0, 0.3, 4.0, "", 500), "NOISE")
 
     def test_sibling_groups_only_multi(self):
         recs = {
@@ -362,7 +372,7 @@ def _attached_bytes(mask_bits="2#1111111111111111#", data=None, record_bytes=LAB
 
 DETACHED_LABEL = (
     "PDS_VERSION_ID = PDS3\n"
-    "^IMAGE = \"image.img\"\n"
+    '^IMAGE = "image.img"\n'
     "\n"
     "OBJECT = IMAGE\n"
     "  LINES = 8\n"
@@ -518,7 +528,7 @@ class TestChangedet(unittest.TestCase):
         b = changedet.shift_image(a, 5, -3)
         dy, dx, score = changedet.phase_correlate(a, b)
         self.assertAlmostEqual(dy, -5, delta=1)  # align b onto a: up 5
-        self.assertAlmostEqual(dx, 3, delta=1)   # align b onto a: right 3
+        self.assertAlmostEqual(dx, 3, delta=1)  # align b onto a: right 3
         self.assertGreater(score, 0.3)
 
     def test_register_no_change(self):
@@ -552,10 +562,13 @@ class TestDetectAnnulus(unittest.TestCase):
         arr = (rng.rand(96, 96) * 20).astype(np.float32)
         arr[40:50, 60:70] = 250.0
         for method in ("box", "annulus"):
-            found = detect.analyze_array(arr, scales=[1, 2], z=3.0, min_size=20,
-                                         max_scale_pixels=12_000_000, method=method)
-            self.assertTrue(any(f["x"] + f["w"] >= 60 and f["x"] <= 70 for f in found),
-                            "method %s missed the blob" % method)
+            found = detect.analyze_array(
+                arr, scales=[1, 2], z=3.0, min_size=20, max_scale_pixels=12_000_000, method=method
+            )
+            self.assertTrue(
+                any(f["x"] + f["w"] >= 60 and f["x"] <= 70 for f in found),
+                "method %s missed the blob" % method,
+            )
 
     def test_analyze_propagates_path(self):
         with tempfile.TemporaryDirectory() as td:
@@ -588,14 +601,24 @@ class TestStack(unittest.TestCase):
 
 class TestAdjudicateGeometry(unittest.TestCase):
     def test_solar_geometry_scoring(self):
-        base = dict(interest=50.0, agrees=0, persistence=0.7, compact=0.8,
-                    near_edge=False, flags="", bg_std=6.0)
-        good = adjudicate.adjudicated_score(**base, shadow_align=0.9,
-                                            shadow_expected=True, size_m=500.0)
-        bad = adjudicate.adjudicated_score(**base, shadow_align=0.1,
-                                           shadow_expected=True, size_m=500.0)
-        huge = adjudicate.adjudicated_score(**base, shadow_align=0.9,
-                                            shadow_expected=True, size_m=50000.0)
+        base = dict(
+            interest=50.0,
+            agrees=0,
+            persistence=0.7,
+            compact=0.8,
+            near_edge=False,
+            flags="",
+            bg_std=6.0,
+        )
+        good = adjudicate.adjudicated_score(
+            **base, shadow_align=0.9, shadow_expected=True, size_m=500.0
+        )
+        bad = adjudicate.adjudicated_score(
+            **base, shadow_align=0.1, shadow_expected=True, size_m=500.0
+        )
+        huge = adjudicate.adjudicated_score(
+            **base, shadow_align=0.9, shadow_expected=True, size_m=50000.0
+        )
         self.assertGreater(good, bad)
         self.assertGreater(good, huge)
         adjudicate.adjudicated_score(**base)  # default path does not crash
@@ -644,8 +667,7 @@ def _cube_label(bands, storage, prefix=0, lines=4, samples=4):
         "  BANDS = %d\n"
         "  SAMPLE_TYPE = MSB_UNSIGNED_INTEGER\n"
         "  SAMPLE_BITS = 16\n"
-        "  BAND_STORAGE_TYPE = %s\n"
-        % (lines, samples, bands, storage)
+        "  BAND_STORAGE_TYPE = %s\n" % (lines, samples, bands, storage)
     )
     if prefix:
         label += "  LINE_PREFIX_BYTES = %d\n" % prefix
@@ -656,13 +678,12 @@ def _cube_label(bands, storage, prefix=0, lines=4, samples=4):
 def _cube_bytes_for(b0, b1, storage, prefix):
     def pre(n):
         return np.full(n, 0xEE, dtype=np.uint16)
+
     lines = b0.shape[0]
     if storage == "BAND_SEQUENTIAL":
-        return np.concatenate([np.concatenate([pre(prefix), r])
-                               for band in (b0, b1) for r in band])
+        return np.concatenate([np.concatenate([pre(prefix), r]) for band in (b0, b1) for r in band])
     if storage == "LINE_INTERLEAVED":
-        return np.concatenate([np.concatenate([pre(prefix), b0[i], b1[i]])
-                               for i in range(lines)])
+        return np.concatenate([np.concatenate([pre(prefix), b0[i], b1[i]]) for i in range(lines)])
     row = []
     for i in range(lines):
         row.append(pre(prefix))
@@ -676,33 +697,39 @@ class TestPDSMultiband(unittest.TestCase):
         b0 = np.arange(16, dtype=np.uint16).reshape(4, 4)
         b1 = (100 + np.arange(16, dtype=np.uint16)).reshape(4, 4)
         lbl = _cube_label(2, storage, prefix)
-        blob = lbl + b"\x00" * (4096 - len(lbl)) + \
-            _cube_bytes_for(b0, b1, storage, prefix).astype(">u2").tobytes()
+        blob = (
+            lbl
+            + b"\x00" * (4096 - len(lbl))
+            + _cube_bytes_for(b0, b1, storage, prefix).astype(">u2").tobytes()
+        )
         path = os.path.join(td, "cube.img")
         with open(path, "wb") as f:
             f.write(blob)
         return path, b0, b1
 
     def test_all_storage_types(self):
-        shapes = {"BAND_SEQUENTIAL": (2, 4, 4),
-                  "LINE_INTERLEAVED": (4, 2, 4),
-                  "SAMPLE_INTERLEAVED": (4, 4, 2)}
+        shapes = {
+            "BAND_SEQUENTIAL": (2, 4, 4),
+            "LINE_INTERLEAVED": (4, 2, 4),
+            "SAMPLE_INTERLEAVED": (4, 4, 2),
+        }
         for storage, want_shape in shapes.items():
             with tempfile.TemporaryDirectory() as td:
                 path, b0, b1 = self._write_cube(td, storage)
                 arr = pds.read_image(path)
                 self.assertEqual(arr.shape, want_shape, msg=storage)
-                band1 = arr[1] if storage == "BAND_SEQUENTIAL" else (
-                    arr[:, 1, :] if storage == "LINE_INTERLEAVED" else arr[:, :, 1])
+                band1 = (
+                    arr[1]
+                    if storage == "BAND_SEQUENTIAL"
+                    else (arr[:, 1, :] if storage == "LINE_INTERLEAVED" else arr[:, :, 1])
+                )
                 np.testing.assert_array_equal(band1, b1.astype(np.float32))
 
     def test_band_selection_and_read_band(self):
         with tempfile.TemporaryDirectory() as td:
             path, _, b1 = self._write_cube(td, "BAND_SEQUENTIAL")
-            np.testing.assert_array_equal(
-                pds.read_image(path, band=1), b1.astype(np.float32))
-            np.testing.assert_array_equal(
-                pds.read_band(path, 1), b1.astype(np.float32))
+            np.testing.assert_array_equal(pds.read_image(path, band=1), b1.astype(np.float32))
+            np.testing.assert_array_equal(pds.read_band(path, 1), b1.astype(np.float32))
             with self.assertRaises(ValueError):
                 pds.read_band(path, 5)
 
@@ -711,8 +738,7 @@ class TestPDSMultiband(unittest.TestCase):
             with tempfile.TemporaryDirectory() as td:
                 path, _, b1 = self._write_cube(td, storage, prefix=2)
                 got = pds.read_image(path, band=1)
-                np.testing.assert_array_equal(got, b1.astype(np.float32),
-                                              err_msg=storage)
+                np.testing.assert_array_equal(got, b1.astype(np.float32), err_msg=storage)
 
     def test_truncated_data_raises(self):
         with tempfile.TemporaryDirectory() as td:
@@ -721,7 +747,7 @@ class TestPDSMultiband(unittest.TestCase):
                 raw = f.read()
             cut = os.path.join(td, "cut.img")
             with open(cut, "wb") as f:
-                f.write(raw[:len(raw) - 40])  # drop part of band 2
+                f.write(raw[: len(raw) - 40])  # drop part of band 2
             with self.assertRaises(ValueError):
                 pds.read_image(cut)
 
@@ -742,16 +768,19 @@ class TestChangedetShift(unittest.TestCase):
             np.testing.assert_array_equal(
                 changedet.shift_image(arr, dy, dx),
                 self._reference_shift(arr, dy, dx),
-                err_msg="shift (%d,%d)" % (dy, dx))
+                err_msg="shift (%d,%d)" % (dy, dx),
+            )
 
 
 class TestAnalyzeFlags(unittest.TestCase):
     def test_corner_flag_near_corner_only(self):
         arr = np.full((200, 200), 50.0, np.float32)
         _, feats_near = analyze.analyze_candidate(
-            {"x": 1, "y": 1, "w": 10, "h": 10, "fill": 0.9}, arr, 512)
+            {"x": 1, "y": 1, "w": 10, "h": 10, "fill": 0.9}, arr, 512
+        )
         _, feats_mid = analyze.analyze_candidate(
-            {"x": 95, "y": 95, "w": 10, "h": 10, "fill": 0.9}, arr, 512)
+            {"x": 95, "y": 95, "w": 10, "h": 10, "fill": 0.9}, arr, 512
+        )
         self.assertTrue(feats_near["in_corner"])
         self.assertFalse(feats_mid["in_corner"])
 
@@ -759,9 +788,20 @@ class TestAnalyzeFlags(unittest.TestCase):
         arr = np.full((64, 64), 100.0, np.float32)
         arr[:, 30:32] = 220.0  # bright column through the whole frame
         feats = analyze.measure(arr, 28, 28, 6, 6)
-        flags = analyze.artifact_flags(dict(
-            feats, area_px=36, aspect=1.0, w=6, h=6, fill=0.33,
-            on_grid8=False, near_edge=False, dark_band=False, sat_frac=0.0))
+        flags = analyze.artifact_flags(
+            dict(
+                feats,
+                area_px=36,
+                aspect=1.0,
+                w=6,
+                h=6,
+                fill=0.33,
+                on_grid8=False,
+                near_edge=False,
+                dark_band=False,
+                sat_frac=0.0,
+            )
+        )
         self.assertIn("column_smear", flags)
 
     def test_discrete_blob_not_smear_flagged(self):
@@ -769,18 +809,40 @@ class TestAnalyzeFlags(unittest.TestCase):
         arr[28:34, 28:34] = 180.0  # compact blob inside the box only
         feats = analyze.measure(arr, 26, 26, 10, 10)
         self.assertLess(feats["column_smear"], 2.0)
-        flags = analyze.artifact_flags(dict(
-            feats, area_px=100, aspect=1.0, w=10, h=10, fill=0.36,
-            on_grid8=False, near_edge=False, dark_band=False, sat_frac=0.0))
+        flags = analyze.artifact_flags(
+            dict(
+                feats,
+                area_px=100,
+                aspect=1.0,
+                w=10,
+                h=10,
+                fill=0.36,
+                on_grid8=False,
+                near_edge=False,
+                dark_band=False,
+                sat_frac=0.0,
+            )
+        )
         self.assertNotIn("column_smear", flags)
 
     def test_wide_column_not_smear_flagged(self):
         arr = np.full((64, 64), 100.0, np.float32)
         arr[:, 20:44] = 200.0  # wide bright band: terrain, not a dead column
         feats = analyze.measure(arr, 22, 28, 20, 8)
-        flags = analyze.artifact_flags(dict(
-            feats, area_px=160, aspect=2.5, w=20, h=8, fill=1.0,
-            on_grid8=False, near_edge=False, dark_band=False, sat_frac=0.0))
+        flags = analyze.artifact_flags(
+            dict(
+                feats,
+                area_px=160,
+                aspect=2.5,
+                w=20,
+                h=8,
+                fill=1.0,
+                on_grid8=False,
+                near_edge=False,
+                dark_band=False,
+                sat_frac=0.0,
+            )
+        )
         self.assertNotIn("column_smear", flags)
 
 
@@ -792,7 +854,7 @@ class TestAdjudicateMorphologyFallback(unittest.TestCase):
         try:
             crop = np.full((64, 64), 100.0, dtype=np.float32)
             yy, xx = np.mgrid[0:64, 0:64]
-            crop[(xx - 32) ** 2 + (yy - 32) ** 2 <= 8 ** 2] += 90.0
+            crop[(xx - 32) ** 2 + (yy - 32) ** 2 <= 8**2] += 90.0
             compact, area, per = adjudicate.roundness(crop, 16, 16, 32, 32)
             self.assertGreaterEqual(compact, 0.7)
             self.assertGreater(area, 100.0)
@@ -813,8 +875,9 @@ class TestBenchmarkHygiene(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             arr = benchmark.synthetic_scene((300, 300), seed=5)
             benchmark.run_bench(arr, [24], [4], 3.0, 12, 5, d, "hygiene")
-            leftovers = [f for f in os.listdir(d)
-                         if f.startswith("_bench_") or f.startswith("_clean_")]
+            leftovers = [
+                f for f in os.listdir(d) if f.startswith("_bench_") or f.startswith("_clean_")
+            ]
             self.assertEqual(leftovers, [])
 
 
@@ -840,7 +903,8 @@ class TestAnalyzeRigor(unittest.TestCase):
         base[30:40, 30:40] = 200.0  # hard-edged square
         blurred = np.asarray(
             Image.fromarray(base.astype(np.uint8)).filter(ImageFilter.GaussianBlur(2)),
-            dtype=np.float32)
+            dtype=np.float32,
+        )
         s_sharp = analyze.edge_sharpness(base, 30, 30, 10, 10)
         s_blur = analyze.edge_sharpness(blurred, 30, 30, 10, 10)
         self.assertGreater(s_sharp, s_blur, "a sharp boundary must score higher")
@@ -848,21 +912,20 @@ class TestAnalyzeRigor(unittest.TestCase):
     def test_contrast_stability_extended_beats_hot_pixel(self):
         disk = np.full((64, 64), 100.0, np.float32)
         yy, xx = np.mgrid[0:64, 0:64]
-        disk[(xx - 32) ** 2 + (yy - 32) ** 2 <= 8 ** 2] = 190.0
+        disk[(xx - 32) ** 2 + (yy - 32) ** 2 <= 8**2] = 190.0
         hot = np.full((64, 64), 100.0, np.float32)
         hot[32, 32] = 255.0
         d = analyze.contrast_stability(disk, 24, 24, 16, 16)
         h = analyze.contrast_stability(hot, 31, 31, 3, 3)
-        self.assertGreater(d, 0.4, "an extended feature keeps its contrast "
-                           "as the window grows")
-        self.assertGreater(d, h, "a lone hot pixel loses contrast when the "
-                          "window grows")
+        self.assertGreater(d, 0.4, "an extended feature keeps its contrast as the window grows")
+        self.assertGreater(d, h, "a lone hot pixel loses contrast when the window grows")
 
     def test_metrics_emitted_by_analyze_candidate(self):
         arr = np.full((200, 200), 60.0, np.float32)
         arr[90:110, 90:110] = 180.0
         _, feats = analyze.analyze_candidate(
-            {"x": 90, "y": 90, "w": 20, "h": 20, "fill": 0.8}, arr, 512)
+            {"x": 90, "y": 90, "w": 20, "h": 20, "fill": 0.8}, arr, 512
+        )
         for key in ("grid_energy", "edge_sharpness", "contrast_stability"):
             self.assertIn(key, feats)
             self.assertIsInstance(feats[key], float)
@@ -873,6 +936,7 @@ class TestEnhance(unittest.TestCase):
 
     def test_stretch_2d(self):
         import enhance
+
         arr = np.linspace(10, 200, 256 * 256, dtype=np.float32).reshape(256, 256)
         out = enhance.stretch(arr)
         self.assertEqual(out.shape, (256, 256))
@@ -882,6 +946,7 @@ class TestEnhance(unittest.TestCase):
 
     def test_stretch_3d(self):
         import enhance
+
         arr = np.full((32, 32, 3), 100.0, dtype=np.float32)
         arr[:, :, 0] = 50.0
         arr[:, :, 2] = 200.0
@@ -891,12 +956,14 @@ class TestEnhance(unittest.TestCase):
 
     def test_is_16bit(self):
         import enhance
+
         self.assertTrue(enhance.is_16bit(np.zeros((4, 4), dtype=np.float32)))
         self.assertTrue(enhance.is_16bit(np.zeros((4, 4), dtype=np.uint16)))
         self.assertFalse(enhance.is_16bit(np.zeros((4, 4), dtype=np.uint8)))
 
     def test_to_uint16(self):
         import enhance
+
         arr = np.linspace(0, 1.0, 100, dtype=np.float32).reshape(10, 10)
         out = enhance.to_uint16(arr)
         self.assertEqual(out.dtype, np.uint16)
@@ -910,6 +977,7 @@ class TestTriage(unittest.TestCase):
     def test_fit_preserves_aspect(self):
         import triage
         from PIL import Image
+
         im = Image.new("RGB", (400, 200))
         thumb = triage.fit(im, 100)
         self.assertLessEqual(max(thumb.width, thumb.height), 100)
@@ -919,6 +987,7 @@ class TestTriage(unittest.TestCase):
     def test_draw_boxes_returns_image(self):
         import triage
         from PIL import Image
+
         im = Image.new("RGB", (200, 200), (50, 50, 50))
         boxes = [(10, 10, 40, 40), (80, 80, 50, 50)]
         thumb = triage.draw_boxes(im, boxes, 128)
@@ -934,6 +1003,7 @@ class TestMark(unittest.TestCase):
         from PIL import Image
         import csv as csv_mod
         import tempfile
+
         with tempfile.TemporaryDirectory() as td:
             im = Image.new("RGB", (100, 100), (80, 80, 80))
             src = os.path.join(td, "src.png")
@@ -953,26 +1023,32 @@ class TestExtrasCompare(unittest.TestCase):
 
     def test_taxonomy_red(self):
         import extras_compare
+
         self.assertIn("B&W", extras_compare._taxonomy("ESP_012345_1234_RED.browse.jpg"))
 
     def test_taxonomy_irb(self):
         import extras_compare
+
         self.assertIn("IRB", extras_compare._taxonomy("ESP_012345_1234_IRB.browse.jpg"))
 
     def test_taxonomy_dtm(self):
         import extras_compare
+
         self.assertIn("DTM", extras_compare._taxonomy("DTEEC_012345_1234_012345_1234.ca.jpg"))
 
     def test_variant_role_red(self):
         import extras_compare
+
         self.assertEqual(extras_compare._variant_role("ESP_012345_1234_RED.browse.jpg"), "red")
 
     def test_variant_role_dtm(self):
         import extras_compare
+
         self.assertEqual(extras_compare._variant_role("DTEEC_012345_1234.jp2"), "dtm")
 
     def test_norm01_basic(self):
         import extras_compare
+
         arr = np.array([0.0, 50.0, 100.0, 150.0, 200.0], dtype=np.float32)
         out = extras_compare._norm01(arr)
         self.assertEqual(out.dtype, np.float32)
@@ -981,6 +1057,7 @@ class TestExtrasCompare(unittest.TestCase):
 
     def test_norm01_empty(self):
         import extras_compare
+
         arr = np.array([], dtype=np.float32)
         out = extras_compare._norm01(arr)
         self.assertEqual(out.size, 0)

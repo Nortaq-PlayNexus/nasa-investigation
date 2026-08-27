@@ -6,6 +6,7 @@ frame to inspect).
 
     python scripts/audit_strips.py
 """
+
 from __future__ import annotations
 
 import sys

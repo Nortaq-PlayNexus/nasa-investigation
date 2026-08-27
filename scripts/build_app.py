@@ -40,8 +40,14 @@ def confirm(prompt, default=False):
 def main():
     p = argparse.ArgumentParser(description="Run tests then package with PyInstaller")
     g = p.add_mutually_exclusive_group()
-    g.add_argument("--bot", action="store_true", help="build the Discord bot exe instead of the pipeline CLI")
-    g.add_argument("--fullstack", action="store_true", help="build the full-stack EXE (API+dashboard+pipeline in one)")
+    g.add_argument(
+        "--bot", action="store_true", help="build the Discord bot exe instead of the pipeline CLI"
+    )
+    g.add_argument(
+        "--fullstack",
+        action="store_true",
+        help="build the full-stack EXE (API+dashboard+pipeline in one)",
+    )
     p.add_argument("--no-test", action="store_true", help="skip the unit test run")
     p.add_argument("--onefile", action="store_true", help="pass --onefile to PyInstaller")
     p.add_argument("--yes", action="store_true", help="do not prompt for confirmation")
@@ -72,32 +78,38 @@ def main():
         except ImportError:
             missing.append(mod)
     if missing:
-        sys.exit("missing base dependency%s: %s\n"
-                 "Run: pip install -r requirements.txt" %
-                 ("s" if len(missing) > 1 else "", ", ".join(missing)))
+        sys.exit(
+            "missing base dependency%s: %s\n"
+            "Run: pip install -r requirements.txt"
+            % ("s" if len(missing) > 1 else "", ", ".join(missing))
+        )
 
     if a.fullstack:
         for mod in ("fastapi", "uvicorn"):
             try:
                 __import__(mod)
             except ImportError:
-                print(f"warning: {mod} not installed — install with: pip install -e .[fullstack]  (fallback stdlib server will be used)")
+                print(
+                    f"warning: {mod} not installed — install with: pip install -e .[fullstack]  (fallback stdlib server will be used)"
+                )
                 break
 
     try:
         import PyInstaller  # noqa: F401
     except ImportError:
-        sys.exit("PyInstaller not installed.\n"
-                 "Run: pip install -e .[dev]   (or pip install pyinstaller)")
+        sys.exit(
+            "PyInstaller not installed.\nRun: pip install -e .[dev]   (or pip install pyinstaller)"
+        )
 
     # 2. Run the unit test suite unless the user opted out.
     if not a.no_test:
         print("== Running unit tests ==", flush=True)
-        code = subprocess.call([sys.executable, "scripts/run_pipeline.py", "--selftest"],
-                               cwd=ROOT)
+        code = subprocess.call([sys.executable, "scripts/run_pipeline.py", "--selftest"], cwd=ROOT)
         if code:
-            sys.exit("tests failed (exit %d); not building.\n"
-                     "Fix the failures or re-run with --no-test to force a build." % code)
+            sys.exit(
+                "tests failed (exit %d); not building.\n"
+                "Fix the failures or re-run with --no-test to force a build." % code
+            )
     else:
         print("== Skipping unit tests (--no-test) ==", flush=True)
 
@@ -120,8 +132,15 @@ def main():
     #    until the build succeeds, then move just the result into dist/.
     with tempfile.TemporaryDirectory(prefix="nasa_build_") as tmp:
         os.makedirs(tmp, exist_ok=True)
-        cmd = ["pyinstaller", "--noconfirm", "--distpath", tmp, "--workpath",
-               os.path.join(ROOT, "build"), spec]
+        cmd = [
+            "pyinstaller",
+            "--noconfirm",
+            "--distpath",
+            tmp,
+            "--workpath",
+            os.path.join(ROOT, "build"),
+            spec,
+        ]
         print("== Building: %s ==" % " ".join(cmd), flush=True)
         code = subprocess.call(cmd, cwd=ROOT)
         if code:

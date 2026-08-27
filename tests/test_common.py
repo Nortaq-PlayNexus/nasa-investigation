@@ -8,7 +8,10 @@ import _common as c  # noqa: E402
 
 
 def test_safe_name():
-    assert c.safe_name("ESP_013236_1410_MIRB.abrowse_enh.png") == "ESP_013236_1410_MIRB.abrowse_enh.png"
+    assert (
+        c.safe_name("ESP_013236_1410_MIRB.abrowse_enh.png")
+        == "ESP_013236_1410_MIRB.abrowse_enh.png"
+    )
     assert c.safe_name("../../etc/passwd") == "etc_passwd"
     assert c.safe_name("") == "item"
     assert len(c.safe_name("a" * 500)) <= 120

@@ -11,19 +11,34 @@ BROWSE_BASE = "https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/RDR/ESP/"
 
 def pds_url(pid):
     prefix = pid.split("_")[0]
-    return "{}/{}/{}/{}_{}.JP2".format("https://hirise-pds.lpl.arizona.edu/PDS/EDR", prefix, pid, pid, "RED")
+    return "{}/{}/{}/{}_{}.JP2".format(
+        "https://hirise-pds.lpl.arizona.edu/PDS/EDR", prefix, pid, pid, "RED"
+    )
 
 
 def main():
     p = argparse.ArgumentParser(description="Download MRO HiRISE imagery from the PDS")
-    p.add_argument("--volume", default=BROWSE_BASE, help="PDS root to crawl (browse products by default)")
-    p.add_argument("--pattern", default=r"_(RED|MIRB|MRGB)\.browse\.jpg$",
-                   help="regex matched against file names")
+    p.add_argument(
+        "--volume", default=BROWSE_BASE, help="PDS root to crawl (browse products by default)"
+    )
+    p.add_argument(
+        "--pattern",
+        default=r"_(RED|MIRB|MRGB)\.browse\.jpg$",
+        help="regex matched against file names",
+    )
     p.add_argument("--depth", type=int, default=3)
     p.add_argument("--max", type=int, default=20)
-    p.add_argument("--max-size-mb", type=float, default=15, help="skip files larger than this many MB")
-    p.add_argument("--max-dirs", type=int, default=50, help="stop after visiting this many directories")
-    p.add_argument("--fetch", default="", help="download a full-res RED JP2 by observation ID, e.g. ESP_011264_1090")
+    p.add_argument(
+        "--max-size-mb", type=float, default=15, help="skip files larger than this many MB"
+    )
+    p.add_argument(
+        "--max-dirs", type=int, default=50, help="stop after visiting this many directories"
+    )
+    p.add_argument(
+        "--fetch",
+        default="",
+        help="download a full-res RED JP2 by observation ID, e.g. ESP_011264_1090",
+    )
     p.add_argument("--out", default="data/raw/mars/hirise")
     a = p.parse_args()
 

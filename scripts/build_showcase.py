@@ -7,6 +7,7 @@ the processed source image tree, and emits a single self-contained HTML file
 Also writes downscaled JPEG previews under showcase/img/ so the page stays fast
 while linking to the full-resolution originals.
 """
+
 from __future__ import annotations
 
 import csv
@@ -92,7 +93,7 @@ def md_to_html(md: str) -> str:
             checked = "[x]" in line.lower()
             item = line.split("] ", 1)[-1]
             box = "&#9745;" if checked else "&#9744;"
-            out.append(f"<li><span class=\"cb\">{box}</span> {esc(item)}</li>")
+            out.append(f'<li><span class="cb">{box}</span> {esc(item)}</li>')
         elif line.startswith("- ") or line.startswith("* "):
             if not in_list:
                 out.append("<ul>")
@@ -206,6 +207,7 @@ def main() -> None:
     with (CONC / "leads.csv").open(encoding="utf-8-sig", newline="") as fh:
         for row in csv.DictReader(fh):
             leads.append(dict(row))
+
     def _f(key, default=0.0):
         # graceful behind-exists helper for the new rigor metric columns
         def _get(row):
@@ -214,6 +216,7 @@ def main() -> None:
                 return float(v) if v not in (None, "") else default
             except (TypeError, ValueError):
                 return default
+
         return _get
 
     _grid = _f("grid_energy")
@@ -259,8 +262,14 @@ def main() -> None:
                 except Exception:
                     w = h = 0
                 sources.append(
-                    {"file": rel, "body": body_of(rel, f.name), "w": w, "h": h,
-                     "thumb": "img/src/" + thumb_f.name, "size": f.stat().st_size}
+                    {
+                        "file": rel,
+                        "body": body_of(rel, f.name),
+                        "w": w,
+                        "h": h,
+                        "thumb": "img/src/" + thumb_f.name,
+                        "size": f.stat().st_size,
+                    }
                 )
                 thumb(f, thumb_f, max_w=640, quality=78)
 
@@ -308,7 +317,10 @@ def main() -> None:
                 "members": grp,
                 "bands": bands,
                 "image": p["image"],
-                "x": p["x"], "y": p["y"], "w": p["w"], "h": p["h"],
+                "x": p["x"],
+                "y": p["y"],
+                "w": p["w"],
+                "h": p["h"],
                 "max_score": max(m["_score"] for m in grp),
                 "max_contrast": max(m["_contrast"] for m in grp),
                 "area": p["_area"],
@@ -390,8 +402,10 @@ def main() -> None:
 
     html = TEMPLATE.replace("__JSON__", json_blob)
     (OUT / "index.html").write_text(html, encoding="utf-8")
-    print(f"showcase/index.html  {os.path.getsize(OUT / 'index.html')/1e6:.1f} MB")
-    print(f"features={len(features)} (from {len(leads)} lead rows) findings={len(findings)} sources={len(sources)} marked={len(MARKED_SET)}")
+    print(f"showcase/index.html  {os.path.getsize(OUT / 'index.html') / 1e6:.1f} MB")
+    print(
+        f"features={len(features)} (from {len(leads)} lead rows) findings={len(findings)} sources={len(sources)} marked={len(MARKED_SET)}"
+    )
 
 
 TEMPLATE = r"""<!DOCTYPE html>
