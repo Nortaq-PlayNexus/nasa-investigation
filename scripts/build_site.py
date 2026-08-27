@@ -1047,7 +1047,13 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     counts = verdict_counts(rows)
     # Grouped display count: one card per distinct anomaly (band variants collapsed)
     # Matches lead_json() capping: at most 8 grouped features per base frame.
-    grouped_all = group_features(rows, si)
+    # Use raw adjudicated.csv so all band variants are visible in the gallery,
+    # while stats stay deduped (rows = rows_d).
+    try:
+        raw_for_group = read_csv(CONC / "adjudicated.csv")
+    except Exception:
+        raw_for_group = rows
+    grouped_all = group_features(raw_for_group, si)
     by_base = defaultdict(list)
     for f in grouped_all:
         by_base[f["base"]].append(f)
@@ -1159,7 +1165,7 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 </div></section>
 
 <section id='explorer'><div class='wrap'>
-  <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>{displayed} distinct anomalies (one card = all views) - {len(grouped_all)} grouped from {len(rows)} band-variant rows - {distinct_bases} base frames - click any card to view every image</span></div>
+  <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>{displayed} distinct anomalies (one card = all views) - {len(grouped_all)} distinct anomalies grouped from {len(raw_for_group)} raw band-variant rows - {distinct_bases} base frames - click any card to view every image</span></div>
   <div class='controls'>
     <input id='q' type='search' placeholder='Search image or flag&hellip;'>
     <label style='color:var(--muted);font-size:.85rem'>min contrast
@@ -1389,7 +1395,7 @@ def main() -> None:
     rows_d = dedupe(rows)
     leads_d = dedupe(leads)
     top = dedupe(top_leads(rows))
-    leads_ver = build_leads_data(rows_d, si)
+    leads_ver = build_leads_data(rows, si)
     build_index(rows_d, leads_d, top, si, summary_md, meth, art, leads_ver)
     build_report(rows_d, leads_d, si, summary_md, leads_ver)
     build_results()
