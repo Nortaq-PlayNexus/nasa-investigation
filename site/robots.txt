@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://nortaq-playnexus.github.io/nasa-investigation/sitemap.xml

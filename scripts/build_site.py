@@ -22,6 +22,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -157,6 +158,13 @@ nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px) saturate(1.2);ba
 .nav-links a{color:var(--muted);font-size:.88rem;font-weight:600;letter-spacing:.02em}
 .nav-links a:hover{color:var(--accent);text-decoration:none}
 .nav-toggle{display:none;background:none;border:1px solid var(--line2);color:var(--accent);font-size:1.1rem;padding:.3rem .6rem;border-radius:8px;cursor:pointer}
+@media(max-width:720px){.nav-toggle{display:inline-flex;align-items:center;justify-content:center}.nav-links{position:absolute;top:100%;left:0;right:0;background:rgba(8,12,22,.96);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);flex-direction:column;padding:.8rem 20px;gap:.2rem;display:none;box-shadow:0 12px 32px rgba(0,0,0,.5)}.nav-links.open{display:flex}.nav-links a{padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04)}.nav-links a:last-child{border-bottom:none}}
+.skip{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}.skip:focus{left:12px;top:12px;width:auto;height:auto;background:var(--accent);color:#111;padding:.5rem .8rem;border-radius:8px;z-index:99;font-family:var(--mono);font-weight:800}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.hero .reticle .sweep,.toprule:after,.hero .tag:before{animation:none!important}html.reveal-on section{opacity:1!important;transform:none!important}canvas#stars{display:none!important}}
+@media print{.toprule,.ticker,.brackets,canvas#stars,.bg-glow,.grid-ov,.scan,nav,.uplink,.to-top{display:none!important}body{background:#fff;color:#111}.hero,.stat,.tile,.lead{box-shadow:none!important;border:1px solid #ddd!important}}
+.ph{padding:1rem;color:var(--muted);font-family:var(--mono);font-size:.82rem;text-align:center;background:rgba(15,20,33,.4);border:1px dashed var(--line);border-radius:10px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 /* hero redesign */
 .hero{position:relative;padding:5rem 0 3.5rem;overflow:hidden}
 .hero .reticle{position:absolute;left:50%;top:45%;width:520px;height:520px;transform:translate(-50%,-50%);border:1px solid rgba(255,196,48,.10);border-radius:50%;pointer-events:none}
@@ -294,6 +302,8 @@ JS = r"""
   var LEADS = [];
   var DIVERSE = [];
   var SB = window.STRIP_BASE || 'results/strips/';
+  function debounce(fn,ms){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},ms)}}
+  var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function stripUrl(n){return n ? SB + n : '';}
   // count-up
   function animateCount(el){var t=+el.dataset.count,dur=1300,t0=performance.now();
@@ -303,13 +313,15 @@ JS = r"""
     document.querySelectorAll('[data-count]').forEach(function(e){io.observe(e);});}
   else{document.querySelectorAll('[data-count]').forEach(animateCount);}
 
-  // starfield
-  var c=document.getElementById('stars');if(c){var x=c.getContext('2d'),w,h,st=[];
-    function rs(){w=c.width=innerWidth;h=c.height=innerHeight;st=[];var n=Math.min(160,Math.floor(w*h/9000));
+  // starfield - respects reduced-motion, mobile, and visibility
+  var c=document.getElementById('stars');if(c && !prefersReducedMotion){var x=c.getContext('2d'),w,h,st=[],raf=null;
+    function rs(){w=c.width=innerWidth;h=c.height=innerHeight;st=[];var isMob=window.innerWidth<720;var n=Math.min(isMob?60:120,Math.floor(w*h/12000));
       for(var i=0;i<n;i++)st.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.3+.2,s:Math.random()*.25+.04});}
-    function draw(){x.clearRect(0,0,w,h);for(var i=0;i<st.length;i++){var p=st[i];p.y+=p.s;if(p.y>h){p.y=0;p.x=Math.random()*w;}
+    function draw(){if(document.hidden){raf=requestAnimationFrame(draw);return;}x.clearRect(0,0,w,h);for(var i=0;i<st.length;i++){var p=st[i];p.y+=p.s;if(p.y>h){p.y=0;p.x=Math.random()*w;}
       x.fillStyle='rgba(180,205,255,'+(0.4+Math.random()*0.5)+')';x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();}
-      requestAnimationFrame(draw);}rs();draw();addEventListener('resize',rs);}
+      raf=requestAnimationFrame(draw);}rs();draw();addEventListener('resize',debounce(rs,250));
+    document.addEventListener('visibilitychange',function(){});
+  } else if(c){c.style.display='none';}
 
   // lightbox / dossier — grouped: one distinct anomaly holds all band views
   var lb=document.getElementById('lb'),lbBox=document.getElementById('lbDossier');
@@ -334,6 +346,24 @@ JS = r"""
     var bx = fw>=1?0:(c[0]/(1-fw)*100);
     var by = fh>=1?0:(c[1]/(1-fh)*100);
     return '<div class="crop" style="background-image:url('+s+');background-size:'+(100/fw)+'% '+(100/fh)+'%;background-position:'+bx+'% '+by+'%"></div>';
+  }
+  function cropDivLazy(r){
+    var s=stripUrl(stripFrom(r)), c=cropFrom(r);
+    if(!s||!c) return '<div class="ph">no strip — enhancements pending</div>';
+    var fw=c[2], fh=c[3];
+    var bx = fw>=1?0:(c[0]/(1-fw)*100);
+    var by = fh>=1?0:(c[1]/(1-fh)*100);
+    return '<div class="crop" data-bg="'+s+'" data-size="'+(100/fw)+'% '+(100/fh)+'%" data-pos="'+bx+'% '+by+'%" style="background-color:#05070a;min-height:160px"></div>';
+  }
+  function initLazyCrops(){
+    var els=document.querySelectorAll('.crop[data-bg]');
+    if(!els.length) return;
+    if(!('IntersectionObserver' in window)){
+      els.forEach(function(el){el.style.backgroundImage='url('+el.dataset.bg+')';el.style.backgroundSize=el.dataset.size;el.style.backgroundPosition=el.dataset.pos;el.style.backgroundRepeat='no-repeat';el.removeAttribute('data-bg');});
+      return;
+    }
+    var io=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){var el=e.target;el.style.backgroundImage='url('+el.dataset.bg+')';el.style.backgroundSize=el.dataset.size;el.style.backgroundPosition=el.dataset.pos;el.style.backgroundRepeat='no-repeat';el.removeAttribute('data-bg');io.unobserve(el);}});},{rootMargin:'200px'});
+    els.forEach(function(el){io.observe(el);});
   }
   function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   // --- LOOP STATE for gallery carousel ---
@@ -462,7 +492,7 @@ JS = r"""
     function card(r){
       var cl=isCL(r);
       var stamp=cl?'<div class="stamp">CONFIRMED LEAD</div>':'';
-      var strip=cropDiv(r);
+      var strip=cropDivLazy(r);
       var variants = r.variants || r.members || [];
       var vc = variants.length>1 ? '<span class="vcount">'+variants.length+' views</span>' : '';
       var bands = (r.bands||[]).map(function(b){return '<span class="pill p-'+r.verdict+'" style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d;font-size:.62rem">'+b+'</span>';}).join('');
@@ -471,7 +501,7 @@ JS = r"""
       var scoreDisp = r.max_score!=null?r.max_score:r.score;
       var contrastDisp = r.max_contrast!=null?r.max_contrast:r.contrast;
       var verdictDisp = r.verdict|| (r.verdicts?r.verdicts[0]:'');
-      return '<div class="lead" data-img="'+escH(r.base||r.image)+'" data-strip="'+escH(r.strip||'')+'">'
+      return '<div class="lead" data-img="'+escH(r.base||r.image)+'" data-strip="'+escH(r.strip||'')+'" role="button" tabindex="0" aria-label="Open dossier for '+escH(r.base||r.image)+'">'
         +'<div class="thumb">'+strip+stamp+'<div class="corner-ref">x'+r.x+' y'+r.y+'</div></div>'
         +'<div class="body"><div class="name">'+title+' '+vc+'</div>'
         +'<div class="row"><span class="pill p-'+verdictDisp+'">'+verdictDisp+'</span><span>'+scoreDisp+'</span></div>'
@@ -506,6 +536,7 @@ JS = r"""
  : 'No anomalies match the current filters - press Reset.';
   state.cur=rows;
   grid.innerHTML=rows.slice(0,state.limit).map(card).join('');
+  setTimeout(initLazyCrops,50);
       var lm=document.getElementById('loadMore');
       if(lm){
         lm.style.display = rows.length ? 'inline-block' : 'none';
@@ -514,10 +545,11 @@ JS = r"""
         else lm.textContent='Load more — '+cap+' / '+rows.length+' (loops at end)';
       }
       Array.prototype.forEach.call(grid.querySelectorAll('.lead'),function(el){
-        el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});});}
+        el.addEventListener('click',function(){openDossier(el.getAttribute('data-img'));});
+        el.addEventListener('keydown',function(e){if(e.key==='Enter' || e.key===' '){e.preventDefault();openDossier(el.getAttribute('data-img'));}});});}
     var q=document.getElementById('q'),mc=document.getElementById('minC'),sort=document.getElementById('sort');
-    q.addEventListener('input',function(){state.q=q.value;render();});
-    mc.addEventListener('input',function(){state.minC=+mc.value;document.getElementById('minCval').textContent=mc.value;render();});
+    q.addEventListener('input',debounce(function(){state.q=q.value;render();},250));
+    mc.addEventListener('input',debounce(function(){state.minC=+mc.value;document.getElementById('minCval').textContent=mc.value;render();},100));
     sort.addEventListener('change',function(){state.sort=sort.value;render();});
     var resetBtn=document.getElementById('reset');
     if(resetBtn){resetBtn.addEventListener('click',function(){
@@ -594,12 +626,12 @@ JS = r"""
   document.querySelectorAll('.finding-card').forEach(function(c){
     c.querySelector('.fc-head').addEventListener('click',function(){c.classList.toggle('open');});});
   var fs=document.getElementById('fSearch');
-  if(fs){fs.addEventListener('input',function(){
+  if(fs){fs.addEventListener('input',debounce(function(){
     var q=fs.value.toLowerCase().trim();
     document.querySelectorAll('#findings .finding-card').forEach(function(c){
       var hay=(c.getAttribute('data-search')||'').toLowerCase();
       c.style.display = (!q || hay.indexOf(q)>=0) ? '' : 'none';
-    });});}
+    });},200));}
 
   // sortable tables
   document.querySelectorAll('table.sortable').forEach(function(t){
@@ -615,8 +647,10 @@ JS = r"""
 
   // mobile nav toggle
   var nt=document.querySelector('.nav-toggle'), nl=document.querySelector('.nav-links');
-  if(nt&&nl){nt.addEventListener('click',function(){nl.classList.toggle('open');});
-    nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');});});}
+  if(nt&&nl){nt.addEventListener('click',function(){var isOpen=nl.classList.toggle('open');nt.setAttribute('aria-expanded', isOpen?'true':'false');});
+    nl.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){nl.classList.remove('open');nt.setAttribute('aria-expanded','false');});});
+    document.addEventListener('click',function(e){if(!nl.contains(e.target) && !nt.contains(e.target)){nl.classList.remove('open');nt.setAttribute('aria-expanded','false');}});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape' && nl.classList.contains('open')){nl.classList.remove('open');nt.setAttribute('aria-expanded','false');nt.focus();}});}
 
   // scroll reveal
   (function(){
@@ -760,6 +794,15 @@ def strip_index() -> dict[str, Path]:
         for f in sorted(STRIPS.iterdir()):
             if f.name.startswith("T") and "_" in f.name and f.name.endswith(".jpg"):
                 idx.setdefault(f.name.split("_", 1)[1][:-4], f)
+    if not idx:
+        # fallback to site strips (committed) or temp backup (preserved before SITE deletion)
+        for _cand in [SITE / "results" / "strips", Path(tempfile.gettempdir()) / f"hirise_strips_backup_{BUILD_EPOCH}"]:
+            if _cand.is_dir():
+                for f in sorted(_cand.iterdir()):
+                    if f.name.startswith("T") and "_" in f.name and f.name.endswith(".jpg"):
+                        idx.setdefault(f.name.split("_", 1)[1][:-4], f)
+                if idx:
+                    break
     return idx
 
 
@@ -989,6 +1032,45 @@ def build_shared() -> None:
         shutil.copy2(BRAND / "social-preview.png", a / "og-image.png")
 
 
+def build_sitemap() -> None:
+    """Generate sitemap.xml, robots.txt, manifest and humans for SEO/PWA."""
+    base = SITE_URL.rstrip("/")
+    urls = [
+        (f"{base}/", "1.0", "daily"),
+        (f"{base}/report/", "0.8", "weekly"),
+        (f"{base}/results/adjudicated.csv", "0.6", "weekly"),
+        (f"{base}/results/leads.csv", "0.6", "weekly"),
+        (f"{base}/results/SUMMARY.md", "0.5", "weekly"),
+    ]
+    # include findings
+    if LEADS_DIR.is_dir():
+        for f in sorted(LEADS_DIR.glob("F-*.md")):
+            urls.append((f"{base}/results/findings/{f.name}", "0.5", "monthly"))
+    today = time.strftime("%Y-%m-%d")
+    sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for loc, prio, freq in urls:
+        sm.append(f"  <url><loc>{html.escape(loc)}</loc><lastmod>{today}</lastmod><changefreq>{freq}</changefreq><priority>{prio}</priority></url>")
+    sm.append("</urlset>")
+    (SITE / "sitemap.xml").write_text("\n".join(sm), encoding="utf-8")
+    (SITE / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")
+    manifest = {
+        "name": "NASA HiRISE Anomaly Investigation",
+        "short_name": "HiRISE Dossier",
+        "description": "Public NASA HiRISE anomaly investigation facility — Mars imagery dossiers",
+        "start_url": "/nasa-investigation/",
+        "scope": "/nasa-investigation/",
+        "display": "standalone",
+        "background_color": "#05070a",
+        "theme_color": "#ffc430",
+        "icons": [
+            {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml"},
+            {"src": "assets/og-image.png", "sizes": "512x512", "type": "image/png"},
+        ],
+    }
+    (SITE / "manifest.webmanifest").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (SITE / "humans.txt").write_text("/* TEAM */\nInvestigator: Nortaq PlayNexus\nSite: NASA HiRISE Anomaly Investigation\n/* THANKS */\nNASA/JPL HiRISE PDS — public domain\nUniversity of Arizona LPL\n/* SITE */\nLast update: " + today + "\nStandards: HTML5, CSS3, ES2020\nComponents: Python dossier builder, vanilla JS, GitHub Pages\n", encoding="utf-8")
+
+
 def build_leads_data(rows, si) -> str:
     payload = lead_json(rows, si)
     ver = _ver(payload)
@@ -1046,7 +1128,15 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     by_img_count = defaultdict(int)
     for r in rows:
         by_img_count[r.get("image", "")] += 1
-    findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
+    findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() and list(LEADS_DIR.glob("F-*.md")) else []
+    if not findings:
+        # fallback: check temp backup (preserved before SITE deletion) and existing site findings
+        for _fb in [Path(tempfile.gettempdir()) / f"hirise_findings_backup_{BUILD_EPOCH}", SITE / "results" / "findings"]:
+            if _fb.is_dir():
+                _cand = sorted(_fb.glob("F-*.md"))
+                if _cand:
+                    findings = _cand
+                    break
     fcards = ""
     for f in findings:
         txt = f.read_text(encoding="utf-8")
@@ -1085,28 +1175,44 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta name='theme-color' content='#020617'>
+<meta name='color-scheme' content='dark light'>
 <meta name='description' content='Public NASA HiRISE anomaly investigation facility: acquire, catalog, enhance, detect, analyze, and adjudicate anomalies with statistical rigor.'>
+<meta name='author' content='Nortaq PlayNexus'>
+<meta name='keywords' content='NASA, HiRISE, Mars, anomaly detection, planetary science, PDS, remote sensing'>
+<link rel='canonical' href='{SITE_URL}/'>
+<link rel='manifest' href='manifest.webmanifest'>
 <meta property='og:title' content='NASA HiRISE Anomaly Investigation — Public Facility'>
 <meta property='og:description' content='Rigorous, reproducible anomaly investigation of public NASA HiRISE Mars & lunar imagery.'>
 <meta property='og:image' content='{SITE_URL}/assets/og-image.png'>
+<meta property='og:image:width' content='1200'>
+<meta property='og:image:height' content='630'>
+<meta property='og:url' content='{SITE_URL}/'>
 <meta property='og:type' content='website'>
+<meta name='twitter:card' content='summary_large_image'>
+<meta name='twitter:title' content='NASA HiRISE Anomaly Investigation — Public Facility'>
+<meta name='twitter:description' content='Rigorous, reproducible anomaly investigation of public NASA HiRISE imagery.'>
+<meta name='twitter:image' content='{SITE_URL}/assets/og-image.png'>
 <link rel='icon' href='assets/logo.svg' type='image/svg+xml'>
+<link rel='preload' href='assets/style.css?v={CSS_VER}' as='style'>
+<link rel='preload' href='assets/app.js?v={JS_VER}' as='script'>
 <title>NASA HiRISE Anomaly Investigation — Public Facility</title>
+<script type='application/ld+json'>{{"@context":"https://schema.org","@type":"Dataset","name":"NASA HiRISE Anomaly Investigation","description":"Adjudicated candidates from public NASA HiRISE PDS imagery","url":"{SITE_URL}/","license":"https://opensource.org/licenses/MIT","creator":{{"@type":"Organization","name":"Nortaq PlayNexus"}},"distribution":[{{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"{SITE_URL}/results/adjudicated.csv"}},{{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"{SITE_URL}/results/leads.csv"}}]}}</script>
 <link rel='stylesheet' href='assets/style.css?v={CSS_VER}'><script>document.documentElement.classList.add('reveal-on')</script></head><body>
+<a href='#main' class='skip'>Skip to content</a>
 <div class='toprule'></div>
 <div class='ticker'><span>Classified // Anomaly Dossier &mdash; Public Facility</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <canvas id='stars'></canvas><div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
-<nav><div class='nav-in'>
-  <a class='brand' href='#'><img src='assets/logo.svg' alt='logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
-  <div class='nav-links'>
-    <a href='#overview'>Overview</a><a href='#explorer'>Explorer</a>
-    <a href='#findings'>Findings</a><a href='#methodology'>Methodology</a>
-    <a href='report/'>Report</a><a href='{BASE}'>Source</a>
+<nav role='navigation' aria-label='Primary'><div class='nav-in'>
+  <a class='brand' href='#'><img src='assets/logo.svg' alt='NASA HiRISE logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
+  <div class='nav-links' id='primary-nav' role='menubar'>
+    <a href='#overview' role='menuitem'>Overview</a><a href='#explorer' role='menuitem'>Explorer</a>
+    <a href='#findings' role='menuitem'>Findings</a><a href='#methodology' role='menuitem'>Methodology</a>
+    <a href='report/' role='menuitem'>Report</a><a href='{BASE}' role='menuitem'>Source</a>
   </div>
-  <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
+  <button class='nav-toggle' aria-label='Toggle navigation menu' aria-expanded='false' aria-controls='primary-nav'>&#9776;</button>
 </div></nav>
-
+<main id="main">
 <header class='hero'><div class='reticle'><div class='ring2'></div><div class='sweep'></div></div><div class='wrap'>
   <div class='tag'>Anomaly Dossier // Public Facility</div>
   <h1>NASA HiRISE <span class='grad'>Anomaly Investigation</span></h1>
@@ -1150,30 +1256,33 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
 
 <section id='explorer'><div class='wrap'>
   <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>{displayed} distinct anomalies (one card = all views) - {len(grouped_all)} distinct anomalies grouped from {len(raw_for_group)} raw band-variant rows - {distinct_bases} base frames - click any card to view every image</span></div>
-  <div class='controls'>
-    <input id='q' type='search' placeholder='Search image or flag&hellip;'>
-    <label style='color:var(--muted);font-size:.85rem'>min contrast
-      <input id='minC' type='range' min='0' max='4' step='0.05' value='0' style='vertical-align:middle'>
-      <span id='minCval'>0</span></label>
-    <select id='sort'>
+  <div class='controls' role='search' aria-label='Filter leads'>
+    <label for='q' class='sr-only'>Search leads</label>
+    <input id='q' type='search' placeholder='Search image or flag&hellip;' aria-label='Search anomalies by image, flag or verdict' autocomplete='off' spellcheck='false'>
+    <label for='minC' style='color:var(--muted);font-size:.85rem'>min contrast
+      <input id='minC' type='range' min='0' max='4' step='0.05' value='0' style='vertical-align:middle' aria-label='Minimum contrast filter'>
+      <span id='minCval' aria-live='polite'>0</span></label>
+    <label for='sort' class='sr-only'>Sort by</label>
+    <select id='sort' aria-label='Sort leads by'>
       <option value='score'>sort: score</option>
       <option value='contrast'>sort: contrast</option>
       <option value='area_px'>sort: area</option>
       <option value='w'>sort: width</option>
     </select>
-<button id='reset' class='btn' style='padding:.4rem .8rem'>Reset</button>
-<button id='export' class='btn' style='padding:.4rem .8rem'>Export CSV</button>
+<button id='reset' class='btn' style='padding:.4rem .8rem' aria-label='Reset all filters'>Reset</button>
+<button id='export' class='btn' style='padding:.4rem .8rem' aria-label='Export filtered leads as CSV'>Export CSV</button>
 </div>
-  <div class='chips'>{chips}</div>
-  <div class='legend'>{legend_html}</div>
-  <div id='leadNote' class='count-note'></div>
+  <div class='chips' role='group' aria-label='Filter by verdict'>{chips}</div>
+  <div class='legend' aria-hidden='true'>{legend_html}</div>
+  <div id='leadNote' class='count-note' aria-live='polite' role='status'></div>
   <div id='leadsGrid' class='grid'></div>
   <div style='text-align:center;margin-top:1rem'><button id='loadMore' class='btn' style='display:none'>Load more</button></div>
 </div></section>
 
 <section id='findings'><div class='wrap'>
   <div class='sec-head'><h2>Finding Reports</h2><span class='hint'>{len(findings)} dossiers</span></div>
-  <input id='fSearch' type='search' placeholder='Filter findings by id / verdict / product&hellip;' style='width:100%;max-width:420px;margin:.2rem 0 1rem;padding:.5rem .7rem;background:#0a0e16;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono)'>
+  <label for='fSearch' class='sr-only'>Filter findings</label>
+  <input id='fSearch' type='search' placeholder='Filter findings by id / verdict / product&hellip;' aria-label='Filter findings by id, verdict or product' style='width:100%;max-width:420px;margin:.2rem 0 1rem;padding:.5rem .7rem;background:#0a0e16;border:1px solid var(--line);border-radius:8px;color:var(--text);font-family:var(--mono)'>
   <div class='findings'>{fcards}</div>
 </div></section>
 
@@ -1183,8 +1292,8 @@ def build_index(rows, leads, top, si, summary_md, meth_html, art_html, leads_ver
   <div class='sec-head' style='margin-top:2.5rem'><h2>Known Artifacts &mdash; the Checklist</h2></div>
   <div class='panel-box'><div class='pb-head'>Known Artifacts — the Checklist</div><div class='prose'>{art_html}</div></div>
 </div></section>
-
-<footer><div class='fwrap'>
+</main>
+<footer role='contentinfo' aria-label='Site footer'><div class='fwrap'>
   <span>Public facility &middot; Data: NASA/JPL HiRISE PDS (public domain) &middot; MIT License</span>
   <span class='src'>SOURCE &nbsp;{BASE}</span>
   <span class='view'>VIEW &nbsp; {SITE_URL}/report/</span>
@@ -1260,7 +1369,14 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
             f"<td>{round(num(r['contrast']), 2)}</td><td>{r.get('agrees', '')}/{r.get('disagrees', '')}</td>"
             f"<td>{r.get('area_px', '')}</td></tr>"
         )
-    findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() else []
+    findings = sorted(LEADS_DIR.glob("F-*.md")) if LEADS_DIR.is_dir() and list(LEADS_DIR.glob("F-*.md")) else []
+    if not findings:
+        for _fb in [Path(tempfile.gettempdir()) / f"hirise_findings_backup_{BUILD_EPOCH}", SITE / "results" / "findings"]:
+            if _fb.is_dir():
+                _cand = sorted(_fb.glob("F-*.md"))
+                if _cand:
+                    findings = _cand
+                    break
     fhtml = ""
     for f in findings:
         txt = f.read_text(encoding="utf-8")
@@ -1276,20 +1392,37 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
     body = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta name='theme-color' content='#020617'>
+<meta name='color-scheme' content='dark light'>
+<meta name='description' content='NASA HiRISE Anomaly Analysis Report — {len(rows)} candidates adjudicated, {len(leads)} leads, {len(findings)} findings. Statistical rigor, cross-band confirmation.'>
+<meta name='author' content='Nortaq PlayNexus'>
+<link rel='canonical' href='{SITE_URL}/report/'>
 <meta property='og:title' content='NASA HiRISE Anomaly Analysis Report'>
+<meta property='og:description' content='Full adjudication report for {len(rows)} candidates — statistical rigor, cross-band confirmation.'>
+<meta property='og:image' content='{SITE_URL}/assets/og-image.png'>
+<meta property='og:image:width' content='1200'>
+<meta property='og:image:height' content='630'>
+<meta property='og:url' content='{SITE_URL}/report/'>
+<meta property='og:type' content='article'>
+<meta name='twitter:card' content='summary_large_image'>
+<meta name='twitter:title' content='NASA HiRISE — Anomaly Analysis Report'>
 <meta property='og:image' content='{SITE_URL}/assets/og-image.png'>
 <link rel='icon' href='../assets/logo.svg' type='image/svg+xml'>
+<link rel='preload' href='../assets/style.css?v={CSS_VER}' as='style'>
+<link rel='preload' href='../assets/app.js?v={JS_VER}' as='script'>
 <title>NASA HiRISE — Anomaly Analysis Report</title>
+<script type='application/ld+json'>{{"@context":"https://schema.org","@type":"TechArticle","headline":"NASA HiRISE Anomaly Analysis Report","description":"Statistical anomaly adjudication for HiRISE imagery","url":"{SITE_URL}/report/","author":{{"@type":"Organization","name":"Nortaq PlayNexus"}},"datePublished":"{BUILD_TS}"}}</script>
 <link rel='stylesheet' href='../assets/style.css?v={CSS_VER}'><script>document.documentElement.classList.add('reveal-on')</script></head><body>
+<a href='#main' class='skip'>Skip to content</a>
 <div class='toprule'></div>
 <div class='ticker'><span>Classified // Anomaly Dossier &mdash; Adjudication</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
-<nav><div class='nav-in'>
-  <a class='brand' href='../'><img src='../assets/logo.svg' alt='logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
-  <div class='nav-links'><a href='../#overview'>Home</a><a href='../#explorer'>Explorer</a><a href='../#findings'>Findings</a><a href='{BASE}'>Source</a></div>
-  <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
+<nav role='navigation' aria-label='Primary'><div class='nav-in'>
+  <a class='brand' href='../'><img src='../assets/logo.svg' alt='NASA HiRISE logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
+  <div class='nav-links' id='primary-nav' role='menubar'><a href='../#overview' role='menuitem'>Home</a><a href='../#explorer' role='menuitem'>Explorer</a><a href='../#findings' role='menuitem'>Findings</a><a href='{BASE}' role='menuitem'>Source</a></div>
+  <button class='nav-toggle' aria-label='Toggle navigation menu' aria-expanded='false' aria-controls='primary-nav'>&#9776;</button>
 </div></nav>
+<main id="main">
 <header class='hero'><div class='reticle'><div class='ring2'></div><div class='sweep'></div></div><div class='wrap'>
   <div class='tag'>Adjudication // Dossier</div>
   <h1>Anomaly <span class='grad'>Analysis Report</span></h1>
@@ -1336,8 +1469,8 @@ def build_report(rows, leads, si, summary_md, leads_ver: str) -> None:
   <div class='sec-head'><h2>Finding reports ({len(findings)})</h2></div>
   <div class='findings'>{fhtml}</div>
 </div></section>
-
-<footer>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License &middot; <span class='sync'>LAST SYNC {BUILD_TS} &middot; {BUILD_REV} &middot; <span id='ago'></span></span></footer>
+</main>
+<footer role='contentinfo' aria-label='Site footer'>Public facility &middot; <a href='../'>Home</a> &middot; <a href='{BASE}'>Source</a> &middot; MIT License &middot; <span class='sync'>LAST SYNC {BUILD_TS} &middot; {BUILD_REV} &middot; <span id='ago'></span></span></footer>
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 <button id='toTop' class='to-top' aria-label='Back to top'>&#8593;</button>
 {timer_html()}
@@ -1386,7 +1519,22 @@ def main() -> None:
         else ""
     )
 
+    # Backup existing strips/findings (gitignored source, but committed artifacts)
+    _backup_strips_dir = None
+    _backup_findings_dir = None
     if SITE.exists():
+        _existing_strips = SITE / "results" / "strips"
+        _existing_findings = SITE / "results" / "findings"
+        if _existing_strips.is_dir() and list(_existing_strips.glob("*.jpg")):
+            _backup_strips_dir = Path(tempfile.gettempdir()) / f"hirise_strips_backup_{BUILD_EPOCH}"
+            if _backup_strips_dir.exists():
+                shutil.rmtree(_backup_strips_dir)
+            shutil.copytree(_existing_strips, _backup_strips_dir)
+        if _existing_findings.is_dir() and list(_existing_findings.glob("F-*.md")):
+            _backup_findings_dir = Path(tempfile.gettempdir()) / f"hirise_findings_backup_{BUILD_EPOCH}"
+            if _backup_findings_dir.exists():
+                shutil.rmtree(_backup_findings_dir)
+            shutil.copytree(_existing_findings, _backup_findings_dir)
         shutil.rmtree(SITE)
     SITE.mkdir(parents=True)
     (SITE / "report").mkdir(parents=True)
@@ -1400,12 +1548,26 @@ def main() -> None:
     build_index(rows_d, leads_d, top, si, summary_md, meth, art, leads_ver)
     build_report(rows_d, leads_d, si, summary_md, leads_ver)
     build_results()
+    # Restore strips/findings if new build produced empty but we had backup
+    _new_strips = list((SITE / "results" / "strips").glob("*.jpg")) if (SITE / "results" / "strips").is_dir() else []
+    _new_findings = list((SITE / "results" / "findings").glob("F-*.md")) if (SITE / "results" / "findings").is_dir() else []
+    if not _new_strips and _backup_strips_dir and _backup_strips_dir.is_dir():
+        (SITE / "results" / "strips").mkdir(parents=True, exist_ok=True)
+        for f in _backup_strips_dir.glob("*.jpg"):
+            shutil.copy2(f, SITE / "results" / "strips" / f.name)
+    if not _new_findings and _backup_findings_dir and _backup_findings_dir.is_dir():
+        (SITE / "results" / "findings").mkdir(parents=True, exist_ok=True)
+        for f in _backup_findings_dir.glob("F-*.md"):
+            shutil.copy2(f, SITE / "results" / "findings" / f.name)
+    build_sitemap()
 
     size = sum(f.stat().st_size for f in SITE.rglob("*") if f.is_file())
+    _final_findings = len(list((SITE / "results" / "findings").glob("F-*.md"))) if (SITE / "results" / "findings").is_dir() else 0
+    _final_strips = len(list((SITE / "results" / "strips").glob("*.jpg"))) if (SITE / "results" / "strips").is_dir() else 0
     print(
         f"Built site/ ({size // 1024} KB): landing+explorer + report + {len(rows_d)} candidates + "
-        f"{len(top)} top leads + {len(list(LEADS_DIR.glob('F-*.md')))} findings + "
-        f"{len(list((SITE / 'results' / 'strips').glob('*.jpg')))} strips"
+        f"{len(top)} top leads + {_final_findings} findings + "
+        f"{_final_strips} strips"
     )
 
 

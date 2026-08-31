@@ -39,9 +39,9 @@ jobs:
           conc = root / "data" / "anomalies" / "conclusions"
           if not (conc / "adjudicated.csv").exists():
               candidates = [
+                  root / "site" / "results",
                   root / "data" / "_backup_upgrade_20260822_220609" / "conclusions",
                   root / "data" / "_backup_upgrade_20260822_220609",
-                  root / "site" / "results",
               ]
               restored = False
               for cand in candidates:
@@ -77,3 +77,4 @@ jobs:
 
       - name: Build site (smoke)
         run: python scripts/build_site.py
+

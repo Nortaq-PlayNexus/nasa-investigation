@@ -35,6 +35,13 @@ nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px) saturate(1.2);ba
 .nav-links a{color:var(--muted);font-size:.88rem;font-weight:600;letter-spacing:.02em}
 .nav-links a:hover{color:var(--accent);text-decoration:none}
 .nav-toggle{display:none;background:none;border:1px solid var(--line2);color:var(--accent);font-size:1.1rem;padding:.3rem .6rem;border-radius:8px;cursor:pointer}
+@media(max-width:720px){.nav-toggle{display:inline-flex;align-items:center;justify-content:center}.nav-links{position:absolute;top:100%;left:0;right:0;background:rgba(8,12,22,.96);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);flex-direction:column;padding:.8rem 20px;gap:.2rem;display:none;box-shadow:0 12px 32px rgba(0,0,0,.5)}.nav-links.open{display:flex}.nav-links a{padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04)}.nav-links a:last-child{border-bottom:none}}
+.skip{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}.skip:focus{left:12px;top:12px;width:auto;height:auto;background:var(--accent);color:#111;padding:.5rem .8rem;border-radius:8px;z-index:99;font-family:var(--mono);font-weight:800}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.hero .reticle .sweep,.toprule:after,.hero .tag:before{animation:none!important}html.reveal-on section{opacity:1!important;transform:none!important}canvas#stars{display:none!important}}
+@media print{.toprule,.ticker,.brackets,canvas#stars,.bg-glow,.grid-ov,.scan,nav,.uplink,.to-top{display:none!important}body{background:#fff;color:#111}.hero,.stat,.tile,.lead{box-shadow:none!important;border:1px solid #ddd!important}}
+.ph{padding:1rem;color:var(--muted);font-family:var(--mono);font-size:.82rem;text-align:center;background:rgba(15,20,33,.4);border:1px dashed var(--line);border-radius:10px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 /* hero redesign */
 .hero{position:relative;padding:5rem 0 3.5rem;overflow:hidden}
 .hero .reticle{position:absolute;left:50%;top:45%;width:520px;height:520px;transform:translate(-50%,-50%);border:1px solid rgba(255,196,48,.10);border-radius:50%;pointer-events:none}

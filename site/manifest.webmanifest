@@ -1,0 +1,22 @@
+{
+  "name": "NASA HiRISE Anomaly Investigation",
+  "short_name": "HiRISE Dossier",
+  "description": "Public NASA HiRISE anomaly investigation facility \u2014 Mars imagery dossiers",
+  "start_url": "/nasa-investigation/",
+  "scope": "/nasa-investigation/",
+  "display": "standalone",
+  "background_color": "#05070a",
+  "theme_color": "#ffc430",
+  "icons": [
+    {
+      "src": "assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "assets/og-image.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

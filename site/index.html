@@ -1,28 +1,44 @@
 <!doctype html><html lang='en'><head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <meta name='theme-color' content='#020617'>
+<meta name='color-scheme' content='dark light'>
 <meta name='description' content='Public NASA HiRISE anomaly investigation facility: acquire, catalog, enhance, detect, analyze, and adjudicate anomalies with statistical rigor.'>
+<meta name='author' content='Nortaq PlayNexus'>
+<meta name='keywords' content='NASA, HiRISE, Mars, anomaly detection, planetary science, PDS, remote sensing'>
+<link rel='canonical' href='https://nortaq-playnexus.github.io/nasa-investigation/'>
+<link rel='manifest' href='manifest.webmanifest'>
 <meta property='og:title' content='NASA HiRISE Anomaly Investigation — Public Facility'>
 <meta property='og:description' content='Rigorous, reproducible anomaly investigation of public NASA HiRISE Mars & lunar imagery.'>
 <meta property='og:image' content='https://nortaq-playnexus.github.io/nasa-investigation/assets/og-image.png'>
+<meta property='og:image:width' content='1200'>
+<meta property='og:image:height' content='630'>
+<meta property='og:url' content='https://nortaq-playnexus.github.io/nasa-investigation/'>
 <meta property='og:type' content='website'>
+<meta name='twitter:card' content='summary_large_image'>
+<meta name='twitter:title' content='NASA HiRISE Anomaly Investigation — Public Facility'>
+<meta name='twitter:description' content='Rigorous, reproducible anomaly investigation of public NASA HiRISE imagery.'>
+<meta name='twitter:image' content='https://nortaq-playnexus.github.io/nasa-investigation/assets/og-image.png'>
 <link rel='icon' href='assets/logo.svg' type='image/svg+xml'>
+<link rel='preload' href='assets/style.css?v=920dac71f5' as='style'>
+<link rel='preload' href='assets/app.js?v=1ddcf743b2' as='script'>
 <title>NASA HiRISE Anomaly Investigation — Public Facility</title>
-<link rel='stylesheet' href='assets/style.css?v=001fc0aeb3'><script>document.documentElement.classList.add('reveal-on')</script></head><body>
+<script type='application/ld+json'>{"@context":"https://schema.org","@type":"Dataset","name":"NASA HiRISE Anomaly Investigation","description":"Adjudicated candidates from public NASA HiRISE PDS imagery","url":"https://nortaq-playnexus.github.io/nasa-investigation/","license":"https://opensource.org/licenses/MIT","creator":{"@type":"Organization","name":"Nortaq PlayNexus"},"distribution":[{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"https://nortaq-playnexus.github.io/nasa-investigation/results/adjudicated.csv"},{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"https://nortaq-playnexus.github.io/nasa-investigation/results/leads.csv"}]}</script>
+<link rel='stylesheet' href='assets/style.css?v=920dac71f5'><script>document.documentElement.classList.add('reveal-on')</script></head><body>
+<a href='#main' class='skip'>Skip to content</a>
 <div class='toprule'></div>
 <div class='ticker'><span>Classified // Anomaly Dossier &mdash; Public Facility</span><span class='eyes'>Eyes Only</span></div>
 <div class='brackets'><span class='tl'></span><span class='tr'></span><span class='bl'></span><span class='br'></span></div>
 <canvas id='stars'></canvas><div class='bg-glow'></div><div class='grid-ov'></div><div class='scan'></div>
-<nav><div class='nav-in'>
-  <a class='brand' href='#'><img src='assets/logo.svg' alt='logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
-  <div class='nav-links'>
-    <a href='#overview'>Overview</a><a href='#explorer'>Explorer</a>
-    <a href='#findings'>Findings</a><a href='#methodology'>Methodology</a>
-    <a href='report/'>Report</a><a href='https://github.com/Nortaq-PlayNexus/nasa-investigation'>Source</a>
+<nav role='navigation' aria-label='Primary'><div class='nav-in'>
+  <a class='brand' href='#'><img src='assets/logo.svg' alt='NASA HiRISE logo'><span>NASA HiRISE<small>Anomaly Dossier</small></span></a>
+  <div class='nav-links' id='primary-nav' role='menubar'>
+    <a href='#overview' role='menuitem'>Overview</a><a href='#explorer' role='menuitem'>Explorer</a>
+    <a href='#findings' role='menuitem'>Findings</a><a href='#methodology' role='menuitem'>Methodology</a>
+    <a href='report/' role='menuitem'>Report</a><a href='https://github.com/Nortaq-PlayNexus/nasa-investigation' role='menuitem'>Source</a>
   </div>
-  <button class='nav-toggle' aria-label='Menu'>&#9776;</button>
+  <button class='nav-toggle' aria-label='Toggle navigation menu' aria-expanded='false' aria-controls='primary-nav'>&#9776;</button>
 </div></nav>
-
+<main id="main">
 <header class='hero'><div class='reticle'><div class='ring2'></div><div class='sweep'></div></div><div class='wrap'>
   <div class='tag'>Anomaly Dossier // Public Facility</div>
   <h1>NASA HiRISE <span class='grad'>Anomaly Investigation</span></h1>
@@ -66,30 +82,33 @@
 
 <section id='explorer'><div class='wrap'>
   <div class='sec-head'><h2>Leads Explorer</h2><span class='hint'>414 distinct anomalies (one card = all views) - 6760 distinct anomalies grouped from 7826 raw band-variant rows - 52 base frames - click any card to view every image</span></div>
-  <div class='controls'>
-    <input id='q' type='search' placeholder='Search image or flag&hellip;'>
-    <label style='color:var(--muted);font-size:.85rem'>min contrast
-      <input id='minC' type='range' min='0' max='4' step='0.05' value='0' style='vertical-align:middle'>
-      <span id='minCval'>0</span></label>
-    <select id='sort'>
+  <div class='controls' role='search' aria-label='Filter leads'>
+    <label for='q' class='sr-only'>Search leads</label>
+    <input id='q' type='search' placeholder='Search image or flag&hellip;' aria-label='Search anomalies by image, flag or verdict' autocomplete='off' spellcheck='false'>
+    <label for='minC' style='color:var(--muted);font-size:.85rem'>min contrast
+      <input id='minC' type='range' min='0' max='4' step='0.05' value='0' style='vertical-align:middle' aria-label='Minimum contrast filter'>
+      <span id='minCval' aria-live='polite'>0</span></label>
+    <label for='sort' class='sr-only'>Sort by</label>
+    <select id='sort' aria-label='Sort leads by'>
       <option value='score'>sort: score</option>
       <option value='contrast'>sort: contrast</option>
       <option value='area_px'>sort: area</option>
       <option value='w'>sort: width</option>
     </select>
-<button id='reset' class='btn' style='padding:.4rem .8rem'>Reset</button>
-<button id='export' class='btn' style='padding:.4rem .8rem'>Export CSV</button>
+<button id='reset' class='btn' style='padding:.4rem .8rem' aria-label='Reset all filters'>Reset</button>
+<button id='export' class='btn' style='padding:.4rem .8rem' aria-label='Export filtered leads as CSV'>Export CSV</button>
 </div>
-  <div class='chips'><span class='chip' data-v='CONFIRMED-LEAD'>CONFIRMED-LEAD</span><span class='chip' data-v='PROMISING'>PROMISING</span><span class='chip' data-v='TERRAIN'>TERRAIN</span><span class='chip' data-v='EXPLAINED-ARTIFACT'>EXPLAINED-ARTIFACT</span><span class='chip' data-v='NOISE'>NOISE</span><span class='chip' data-v='WEAK'>WEAK</span></div>
-  <div class='legend'><span class='pill p-CONFIRMED-LEAD' style='font-size:.68rem;padding:.1rem .5rem'>CONFIRMED-LEAD</span><span class='pill p-PROMISING' style='font-size:.68rem;padding:.1rem .5rem'>PROMISING</span><span class='pill p-TERRAIN' style='font-size:.68rem;padding:.1rem .5rem'>TERRAIN</span><span class='pill p-EXPLAINED-ARTIFACT' style='font-size:.68rem;padding:.1rem .5rem'>EXPLAINED-ARTIFACT</span><span class='pill p-NOISE' style='font-size:.68rem;padding:.1rem .5rem'>NOISE</span><span class='pill p-WEAK' style='font-size:.68rem;padding:.1rem .5rem'>WEAK</span></div>
-  <div id='leadNote' class='count-note'></div>
+  <div class='chips' role='group' aria-label='Filter by verdict'><span class='chip' data-v='CONFIRMED-LEAD'>CONFIRMED-LEAD</span><span class='chip' data-v='PROMISING'>PROMISING</span><span class='chip' data-v='TERRAIN'>TERRAIN</span><span class='chip' data-v='EXPLAINED-ARTIFACT'>EXPLAINED-ARTIFACT</span><span class='chip' data-v='NOISE'>NOISE</span><span class='chip' data-v='WEAK'>WEAK</span></div>
+  <div class='legend' aria-hidden='true'><span class='pill p-CONFIRMED-LEAD' style='font-size:.68rem;padding:.1rem .5rem'>CONFIRMED-LEAD</span><span class='pill p-PROMISING' style='font-size:.68rem;padding:.1rem .5rem'>PROMISING</span><span class='pill p-TERRAIN' style='font-size:.68rem;padding:.1rem .5rem'>TERRAIN</span><span class='pill p-EXPLAINED-ARTIFACT' style='font-size:.68rem;padding:.1rem .5rem'>EXPLAINED-ARTIFACT</span><span class='pill p-NOISE' style='font-size:.68rem;padding:.1rem .5rem'>NOISE</span><span class='pill p-WEAK' style='font-size:.68rem;padding:.1rem .5rem'>WEAK</span></div>
+  <div id='leadNote' class='count-note' aria-live='polite' role='status'></div>
   <div id='leadsGrid' class='grid'></div>
   <div style='text-align:center;margin-top:1rem'><button id='loadMore' class='btn' style='display:none'>Load more</button></div>
 </div></section>
 
 <section id='findings'><div class='wrap'>
   <div class='sec-head'><h2>Finding Reports</h2><span class='hint'>20 dossiers</span></div>
-  <input id='fSearch' type='search' placeholder='Filter findings by id / verdict / product&hellip;' style='width:100%;max-width:420px;margin:.2rem 0 1rem;padding:.5rem .7rem;background:#0a0e16;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono)'>
+  <label for='fSearch' class='sr-only'>Filter findings</label>
+  <input id='fSearch' type='search' placeholder='Filter findings by id / verdict / product&hellip;' aria-label='Filter findings by id, verdict or product' style='width:100%;max-width:420px;margin:.2rem 0 1rem;padding:.5rem .7rem;background:#0a0e16;border:1px solid var(--line);border-radius:8px;color:var(--text);font-family:var(--mono)'>
   <div class='findings'><div class='finding-card' data-search='F-0001.md CONFIRMED-LEAD ESP_013236_1410_MIRB.abrowse_enh.png'><div class='fc-head'><span class='fid'>F-0001.md</span><span class='f-stamp'>CONFIRMED LEAD</span><span class='ft'>+</span></div><div class='fc-sub'>PRODUCT ESP_013236_1410_MIRB.abrowse_enh.png &middot; VERDICT CONFIRMED-LEAD</div><div class='fc-body prose'><h2>Finding Report (lead)</h2>
 <ul>
 <li>Finding ID: F-0001.md</li>
@@ -1412,18 +1431,18 @@
 <h3>The default conclusion</h3>
 <p>For every candidate, the null hypothesis is: <b>known artifact, reproducible, explained by physics or instrument</b>. Extraordinary claims require you to defeat that null hypothesis in writing, in the finding report, with references to the specific images and metadata.</p></div></div>
 </div></section>
-
-<footer><div class='fwrap'>
+</main>
+<footer role='contentinfo' aria-label='Site footer'><div class='fwrap'>
   <span>Public facility &middot; Data: NASA/JPL HiRISE PDS (public domain) &middot; MIT License</span>
   <span class='src'>SOURCE &nbsp;https://github.com/Nortaq-PlayNexus/nasa-investigation</span>
   <span class='view'>VIEW &nbsp; https://nortaq-playnexus.github.io/nasa-investigation/report/</span>
-  <span class='sync'>LAST SYNC &nbsp; 2026-08-28 02:15 UTC &middot; 4b61d7b &middot; <span id='ago'></span></span>
+  <span class='sync'>LAST SYNC &nbsp; 2026-08-31 17:26 UTC &middot; ec88217 &middot; <span id='ago'></span></span>
   <a href='../'>Home</a>
 </div></footer>
 
 <div class='lb' id='lb'><span class='x'>&times;</span><div class='dossier' id='lbDossier'></div></div>
 <button id='toTop' class='to-top' aria-label='Back to top'>&#8593;</button>
 <div id='uplink' class='uplink'>UPLINK WINDOW // <span id='uplinkClock'>--:--:--</span> REMAINING</div>
-<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='f2e642896f';window.UPLINK_END=1787883353;window.BUILD_EPOCH=1787883322;</script>
-<script src='assets/app.js?v=11b3ff3953'></script>
+<script>window.STRIP_BASE='results/strips/';window.LEADS_VER='a140b4c031';window.UPLINK_END=1787883353;window.BUILD_EPOCH=1788197168;</script>
+<script src='assets/app.js?v=1ddcf743b2'></script>
 </body></html>

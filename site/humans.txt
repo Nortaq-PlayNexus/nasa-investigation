@@ -1,0 +1,10 @@
+/* TEAM */
+Investigator: Nortaq PlayNexus
+Site: NASA HiRISE Anomaly Investigation
+/* THANKS */
+NASA/JPL HiRISE PDS — public domain
+University of Arizona LPL
+/* SITE */
+Last update: 2026-09-01
+Standards: HTML5, CSS3, ES2020
+Components: Python dossier builder, vanilla JS, GitHub Pages
