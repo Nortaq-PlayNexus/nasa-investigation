@@ -732,7 +732,8 @@ def md_to_html(md: str) -> str:
             if not in_ol:
                 out.append("<ol>")
                 in_ol = True
-            out.append(f"<li>{inline(re.sub(r'^\d+\. ', '', s))}</li>")
+            cleaned = re.sub(r"^\d+\. ", "", s)
+            out.append(f"<li>{inline(cleaned)}</li>")
         elif s.startswith("> "):
             close()
             out.append(f"<blockquote>{inline(s[2:].strip())}</blockquote>")
