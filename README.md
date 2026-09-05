@@ -1,168 +1,180 @@
-<div align="center">
-
-# 🔬 NASA HiRISE Investigation
-
-**Exclusive Anomaly Detection Pipeline for Mars & Lunar Imagery**
-
-*Acquire → Catalog → Enhance → Detect → Analyze → Adjudicate*
-
-[![CI](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml/badge.svg)](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml)
-[![Pages](https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/pages.yml/badge.svg)](https://nortaq-playnexus.github.io/nasa-investigation/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-88%20passing-brightgreen)]()
-
-</div>
-
----
-
-## What Is This?
-
-A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery** to surface candidate anomalies for structured human review. Built on the principle that nearly all "anomalies" in planetary imagery are known sensor/compression/viewing artifacts — the system is designed to **document, control, and debunk** before anything is ever recorded as a finding.
-
-**Key design principle:** EXTRAS-only data acquisition from a single sanctioned source (`https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/`), comparing complete variant sets (B&W ↔ filtered ↔ ortho ↔ DTM) pixel-for-pixel to separate terrain from processing artifacts.
-
----
-
-## Screenshots
-
 <p align="center">
-  <a href="https://nortaq-playnexus.github.io/nasa-investigation/report/"><img src="assets/screenshots/report.png" width="80%" alt="Anomaly Analysis Report"></a>
+  <picture>
+    <img src="assets/branding/logo.svg" alt="PLANETARY SCAN NODE logo" width="200" />
+  </picture>
 </p>
 
+# PLANETARY SCAN NODE :: HiRISE INTAKE
+
+**Exclusive anomaly-detection pipeline for NASA HiRISE Mars & lunar imagery.**
+
+`ACQUIRE → CATALOG → ENHANCE → DETECT → ANALYZE → ADJUDICATE`
+
 <p align="center">
-  <em>Generated HTML report showing pipeline statistics, detection summary, and adjudicated leads.
-  <a href="https://nortaq-playnexus.github.io/nasa-investigation/report/">Open the public Anomaly Analysis Report &rarr;</a></em>
+  <a href="https://github.com/Nortaq-PlayNexus/nasa-investigation/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Nortaq-PlayNexus/nasa-investigation/ci.yml?style=flat-square&label=CI&labelColor=0a0e1a&color=B8FF1E" alt="CI"/></a>
+  <a href="https://nortaq-playnexus.github.io/nasa-investigation/"><img src="https://img.shields.io/badge/dossier-ONLINE-3dd5ff?style=flat-square&logo=githubpages&logoColor=3dd5ff&labelColor=0a0e1a" alt="dossier"/></a>
+  <img src="https://img.shields.io/badge/python-3.10+-ffc430?style=flat-square&logo=python&logoColor=ffc430&labelColor=0a0e1a" alt="python"/>
+  <img src="https://img.shields.io/badge/tests-88%20passing-E8E8E8?style=flat-square&labelColor=0a0e1a" alt="tests"/>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-ff3b3b?style=flat-square&labelColor=0a0e1a" alt="license"/></a>
+</p>
+
+```
+[ NAV ]  [01 signal][02 rig][03 setup][04 boot][05 archive][06 verify]
+```
+
+<pre>
+IDENT ......... ANOMALY-SCAN
+CLASS ......... PLANETARY IMAGERY PIPELINE
+STATUS ........ ONLINE / DOSSIER LIVE
+SOURCE ........ NASA HiRISE PDS (EXTRAS-ONLY)
+FREQ .......... MARS + LUNAR UPLINK
+LINK .......... /nasa-investigation
+</pre>
+
+---
+
+## // 01 :: SIGNAL
+
+A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery** and surfacing candidate anomalies for structured human review — built on the principle that nearly every "anomaly" in planetary imagery is a known sensor, compression, or viewing artifact. The system **documents, controls, and debunks** before anything is ever recorded as a finding.
+
+**Design law:** EXTRAS-only acquisition from a single sanctioned source (`https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/`), comparing complete variant sets (B&W ↔ filtered ↔ ortho ↔ DTM) pixel-for-pixel to separate terrain from processing artifacts.
+
+<p align="center">
+  <em><code>// DECORATIVE READOUT: NOT A FACTUAL CLAIM</code></em>
 </p>
 
 ---
 
-## Features
+## // 02 :: CAPABILITIES
 
-- 🔍 **Multi-scale anomaly detection** — local-contrast flagging with box and annulus methods
-- 🎯 **Cross-band confirmation** — pixel-level verification across B&W, filtered, and orthorectified variants
-- 📊 **Statistical rigor** — Benjamini-Hochberg FDR control, negative-control baselines, stress testing
-- 🛡️ **Artifact debunking** — systematic checklist against known sensor, compression, and optics artifacts
-- 🗺️ **Native PDS ingestion** — reads `.IMG` EDRs directly with PDS3/PDS4 label parsing
-- 📐 **3D stereo confirmation** — block-matching disparity maps with height estimation
-- 🌗 **Solar geometry scoring** — shadow direction vs. solar azimuth alignment
-- 🧪 **Benchmark calibration** — injected-blob sensitivity measurement with recall curves
-- 📱 **Full-stack dashboard** — drag-drop analysis, live stats, searchable leads table
-- 🤖 **Discord bot** — upload an image, get a pipeline verdict
-- 📦 **Standalone EXE** — PyInstaller single-file builds, no installation required
-
----
-
-## Technology Stack
-
-```
-Core Pipeline     Python 3.10+ / NumPy / Pillow / requests
-Image Analysis    SciPy (optional) / OpenCV (optional)
-Published Site    Static dossier (scripts/build_site.py) -> GitHub Pages
-Social Cards      4K card generator (scripts/social_card_4k.py)
-Build System      PyInstaller / pip / pyproject.toml
-Testing           unittest + pytest (88 test cases)
-Linting           ruff (100 char line length)
-CI/CD             GitHub Actions (Linux + Windows, Python 3.10/3.11/3.12)
-```
+<table>
+<tr><td>🔬 Multi-scale detection</td><td>local-contrast flagging via box + annulus methods</td></tr>
+<tr><td>🎯 Cross-band confirmation</td><td>pixel-level verification across B&W / filtered / ortho variants</td></tr>
+<tr><td>📊 Statistical rigor</td><td>Benjamini–Hochberg FDR control, negative-control baselines, stress tests</td></tr>
+<tr><td>🛡️ Artifact debunking</td><td>systematic checklist against known sensor/compression/optics artifacts</td></tr>
+<tr><td>🗺️ Native PDS ingestion</td><td>reads <code>.IMG</code> EDRs directly with PDS3/PDS4 label parsing</td></tr>
+<tr><td>📐 3D stereo confirmation</td><td>block-matching disparity maps with height estimation</td></tr>
+<tr><td>🌗 Solar geometry scoring</td><td>shadow direction vs. solar azimuth alignment</td></tr>
+<tr><td>🧪 Benchmark calibration</td><td>injected-blob sensitivity measurement with recall curves</td></tr>
+<tr><td>💻 Full-stack dashboard</td><td>drag-drop analysis, live stats, searchable leads table</td></tr>
+<tr><td>🤖 Discord bot</td><td>upload an image, get a pipeline verdict</td></tr>
+<tr><td>📦 Standalone EXE</td><td>PyInstaller single-file builds — no installation required</td></tr>
+</table>
 
 ---
 
-## Architecture
+## // 03 :: THE RIG
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐
-│  Download    │───▶│   Catalog    │───▶│   Verify     │
-│  (EXTRAS)    │    │  + Hash      │    │  Integrity   │
-└─────────────┘    └──────────────┘    └──────────────┘
-                                                │
-┌─────────────┐    ┌──────────────┐    ┌────────▼──────┐
-│   Detect    │◀───│   Enhance    │◀───│  Native PDS   │
-│  Flagging   │    │  Stretch     │    │  Reader       │
-└──────┬──────┘    └──────────────┘    └───────────────┘
+┌─────────────┐   ┌──────────────┐   ┌──────────────┐
+│  DOWNLOAD   │──▶│   CATALOG    │──▶│   VERIFY     │
+│  (EXTRAS)   │   │  + HASH      │   │  INTEGRITY   │
+└─────────────┘   └──────────────┘   └──────────────┘
+                                                 │
+┌─────────────┐   ┌──────────────┐   ┌───────────▼──┐
+│   DETECT    │◀──│   ENHANCE    │◀──│  NATIVE PDS  │
+│  FLAGGING   │   │  STRETCH     │   │  READER      │
+└──────┬──────┘   └──────────────┘   └──────────────┘
        │
-┌──────▼──────┐    ┌──────────────┐    ┌──────────────┐
-│   Analyze   │───▶│  Adjudicate  │───▶│  Conclusions │
-│  Measure    │    │  Cross-band  │    │  Leads       │
-└─────────────┘    └──────────────┘    └──────────────┘
+┌──────▼──────┐   ┌──────────────┐   ┌──────────────┐
+│   ANALYZE   │──▶│  ADJUDICATE  │──▶│  CONCLUSIONS │
+│  MEASURE    │   │  CROSS-BAND  │   │  LEADS       │
+└─────────────┘   └──────────────┘   └──────────────┘
+```
+
+<pre>
+CORE PIPELINE ... Python 3.10+ / NumPy / Pillow / requests
+IMAGE ANALYSIS .. SciPy (optional) / OpenCV (optional)
+PUBLISHED SITE .. static dossier -> GitHub Pages
+SOCIAL CARDS ... 4K generator (scripts/social_card_4k.py)
+BUILD .......... PyInstaller / pip / pyproject.toml
+TESTING ........ unittest + pytest (88 cases)
+LINTING ........ ruff (100 char line length)
+CI/CD .......... GitHub Actions (Linux + Windows, py 3.10-3.12)
+</pre>
+
+<p align="center">
+  <a href="https://nortaq-playnexus.github.io/nasa-investigation/report/"><img src="assets/screenshots/report.png" width="80%" alt="Generated anomaly analysis report" /></a>
+  <br />
+  <em><code>// live dossier: <a href="https://nortaq-playnexus.github.io/nasa-investigation/report/">OPEN THE PUBLIC REPORT →</a></code></em>
+</p>
+
+---
+
+## // 04 :: SETUP
+
+### Downlink from source
+
+```bash
+$ git clone https://github.com/Nortaq-PlayNexus/nasa-investigation.git
+$ cd nasa-investigation
+$ pip install -r requirements.txt
+```
+
+### Development rig
+
+```bash
+$ pip install -e .[dev]
+$ python -m pytest tests/test_pipeline.py -v
+```
+
+### Standalone build
+
+```bash
+$ pip install -e .[dev]
+$ python scripts/build_app.py              # pipeline CLI
+$ python scripts/build_app.py --fullstack  # full dashboard + pipeline
 ```
 
 ---
 
-## Installation
+## // 05 :: BOOT SEQUENCE
 
-### From Source
+### Full pipeline
 
 ```bash
-git clone https://github.com/Nortaq-PlayNexus/nasa-investigation.git
-cd nasa-investigation
-pip install -r requirements.txt
+$ python scripts/run_pipeline.py --query "moon" --max 50
 ```
 
-### Development
+### Step-by-step intake
 
 ```bash
-pip install -e .[dev]
-python -m pytest tests/test_pipeline.py -v
-```
+# 1. DOWNLOAD EXTRAS IMAGERY
+$ python scripts/download_hirise_extras.py --query "crater" --max 30 --out data/raw
 
-### Standalone EXE
+# 2. BUILD CATALOG W/ SOLAR GEOMETRY
+$ python scripts/build_catalog.py
 
-```bash
-pip install -e .[dev]
-python scripts/build_app.py              # Pipeline CLI
-python scripts/build_app.py --fullstack  # Full dashboard + pipeline
-```
+# 3. VERIFY INTEGRITY
+$ python scripts/verify_downloads.py
 
----
+# 4. ENHANCE
+$ python pipeline/enhance.py --dir data/raw --out data/processed
 
-## Quick Start
+# 5. DETECT ANOMALIES
+$ python pipeline/detect.py --dir data/processed --out data/anomalies
 
-### Full Pipeline
+# 6. MARK CANDIDATES
+$ python pipeline/mark.py --candidates data/anomalies/candidates.csv --out data/anomalies/marked
 
-```bash
-python scripts/run_pipeline.py --query "moon" --max 50
-```
+# 7. ANALYZE
+$ python pipeline/analyze.py --candidates data/anomalies/candidates.csv --out data/anomalies/analysis
 
-### Individual Steps
-
-```bash
-# 1. Download EXTRAS imagery
-python scripts/download_hirise_extras.py --query "crater" --max 30 --out data/raw
-
-# 2. Build catalog with solar geometry
-python scripts/build_catalog.py
-
-# 3. Verify integrity
-python scripts/verify_downloads.py
-
-# 4. Enhance images
-python pipeline/enhance.py --dir data/raw --out data/processed
-
-# 5. Detect anomalies
-python pipeline/detect.py --dir data/processed --out data/anomalies
-
-# 6. Mark candidates
-python pipeline/mark.py --candidates data/anomalies/candidates.csv --out data/anomalies/marked
-
-# 7. Analyze candidates
-python pipeline/analyze.py --candidates data/anomalies/candidates.csv --out data/anomalies/analysis
-
-# 8. Adjudicate leads
-python pipeline/adjudicate.py --candidates data/anomalies/candidates.csv \
+# 8. ADJUDICATE LEADS
+$ python pipeline/adjudicate.py --candidates data/anomalies/candidates.csv \
     --evaluated data/anomalies/analysis/evaluated.csv \
     --out data/anomalies/conclusions
 ```
 
-### Self-Test
+### Self-test
 
 ```bash
-python scripts/run_pipeline.py --selftest
+$ python scripts/run_pipeline.py --selftest
 ```
 
 ---
 
-## Configuration
+## // 06 :: TUNING / CONFIG
 
 | File | Purpose |
 |------|---------|
@@ -170,102 +182,102 @@ python scripts/run_pipeline.py --selftest
 | `config/sources.yaml` | EXTRAS-only source policy, variant taxonomy |
 | `.env` | API tokens (Discord, LLM) — never commit |
 
-### Environment Variables
-
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `DISCORD_TOKEN` | No | Discord bot token |
-| `AI_LLM_KEY` | No | OpenRouter API key for vision LLM analysis |
-| `AI_LLM_ENDPOINT` | No | LLM API endpoint (default: OpenRouter) |
-| `AI_LLM_MODEL` | No | Vision model (default: llama-3.2-90b-vision) |
+|----------|:--------:|-------------|
+| `DISCORD_TOKEN` | no | Discord bot token |
+| `AI_LLM_KEY` | no | OpenRouter API key for vision LLM analysis |
+| `AI_LLM_ENDPOINT` | no | LLM API endpoint (default: OpenRouter) |
+| `AI_LLM_MODEL` | no | Vision model (default: llama-3.2-90b-vision) |
 
 ---
 
-## Usage
+## // 07 :: TRANSMIT
 
-### Full-Stack Dashboard
+### Full-stack dashboard
 
 ```bash
-python scripts/build_app.py --fullstack
-dist/nasa-fullstack/nasa-fullstack.exe
-# Opens http://127.0.0.1:8000
+$ python scripts/build_app.py --fullstack
+$ dist/nasa-fullstack/nasa-fullstack.exe     # http://127.0.0.1:8000
 ```
 
-Features: drag-drop instant analysis, live stats, searchable leads table, pipeline controls, showcase gallery.
+Drag-drop instant analysis, live stats, searchable leads table, showcase gallery.
 
-### Discord Bot
+### Discord bot
 
 ```bash
-pip install -r requirements.txt
-$env:DISCORD_TOKEN = "<your-token>"
-python scripts/build_app.py --bot
+$ pip install -r requirements.txt
+$ $env:DISCORD_TOKEN = "<your-token>"
+$ python scripts/build_app.py --bot
 ```
 
 Upload a Moon/Mars image → pipeline verdict with marked-up image and plain-language assessment.
 
-### 3D Stereo Confirmation
+### Stereo confirmation
 
 ```bash
-python scripts/check_stereo.py --left pair_a.png --right pair_b.png \
+$ python scripts/check_stereo.py --left pair_a.png --right pair_b.png \
     --candidates data/anomalies/candidates.csv --box 0 \
     --altitude-km 300 --baseline-km 1.2 --out data/anomalies/stereo
 ```
 
 ---
 
-## Output Files
+## // 08 :: ARCHIVE
+
+<details>
+  <summary><code>$ ls archive/ - OUTPUT FILES</code></summary>
 
 | File | Description |
 |------|-------------|
-| `data/catalog/catalog.csv` | Every file with mission, dimensions, SHA-256, solar geometry |
-| `data/anomalies/candidates.csv` | Detected regions (x, y, w, h, fill, score) |
-| `data/anomalies/marked/` | Images with anomaly boxes drawn |
-| `data/anomalies/analysis/` | Enhanced crops, measurements, artifact verdicts, HTML report |
-| `data/anomalies/conclusions/adjudicated.csv` | Cross-band confirmed leads with verdicts |
-| `data/anomalies/audit.jsonl` | Machine-readable audit trail of every run |
-| `findings/` | Only conclusions that survived the full methodology |
-| [`site/report/`](https://nortaq-playnexus.github.io/nasa-investigation/report/) | **Public** self-contained Anomaly Analysis Report, published via GitHub Pages |
-| [`site/results/`](https://nortaq-playnexus.github.io/nasa-investigation/results/) | Public adjudication data: `adjudicated.csv`, `leads.csv`, `SUMMARY.md`, finding reports, evidence strips |
+| `data/catalog/catalog.csv` | every file with mission, dimensions, SHA-256, solar geometry |
+| `data/anomalies/candidates.csv` | detected regions (x, y, w, h, fill, score) |
+| `data/anomalies/marked/` | images with anomaly boxes drawn |
+| `data/anomalies/analysis/` | enhanced crops, measurements, artifact verdicts, HTML report |
+| `data/anomalies/conclusions/adjudicated.csv` | cross-band confirmed leads with verdicts |
+| `data/anomalies/audit.jsonl` | machine-readable audit trail of every run |
+| `findings/` | only conclusions that survived the full methodology |
+| [`site/report/`](https://nortaq-playnexus.github.io/nasa-investigation/report/) | public self-contained report (GitHub Pages) |
+| [`site/results/`](https://nortaq-playnexus.github.io/nasa-investigation/results/) | public adjudication data + finding reports |
 
----
+</details>
 
-## Pipeline Modules (this repository)
+<details>
+  <summary><code>$ cat manifest/pipeline - MODULES</code></summary>
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/download_hirise_extras.py` | EXTRAS-only acquisition from the sanctioned LPL source |
+| `scripts/download_hirise_extras.py` | EXTRAS-only acquisition from sanctioned LPL source |
 | `scripts/download_pds.py` / `download_archive.py` | PDS / archive ingestion |
-| `scripts/download_lroc.py` / `download_rover.py` / `download_nasa_library.py` | Multi-source lunar/Mars ingest |
-| `scripts/build_catalog.py` | Catalog with SHA-256, solar geometry, immutable snapshot |
-| `scripts/verify_downloads.py` | Integrity verification + snapshot diff |
-| `scripts/package_anomalies.py` | Assemble conclusions, strips, and finding reports |
-| `scripts/chase_leads.py` | Cross-band lead chasing / persistence |
-| `scripts/check_stereo.py` | Block-matching stereo disparity + height estimate |
-| `scripts/social_card_4k.py` | 4K "anomaly dossier" social cards |
-| `scripts/build_site.py` | **Public dossier site** (landing + explorer + report) on GitHub Pages |
-| `scripts/report_stats.py` | Conclusions summarizer (counts, top acquisitions) |
-| `scripts/validate_conclusions.py` | Schema/rigor gate for the published conclusions |
+| `scripts/download_lroc.py` / `download_rover.py` / `download_nasa_library.py` | multi-source lunar/Mars ingest |
+| `scripts/build_catalog.py` | catalog with SHA-256, solar geometry, immutable snapshot |
+| `scripts/verify_downloads.py` | integrity verification + snapshot diff |
+| `scripts/package_anomalies.py` | assemble conclusions, strips, finding reports |
+| `scripts/chase_leads.py` | cross-band lead chasing / persistence |
+| `scripts/check_stereo.py` | block-matching stereo disparity + height estimate |
+| `scripts/social_card_4k.py` | 4K anomaly-dossier social cards |
+| `scripts/build_site.py` | public dossier site (landing + explorer + report) |
+| `scripts/report_stats.py` | conclusions summarizer |
+| `scripts/validate_conclusions.py` | schema/rigor gate for published conclusions |
 
----
+</details>
 
-## Testing
+<details>
+  <summary><code>$ cat manifest/tests - 88 CASES</code></summary>
+
+Overlay detection, border exclusion, z-score p-values, Benjamini–Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, rigor metrics, dossier helpers (crop framing, dedupe, diverse preview).
+
+Run:
 
 ```bash
-# Run full test suite
-python -m pytest tests/test_pipeline.py -v
-
-# Run specific test class
-python -m pytest tests/test_pipeline.py::TestDetect -v
-
-# Run via pipeline selftest
-python scripts/run_pipeline.py --selftest
+$ python -m pytest tests/test_pipeline.py -v
+$ python -m pytest tests/test_pipeline.py::TestDetect -v
+$ python scripts/run_pipeline.py --selftest
 ```
 
-**88 test cases** covering: overlay detection, border exclusion, z-score p-values, Benjamini-Hochberg FDR, input validation, atomic writes, SHA-256 hashing, detector recall, blob injection, adjudication persistence/verdict/roundness, multi-band PDS cubes, stereo/change-detection, artifact flags, rigor metrics, and the dossier helpers (crop framing, dedupe, diverse preview).
+</details>
 
----
-
-## Security
+<details>
+  <summary><code>$ cat manifest/security</code></summary>
 
 - **No hardcoded secrets** — all tokens loaded from environment variables
 - **Path traversal protection** — `common.contain_path()` validates all file paths
@@ -273,55 +285,44 @@ python scripts/run_pipeline.py --selftest
 - **Audit trail** — every pipeline operation recorded in `audit.jsonl`
 - **Localhost only** — server binds to `127.0.0.1:8000` by default
 
-See [SECURITY.md](SECURITY.md) for the full security policy.
+Full policy: [SECURITY.md](SECURITY.md)
 
----
+</details>
 
-## Roadmap
+<details>
+  <summary><code>$ cat manifest/roadmap</code></summary>
 
-- [ ] Overlay detection hardening
-- [ ] Streaming pipeline (process during download)
-- [ ] Confidence calibration against benchmarks
-- [ ] Multi-mission support (LROC NAC, CTX, Mars Express HRSC)
-- [ ] Automated stereo pair matching
-- [ ] Cross-platform builds (Linux, macOS)
+- [ ] overlay detection hardening
+- [ ] streaming pipeline (process during download)
+- [ ] confidence calibration against benchmarks
+- [ ] multi-mission support (LROC NAC, CTX, Mars Express HRSC)
+- [ ] automated stereo pair matching
+- [ ] cross-platform builds (Linux, macOS)
 - [ ] Docker deployment
-- [ ] Interactive map-based anomaly viewer
+- [ ] interactive map-based anomaly viewer
 
-See [ROADMAP.md](ROADMAP.md) for the full roadmap.
+Full roadmap: [ROADMAP.md](ROADMAP.md)
 
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Run tests: `python -m pytest tests/test_pipeline.py -v`
-4. Run linter: `ruff check pipeline/ scripts/ app/ bot/`
-5. Submit a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+</details>
 
 ---
 
-## License
+## // 09 :: LEGAL // CREDITS
 
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+**License:** [MIT](LICENSE)
 
----
-
-## Acknowledgments
-
+With thanks to:
 - **NASA/JPL** — HiRISE PDS data (public domain)
 - **University of Arizona LPL** — HiRISE processing pipeline
 - **Python community** — NumPy, Pillow, SciPy, FastAPI
 
 ---
 
-<div align="center">
-
-**Built for rigorous planetary anomaly investigation**
-
-*Document → Control → Debunk → Confirm*
-
-</div>
+```
+ ┌─────────────────────────────────────────────┐
+ │  DOCUMENT → CONTROL → DEBUNK → CONFIRM      │
+ │  ANOMALY RECEIVER // SIGNAL LOCKED          │
+ │  PHANTOMTAPE CLASSIFIED ARCHIVE             │
+ └─────────────────────────────────────────────┘
+END OF TRANSMISSION
+```
