@@ -177,7 +177,13 @@ def text_overlay_score(arr, max_side=1600):
     best = 0.0
     boxes = []
     accepted = 0
-    band = 0.06  # annotation prior: text in the outer 6% band is the classic
+    # HiRISE EXTRAS images carry baked-in text (image IDs, coordinates,
+    # scale bars) in a border band typically spanning the outer ~10% of
+    # each side, plus corner annotations. We treat anything text-like in
+    # that band as overlay so it gets masked from detection. The strict
+    # 0.45 floor is kept for the image interior to avoid flagging marginal
+    # terrain alignments as overlay (see issue #overlay-edges).
+    band = 0.10
     for ln in _group_lines(glyphs):  # label / scale-bar position
         base = _line_score(ln)
         sc = base + _scale_bar_boost(bars, ln, h)
@@ -185,13 +191,13 @@ def text_overlay_score(arr, max_side=1600):
         y0 = min(c["y0"] for c in ln)
         x1 = max(c["x1"] for c in ln)
         y1 = max(c["y1"] for c in ln)
-        # the position bonus only lifts lines that are already strong text
-        # candidates, never marginal terrain alignments
-        if base >= 0.45 and (y1 <= band * h or y0 >= (1.0 - band) * h
-                             or x1 <= band * w or x0 >= (1.0 - band) * w):
-            sc += 0.15
+        in_band = (y1 <= band * h or y0 >= (1.0 - band) * h
+                   or x1 <= band * w or x0 >= (1.0 - band) * w)
+        if in_band:
+            sc += 0.25
         sc = min(1.0, sc)
-        if sc >= 0.45:
+        threshold = 0.35 if in_band else 0.45
+        if sc >= threshold:
             accepted += 1
             best = max(best, sc)
             boxes.append((x0, y0, x1 - x0 + 1, y1 - y0 + 1))

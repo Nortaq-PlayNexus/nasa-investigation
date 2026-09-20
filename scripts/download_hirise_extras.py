@@ -362,7 +362,9 @@ def crawl_extras(
     out_root: Path, manifest: Path, max_sets: int, max_size_mb: float | None, max_dirs: int
 ) -> int:
     """Bounded crawl of EXTRAS/ tree, collecting bounded number of variant sets."""
-    # Walk RDR + DTM roots breadth-first
+    # Walk RDR + DTM roots depth-first (LIFO): the RDR/ESP tree alone holds
+    # ~770 ORB-range shards, so breadth-first exhausts max_dirs before ever
+    # reaching a leaf observation directory.
     roots = [EXTRAS_BASE + "RDR/", EXTRAS_BASE + "DTM/"]
     todo: list[tuple[str, int]] = [(r, 0) for r in roots]
     seen: set[str] = set()
@@ -370,7 +372,7 @@ def crawl_extras(
     total_files = 0
     dirs_visited = 0
     while todo and sets_done < max_sets and dirs_visited < max_dirs:
-        url, depth = todo.pop(0)
+        url, depth = todo.pop()
         if url in seen:
             continue
         seen.add(url)

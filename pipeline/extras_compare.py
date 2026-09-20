@@ -285,7 +285,8 @@ def _candidate_persistence(candidates: list[dict], ref_arr: np.ndarray, cmp_arr:
         cr = _contrast(ref_crop)
         cc = _contrast(cmp_crop)
         persist = float(cc / (cr + 1e-6))
-        out[(c.get("image", ""), x, y, w, h)] = round(float(np.clip(persist, 0, 2)), 3)
+        key = f"{c.get('image', '')}|{x},{y}@{w}x{h}"
+        out[key] = round(float(np.clip(persist, 0, 2)), 3)
     return out
 
 

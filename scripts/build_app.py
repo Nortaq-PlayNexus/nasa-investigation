@@ -132,8 +132,11 @@ def main():
     #    until the build succeeds, then move just the result into dist/.
     with tempfile.TemporaryDirectory(prefix="nasa_build_") as tmp:
         os.makedirs(tmp, exist_ok=True)
+        pyinstaller = os.path.join(os.path.dirname(sys.executable), "pyinstaller.exe")
+        if not os.path.exists(pyinstaller):
+            pyinstaller = "pyinstaller"
         cmd = [
-            "pyinstaller",
+            pyinstaller,
             "--noconfirm",
             "--distpath",
             tmp,
