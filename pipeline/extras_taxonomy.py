@@ -354,7 +354,6 @@ def classify_file(filename: str, branch_hint: str = "") -> dict:
     if m:
         band = m.group("band")
         geom_token = m.group("geom")
-        ext = m.group(0).rsplit(".", 1)[-1].upper()
         is_jp2 = name.upper().endswith(".JP2")
         is_lbl = name.upper().endswith(".LBL")
         scale = m.group("scale") or ("fullres" if is_jp2 else "")

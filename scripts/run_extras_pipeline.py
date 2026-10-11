@@ -54,7 +54,6 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 for _p in (_ROOT, os.path.join(_ROOT, "pipeline"), os.path.join(_ROOT, "scripts")):
@@ -497,16 +496,6 @@ def main(argv: list[str] | None = None) -> int:
         if code is not None:
             return code
         time.sleep(5)
-
-
-def ago(seconds: float) -> str:
-    if seconds > 1e8:
-        return "never"
-    if seconds < 90:
-        return f"{seconds:.0f}s ago"
-    if seconds < 5400:
-        return f"{seconds/60:.0f}m ago"
-    return f"{seconds/3600:.1f}h ago"
 
 
 if __name__ == "__main__":

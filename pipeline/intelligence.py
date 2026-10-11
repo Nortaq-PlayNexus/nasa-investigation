@@ -11,13 +11,11 @@ Provides:
 All AI features work offline (local rules) unless an LLM API key is configured.
 """
 
-import json
 import os
 import re
 import sys
 from pathlib import Path
 
-import numpy as np
 
 # ---------------------------------------------------------------------------
 # Project root (works in dev and frozen modes)
@@ -36,7 +34,6 @@ PIPELINE_DIR = ROOT / "pipeline"
 if str(PIPELINE_DIR) not in sys.path:
     sys.path.insert(0, str(PIPELINE_DIR))
 
-import common  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # 1. Natural Language Query Engine
@@ -59,7 +56,15 @@ QUERY_KEYWORDS = {
     "noise": {"verdict": "NOISE"},
     "weak": {"verdict": "WEAK"},
     "explained": {"verdict": "EXPLAINED-ARTIFACT"},
-    "artifact": {"verdict": "EXPLAINED-ARTIFACT"},
+    # No "artifact" key here. This dict already has one further down, under
+    # feature types, and it maps to {"category": "artifact"}. Because a later
+    # key silently overwrites an earlier one in the same literal, this entry was
+    # never reachable -- the EXPLAINED-ARTIFACT verdict filter for the word
+    # "artifact" was dead code. The two are not interchangeable: the category is
+    # a detection outcome (CATEGORY_RULES, keyword- and shape-based) while the
+    # verdict is an adjudication result, so merging them would change what
+    # queries return. The verdict stays reachable via "explained", "fake" and
+    # "debunked".
     "debunked": {"verdict": "EXPLAINED-ARTIFACT"},
 
     # Band / variant
@@ -135,7 +140,6 @@ def parse_natural_query(query: str) -> dict:
 
     q = query.lower().strip()
     criteria = {}
-    matched_any = False
 
     # Check for negation patterns ("not", "exclude", "no")
     negations = []
@@ -173,7 +177,6 @@ def parse_natural_query(query: str) -> dict:
                             pass  # keep existing
                     else:
                         criteria[field] = val
-            matched_any = True
 
     # Remove negated terms from criteria (simplified: if user says "no artifacts",
     # exclude EXPLAINED-ARTIFACT)
@@ -235,43 +238,51 @@ def apply_filters(features: list, criteria: dict) -> list:
 
             if field == "body":
                 if f.get("_body", "") != val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "verdict":
                 verdicts = f.get("verdicts", [f.get("verdict", "")])
                 if val not in verdicts:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "band":
                 if val not in f.get("bands", []):
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "polarity":
                 members = f.get("members", [f])
                 if not any(m.get("polarity") == val for m in members):
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "category":
                 cat = categorize(f)
                 if cat != val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "min_score":
                 if float(f.get("max_score", 0)) < val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "max_score":
                 if float(f.get("max_score", 999)) > val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "min_contrast":
                 if float(f.get("max_contrast", 0)) < val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "max_contrast":
                 if float(f.get("max_contrast", 999)) > val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "min_area":
                 if int(f.get("area", 0)) < val:
-                    ok = False; break
+                    ok = False
+                    break
             elif field == "max_area":
                 if int(f.get("area", 0)) > val:
-                    ok = False; break
-            elif field == "min_contrast":
-                if float(f.get("max_contrast", 0)) < val:
-                    ok = False; break
+                    ok = False
+                    break
 
         if ok:
             filtered.append(f)
@@ -382,7 +393,6 @@ def generate_summary(features: list, stats: dict = None) -> str:
     total = len(features)
     conf = sum(1 for f in features if f.get("verdict") == "CONFIRMED-LEAD")
     prom = sum(1 for f in features if f.get("verdict") == "PROMISING")
-    others = total - conf - prom
 
     # Top features
     sorted_f = sorted(features, key=lambda f: float(f.get("max_score", 0)), reverse=True)
