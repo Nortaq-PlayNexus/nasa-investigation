@@ -6,6 +6,17 @@ data/raw/
 data/processed/
 data/catalog/*.csv
 data/catalog/*.json
+# run logs and empty verify stubs written by the catalog scripts -- generated
+# output, not provenance
+data/catalog/*.jsonl
+data/catalog/*.txt
+# truncated writes from an interrupted catalog run. extras_site.json.tmp12852 was
+# a 2 GB partial file; a *.tmp* file is never a complete artifact.
+data/catalog/*.tmp*
+# index-listing cache: tens of thousands of small files, rebuildable by
+# re-running scripts/catalog_extras_site.py (it is a pure cache, not provenance)
+data/catalog/extras_listings/
+data/catalog/*.log
 data/anomalies/
 data/downloads.log
 *.part
@@ -26,3 +37,6 @@ showcase/img/
 
 # generated stats
 stats.json
+
+# throwaway network probes kept for reference, not part of the pipeline
+scripts/_probe*.py

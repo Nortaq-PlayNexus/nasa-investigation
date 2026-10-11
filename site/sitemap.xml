@@ -1,8 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/</loc><lastmod>2026-09-01</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/report/</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/adjudicated.csv</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/leads.csv</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/SUMMARY.md</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/</loc><lastmod>2026-10-11</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/report/</loc><lastmod>2026-10-11</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/adjudicated.csv</loc><lastmod>2026-10-11</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/leads.csv</loc><lastmod>2026-10-11</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/SUMMARY.md</loc><lastmod>2026-10-11</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0001.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0002.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0003.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0004.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0005.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0006.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0007.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0008.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0009.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0010.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0011.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0012.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0013.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0014.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0015.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0016.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0017.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0018.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0019.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nortaq-playnexus.github.io/nasa-investigation/results/findings/F-0020.md</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>

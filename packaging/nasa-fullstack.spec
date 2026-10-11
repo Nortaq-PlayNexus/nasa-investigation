@@ -142,6 +142,7 @@ a = Analysis(
         "common",
         "detect",
         "analyze",
+        "intelligence",
         "adjudicate",
         "benchmark",
         "enhance",

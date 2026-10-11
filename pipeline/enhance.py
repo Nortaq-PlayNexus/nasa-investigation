@@ -8,11 +8,36 @@ from PIL import Image, ImageFilter, ImageOps
 
 
 def load_array(path):
-    """Load any supported image as a numpy array via common.load_image."""
-    arr = common.load_image(path)
-    if arr.dtype == np.float32 or arr.dtype == np.float64:
-        return arr
-    return np.asarray(arr)
+    """Load any supported image as a numpy array via common.load_image.
+
+    Normalises to plain RGB/L before any stretch runs. Press stills saved with
+    a misleading extension decode as RGBA/LA/CMYK/palette far more often than
+    orbital EDRs do: stretching an alpha plane as if it were a colour band
+    corrupts the result, a palette mode hands back indices rather than pixels,
+    and ImageOps.autocontrast refuses RGBA outright. PDS/16-bit sources still
+    go through common.load_image so full bit depth is preserved.
+    """
+    low = path.lower()
+    if not low.endswith((".img", ".lbl", ".xml")):
+        Image.MAX_IMAGE_PIXELS = None  # orbital EDRs routinely exceed PIL's cap
+        try:
+            with Image.open(path) as im:
+                mode = im.mode
+                if mode in ("CMYK", "YCbCr", "LAB", "HSV", "P", "PA", "1"):
+                    # Not a colour array at all: CMYK/YCC decode to 4 planes and
+                    # P/PA to palette indices, so np.asarray would hand back
+                    # indices instead of pixels. Let Pillow do the conversion.
+                    arr = np.asarray(im.convert("RGB"))
+                    return arr
+                if mode in ("RGBA", "LA"):
+                    im = im.convert("RGB") if mode == "RGBA" else im.convert("L")
+                    return np.asarray(im)
+        except Exception:
+            pass  # fall through to the generic loader below
+    arr = np.asarray(common.load_image(path))
+    if arr.ndim == 3 and arr.shape[2] == 4:  # last resort: drop a trailing plane
+        arr = arr[..., :3]
+    return arr
 
 
 def is_16bit(arr):

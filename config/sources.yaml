@@ -13,9 +13,36 @@ extras_policy:
   base: https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/
   downloader: scripts/download_hirise_extras.py
   comparator: pipeline/extras_compare.py
+  # Whole-site path: index every branch, then walk it one image at a time.
+  taxonomy: pipeline/extras_taxonomy.py
+  site_catalogue: scripts/catalog_extras_site.py
+  systematic_pass: scripts/extras_pass.py
   exemplar_dtm: ESP_013948_1410_ESP_013236_1410
   exemplar_dir: DTM/ESP/ORB_013900_013999/ESP_013948_1410_ESP_013236_1410
   require_variant_set: true   # every footprint must ship B&W + filtered siblings
+  # The comparison reference is the map-projected B&W RED full browse. A
+  # *NOMAP product is in raw detector geometry and is usually the largest
+  # B&W file in the set, so a size-ranked choice silently picks the wrong one.
+  comparison_reference: map_projected_red_browse
+  # Byte budget. Two orthogonal knobs: --scales (render scale) and
+  # --geometries (geometry class). Measured over ~7,600 real RDR footprints,
+  # a *RED.NOMAP.browse.jpg averages 5.6 MB vs 2.3 MB for the map-projected
+  # *RED.browse.jpg, because NOMAP keeps native detector resolution. Across a
+  # whole observation that is ~9.5 MB of the ~18 MB budget:
+  #   all geometries  ~18.0 MB/footprint -> RDR/ESP alone ~1489 GB (does not fit)
+  #   map only         ~8.5 MB/footprint -> RDR/ESP alone  ~705 GB (fits)
+  #   thumb only       ~1.2 MB/footprint -> RDR/ESP alone  ~102 GB
+  # `map` is the default: the debunk path is RED -> colour -> ortho -> DTM,
+  # and all four are map-projected. extras_compare already scores the NOMAP
+  # siblings STRONG DIVERGENCE (~0.32) because they are in a different
+  # geometry, so they confirm coverage rather than morphology.
+  scale_set: core            # core = .browse.jpg + .thumb.jpg
+  geometry_set: map           # map = map-projected + ortho + dtm + anaglyph
+  fullres_policy: skip        # JP2s only with --max-fullres-mb
+  host_note: >
+    The PDS host serves ~1 index request per 10 s and returns HTTP 503 beyond
+    ~8 concurrent connections. Keep --workers at 6; the crawler backs off
+    globally on 503 rather than hammering the archive.
   notes: >
     EXTRAS is the only sanctioned source. A feature that appears in only one
     rendering (e.g. filtered color but not B&W RED) is a processing artifact

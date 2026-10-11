@@ -185,6 +185,13 @@ def main() -> None:
     OUT_IMG_MARKED.mkdir(parents=True, exist_ok=True)
     OUT_IMG_SRC.mkdir(parents=True, exist_ok=True)
 
+    # ---- Load template ----
+    template_path = ROOT / "showcase" / "template.html"
+    if template_path.exists():
+        TEMPLATE = template_path.read_text(encoding="utf-8")
+    else:
+        TEMPLATE = _DEFAULT_TEMPLATE
+
     # ---- strips: T###_<image>.jpg, map by product image name ----
     STRIP_INDEX = {}
     if STRIPS.is_dir():
@@ -408,7 +415,7 @@ def main() -> None:
     )
 
 
-TEMPLATE = r"""<!DOCTYPE html>
+_DEFAULT_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">

@@ -95,6 +95,12 @@ def atomic_text_write(path, text):
 
     The temp file is removed if anything fails, so a crash never leaves
     half-written output (or stray .tmp* litter) behind.
+
+    ``os.replace`` is retried: on Windows the rename fails with
+    ``PermissionError`` if any other process holds the destination open even
+    briefly, which happens constantly with a status reader, an indexer, or
+    antivirus. A checkpointed crawler that dies on a transient lock loses
+    minutes of work for no good reason, so retry a few times before giving up.
     """
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     tmp = path + ".tmp%d" % os.getpid()
@@ -103,13 +109,29 @@ def atomic_text_write(path, text):
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        _replace_with_retry(tmp, path)
     except Exception:
         try:
             os.remove(tmp)
         except OSError:
             pass
         raise
+
+
+def _replace_with_retry(tmp, path, attempts=8, delay=0.25):
+    """``os.replace`` with a bounded retry for transient Windows file locks."""
+    last = None
+    for i in range(attempts):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError as e:
+            # WinError 5/32: another process is holding the target open.
+            last = e
+            if i == attempts - 1:
+                break
+            time.sleep(delay * (1 + i))
+    raise last if last else OSError("replace failed")
 
 
 def atomic_csv_write(path, rows, fieldnames, extras="ignore"):
@@ -124,7 +146,7 @@ def atomic_csv_write(path, rows, fieldnames, extras="ignore"):
             w.writerows(rows)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        _replace_with_retry(tmp, path)
     except Exception:
         try:
             os.remove(tmp)

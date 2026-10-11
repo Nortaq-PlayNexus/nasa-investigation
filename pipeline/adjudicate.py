@@ -29,6 +29,7 @@ import argparse
 import csv
 import datetime
 import html
+import json
 import os
 import re
 import sys
@@ -170,6 +171,77 @@ def sibling_groups(recs):
     return {k: sorted(v) for k, v in groups.items() if len(v) > 1}
 
 
+def load_persistence(report_path):
+    """Read the per-candidate cross-variant persistence from extras_compare.
+
+    ``extras_compare.compare_footprint`` measures, for every detected box,
+    the local contrast in each sibling rendering divided by the contrast in
+    the B&W reference. That map is the cross-variant evidence this module
+    needs, but it was previously computed and then discarded — so with
+    reference-only detection (one image per footprint) there were no sibling
+    *detections* for ``cross_band_agreement`` to compare, every candidate
+    came back ``agrees=0, disagrees=0``, and no verdict could ever reach
+    CONFIRMED-LEAD.
+
+    Returns ``{box_key: {variant_name: persistence}}``.
+    """
+    if not report_path or not os.path.exists(report_path):
+        return {}
+    try:
+        with open(report_path, encoding="utf-8") as f:
+            rep = json.load(f)
+    except Exception as e:  # noqa: BLE001
+        # Do not swallow this silently: an unreadable report means every
+        # candidate silently keeps agrees=0 and no verdict can be confirmed
+        # or refuted, which looks exactly like "nothing interesting found".
+        common.log("warn", "persistence report unreadable (%s): %s" % (report_path, e))
+        return {}
+    out = {}
+    for variant, boxes in (rep.get("candidate_persistence") or {}).items():
+        if not isinstance(boxes, dict):
+            continue
+        for key, val in boxes.items():
+            try:
+                out.setdefault(key, {})[os.path.basename(variant)] = float(val)
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
+def persistence_key(image, x, y, w, h):
+    """The same key extras_compare uses: ``<image>|<x>,<y>@<w>x<h>``."""
+    return f"{image}|{int(x)},{int(y)}@{int(w)}x{int(h)}"
+
+
+def summarise_persistence(per_variant):
+    """Reduce per-variant persistence to the numbers the verdict needs.
+
+    Only *map-projected* renderings count. A ``NOMAP`` sibling sits in raw
+    detector geometry, so a low ratio there says nothing about whether the
+    feature is real — that is a geometry difference the comparator already
+    scores as STRONG DIVERGENCE.
+
+    Returns ``(median, n_hold, n_collapse, n_tested)`` where *hold* means the
+    feature keeps its contrast in another rendering (ratio >= 0.65) and
+    *collapse* means it vanishes (ratio < 0.35).
+    """
+    vals = []
+    for name, v in (per_variant or {}).items():
+        low = name.lower()
+        if ".nomap." in low or ".quicklook." in low or low.endswith("_nomap.browse.jpg"):
+            continue
+        if "thumb" in low:  # a downsample of a rendering already tested
+            continue
+        if v is None or v <= 0:
+            continue
+        vals.append(v)
+    if not vals:
+        return 0.0, 0, 0, 0
+    vals.sort()
+    med = vals[len(vals) // 2]
+    return med, sum(1 for v in vals if v >= 0.65), sum(1 for v in vals if v < 0.35), len(vals)
+
+
 def cross_band_agreement(recs, groups, arr_cache, i, row, max_crop):
     """Pixel-level confirmation in same-size sibling images.
 
@@ -245,16 +317,46 @@ def adjudicated_score(interest, agrees, persistence, compact, near_edge, flags, 
     return round(max(0.0, min(100.0, score)), 1)
 
 
-def verdict(score, evidence_class, agrees, compactness, aspect, flags, area_px):
+def verdict(score, evidence_class, agrees, compactness, aspect, flags, area_px,
+            xv_collapse=0, xv_tested=0, contrast_bar=1.5, contrast=None,
+            dtm_artifacts=None):
+    """Classify one adjudicated candidate.
+
+    ``contrast`` gates CONFIRMED-LEAD. ``None`` means the caller did not
+    supply one and the gate is skipped; the real pipeline always passes it.
+
+    ``dtm_artifacts`` is the stereo pair's declared list of terrain-model
+    defects. A candidate on a DTM-derived product, or on an orthorectified
+    image draped onto that DTM, is a statement about the terrain model — so
+    a source whose README declares known defects cannot carry a lead.
+    """
     if evidence_class == 1:
         return "EXPLAINED-ARTIFACT"
+    if dtm_artifacts:
+        return "DTM-ARTIFACT-RISK"
     disqualify = {"streak", "hot_pixel", "compression", "dark_band",
                   "elongated_large", "edge_artifact"}
     flagged = {f for f in flags.split(",") if f} if isinstance(flags, str) else set()
     disq = bool(flagged & disqualify)
     discrete = compactness >= 0.5 and aspect < 3
+    # Present in the B&W reference but absent from every other rendering of
+    # the same terrain: by the EXTRAS cross-rendering rule that is a
+    # reference-rendering artifact, not a surface feature. It cannot be
+    # explained as lighting or geology, because the sibling renderings see
+    # the same ground at the same time under the same sun.
+    if xv_tested >= 2 and xv_collapse == xv_tested:
+        return "BAND-DEPENDENT"
     if agrees >= 1:
-        if discrete and not disq and 200 <= area_px <= 50000:
+        # The feature is real — it holds up in another rendering. But per
+        # docs/EXTRAS.md section 6, a feature that survives B&W -> filtered
+        # colour -> orthorectified -> DTM-shaded *is terrain*. Persistence is
+        # therefore the null result, not evidence of anything unusual, and it
+        # must not on its own promote a candidate to a lead. Only a feature
+        # that is also compact, plausibly sized, above the contrast bar and
+        # free of disqualifying flags earns CONFIRMED-LEAD; everything else
+        # that simply persists is ordinary terrain.
+        if (discrete and not disq and 200 <= area_px <= 50000
+                and (contrast is None or float(contrast) >= contrast_bar)):
             return "CONFIRMED-LEAD"
         return "TERRAIN"
     if score >= 45 and not disq:
@@ -277,6 +379,16 @@ def confidence(score, agrees, persistence, evidence_class):
 def recommend(verdict):
     if verdict == "EXPLAINED-ARTIFACT":
         return "Discard. Mechanism identified; matches a known processing/sensor artifact."
+    if verdict == "DTM-ARTIFACT-RISK":
+        return ("Not usable as a surface feature. The product comes from a stereo DTM, "
+                "and its README declares known terrain-model defects (tiling boxes, "
+                "CCD seams, faceted areas). Re-acquire on the unprojected RDR browse, "
+                "or check the shaded relief for the defect before trusting it.")
+    if verdict == "BAND-DEPENDENT":
+        return ("Discard as a surface feature. Visible in the B&W reference but the "
+                "contrast vanishes in every other rendering of the same terrain, so it "
+                "tracks the reference rendering rather than the ground. Investigate the "
+                "reference's processing chain, not the surface.")
     if verdict == "CONFIRMED-LEAD":
         return ("Real feature confirmed at the same pixels in the corresponding band "
                 "variant(s) of one acquisition. Fetch the EDR original, geolocate on "
@@ -314,6 +426,10 @@ def main(argv=None):
                    help="false-discovery-rate level for the top-lead claim")
     p.add_argument("--metadata", default="data/catalog/catalog.csv",
                    help="catalog CSV with per-product solar geometry and pixel scale")
+    p.add_argument("--persistence", default="",
+                   help="extras_compare compare_report.json for this footprint; supplies "
+                        "per-candidate cross-variant persistence so a confirmation can "
+                        "be reached even when only the reference rendering was scanned")
     a = p.parse_args(argv)
     common.set_audit(common.audit_path_for(a.out))
 
@@ -326,8 +442,10 @@ def main(argv=None):
         return (r["image"], r["x"], r["y"], r["w"], r["h"])
     ev_by_key = {_sort_key(r): r for r in ev}
     geom_rows = load_geometry(a.metadata)
-    common.log("info", "adjudicate: %d candidates, %d evaluated rows, %d geometry rows"
-               % (len(cand), len(ev), len(geom_rows)))
+    persist_map = load_persistence(a.persistence)
+    common.log("info", "adjudicate: %d candidates, %d evaluated rows, %d geometry rows, "
+                       "%d cross-variant persistence entries"
+               % (len(cand), len(ev), len(geom_rows), len(persist_map)))
 
     recs = analyze.precompute(cand)
     groups = sibling_groups(recs)
@@ -366,8 +484,29 @@ def main(argv=None):
         compact, area, per = roundness(crop, fx2, fy2, w, h)
 
         agrees, disagrees, notes = cross_band_agreement(recs, groups, arr_cache, i, e, a.max_crop)
+
+        # Cross-variant persistence, measured by extras_compare on the same
+        # terrain rendered in every band. This is the independent route to a
+        # confirmation when only the reference was scanned for candidates.
+        xv_med, xv_hold, xv_collapse, xv_tested = (0.0, 0, 0, 0)
+        if persist_map:
+            key = persistence_key(row["image"], row["x"], row["y"], row["w"], row["h"])
+            xv_med, xv_hold, xv_collapse, xv_tested = summarise_persistence(persist_map.get(key))
+        if xv_hold >= 1:
+            # the feature keeps its contrast in another rendering of the same
+            # terrain -> that is a real, cross-rendering confirmation
+            agrees = max(agrees, 1)
+            if xv_hold >= 2:
+                agrees = max(agrees, 2)
         smooth = "yes" if bg_std < 8.0 else "no"
 
+        # DTM provenance: a stereo pair's README declares the grid spacing and
+        # lists the terrain-model defects HiRISE DTMs are known to contain
+        # (tiling boxes, CCD seams, faceted areas). A candidate sitting on a
+        # DTM-derived product is a claim about the terrain model, and these
+        # artifacts are how that model lies.
+        dtm_artifacts = geom_rows.get(e["image"], {}).get("dtm_known_artifacts", "") \
+            or geom_rows.get(os.path.basename(path), {}).get("dtm_known_artifacts", "")
         # Solar-geometry join: physical size, shadow alignment, implied height.
         geo = geom_rows.get(e["image"]) or geom_rows.get(os.path.basename(path)) or {}
         px_scale = _num(geo.get("pixel_scale_m"))
@@ -401,7 +540,9 @@ def main(argv=None):
                                   shadow_expected=shadow_expected,
                                   size_m=size_m)
         v = verdict(score, int(e["evidence_class"]), agrees, compact, float(e["aspect"]),
-                    e["flags"], int(e["area_px"]))
+                    e["flags"], int(e["area_px"]), xv_collapse=xv_collapse,
+                    xv_tested=xv_tested, contrast_bar=a.contrast_bar,
+                    contrast=float(e["contrast"]), dtm_artifacts=dtm_artifacts)
         conf = confidence(score, agrees, persist, int(e["evidence_class"]))
         out_rows.append({
             "image": e["image"], "path": path, "x": x, "y": y, "w": w, "h": h,
@@ -410,6 +551,13 @@ def main(argv=None):
             "matches_coord": e["matches"], "agrees": agrees, "disagrees": disagrees,
             "near_edge": e["near_edge"], "persistence": persist, "compactness": compact,
             "bg_std": bg_std, "smooth": smooth,
+            # cross-variant persistence across sibling renderings
+            "xv_median": round(xv_med, 3) if xv_tested else "",
+            "xv_hold": xv_hold, "xv_collapse": xv_collapse, "xv_tested": xv_tested,
+            # stereo-DTM provenance
+            "dtm_post_spacing_m": geo.get("dtm_post_spacing_m", ""),
+            "dtm_rms_z_m": geo.get("dtm_rms_z_m", ""),
+            "dtm_known_artifacts": dtm_artifacts,
             # new rigor metrics carried through from analyze.py
             "grid_energy": e.get("grid_energy", ""),
             "edge_sharpness": e.get("edge_sharpness", ""),
@@ -465,11 +613,13 @@ def main(argv=None):
     fields = ["image", "x", "y", "w", "h", "contrast", "area_px", "aspect", "polarity",
               "evidence_class", "matches_coord", "agrees", "disagrees", "near_edge",
               "persistence", "compactness", "bg_std", "smooth",
+              "xv_median", "xv_hold", "xv_collapse", "xv_tested",
               "grid_energy", "edge_sharpness", "contrast_stability",
               "interest", "score", "verdict", "confidence",
               "flags", "recommendation", "path", "baseline_fp", "fdr_q",
               "solar_elevation_deg", "solar_azimuth_deg", "pixel_scale_m", "size_m",
-              "shadow_alignment", "inferred_height_m", "spacecraft_altitude_km"]
+              "shadow_alignment", "inferred_height_m", "spacecraft_altitude_km",
+              "dtm_post_spacing_m", "dtm_rms_z_m", "dtm_known_artifacts"]
     for r in out_rows:
         r["baseline_fp"] = baseline_for(r["image"]) if baseline_for(r["image"]) is not None else ""
         r["fdr_q"] = ""
@@ -491,6 +641,14 @@ def main(argv=None):
     common.atomic_csv_write(os.path.join(a.out, "adjudicated.csv"), out_rows, fields)
     leads = [r for r in out_rows if r["verdict"] in ("CONFIRMED-LEAD", "PROMISING")]
     common.atomic_csv_write(os.path.join(a.out, "leads.csv"), leads, fields)
+
+    # Band-dependent candidates are worth keeping on file: they are the
+    # signature of a reference-rendering artifact, which is a pipeline bug
+    # report rather than a discard.
+    band_dep = [r for r in out_rows if r["verdict"] == "BAND-DEPENDENT"]
+    if band_dep:
+        common.atomic_csv_write(os.path.join(a.out, "band_dependent.csv"), band_dep, fields)
+        common.log("info", "band-dependent (reference-rendering artifact): %d" % len(band_dep))
 
     # The short list worth human attention: cross-band confirmed, discrete,
     # contrast above the configurable bar, not on the image border, plausible size.

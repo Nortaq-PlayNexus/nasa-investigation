@@ -275,6 +275,10 @@ def main(argv=None):
     p.add_argument("--exclude-patterns", default="",
                    help="comma-separated regexes; any image whose basename matches any "
                         "pattern is skipped (e.g. annotated press graphics, infographics)")
+    p.add_argument("--only", default="",
+                   help="comma-separated exact basenames to scan; everything else in "
+                        "--dir is skipped. Used to point detection at one specific "
+                        "rendering of a footprint (e.g. the B&W RED reference).")
     a = p.parse_args(argv)
 
     scales = sorted({int(s) for s in a.scales.split(",") if s.strip()})
@@ -289,6 +293,9 @@ def main(argv=None):
         for n in names:
             if n.lower().endswith(exts):
                 files.append(os.path.join(root, n))
+    only = {s.strip().lower() for s in a.only.split(",") if s.strip()}
+    if only:
+        files = [p for p in files if os.path.basename(p).lower() in only]
     for path in sorted(files):
         base = os.path.basename(path)
         if any(pat.search(base) for pat in exclude):

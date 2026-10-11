@@ -71,6 +71,10 @@ RED_RX = re.compile(r"_RED(\.NOMAP|\.QLOOK|_C_\d+_ORTHO)?\.", re.I)
 IRB_RX = re.compile(r"_IRB", re.I)
 MIRB_RX = re.compile(r"_MIRB", re.I)
 MRGB_RX = re.compile(r"_MRGB", re.I)
+# COLOR and RGB are separate RDR composites; without these they fall through
+# to role "other" and get the uninformative "browse variant" label.
+COLOR_RX = re.compile(r"_COLOR(\.|\Z)", re.I)
+RGB_RX = re.compile(r"_RGB(\.|\Z)", re.I)
 ORTHO_RX = re.compile(r"ORTHO", re.I)
 NOMAP_RX = re.compile(r"NOMAP", re.I)
 DTM_RX = re.compile(r"^DTEEC", re.I)
@@ -90,6 +94,11 @@ DTM_LABELS = {
 }
 
 BROWSE_RX = re.compile(r"\.(browse|abrowse|thumb)\.jpg$", re.I)
+
+#: Safety bound on how many candidate boxes the persistence map carries per
+#: variant. Only bites on pathological footprints; see the report-writing site
+#: for why the cap has to be loud rather than silent.
+PERSISTENCE_BOX_CAP = 2000
 
 
 def _taxonomy(path: str) -> str:
@@ -114,6 +123,10 @@ def _taxonomy(path: str) -> str:
         return "filtered color (MIRB)"
     if MRGB_RX.search(name):
         return "filtered color (MRGB)"
+    if COLOR_RX.search(name):
+        return "COLOR quicklook composite"
+    if RGB_RX.search(name):
+        return "RGB composite (detector geometry)"
     if RED_RX.search(name):
         return "B&W panchromatic (RED)"
     return "browse variant"
@@ -129,13 +142,14 @@ def _variant_role(path: str) -> str:
     is_ortho = bool(ORTHO_RX.search(name))
     is_red = bool(RED_RX.search(name))
     is_irb = bool(IRB_RX.search(name) or MIRB_RX.search(name) or MRGB_RX.search(name))
+    is_other_color = bool(COLOR_RX.search(name) or RGB_RX.search(name))
     if is_ortho and is_red:
         return "ortho_red"
-    if is_ortho and is_irb:
+    if is_ortho and (is_irb or is_other_color):
         return "ortho_color"
     if is_red:
         return "red"
-    if is_irb:
+    if is_irb or is_other_color:
         return "color"
     return "other"
 
@@ -294,9 +308,61 @@ def _candidate_persistence(candidates: list[dict], ref_arr: np.ndarray, cmp_arr:
 # Per-footprint comparison
 # ---------------------------------------------------------------------------
 
-def compare_footprint(footprint_dir: Path, candidates: list[dict], out_root: Path) -> dict:
+def _reference_rank(p: Path) -> tuple:
+    """Sort key for choosing the comparison reference.
+
+    The reference must be the *map-projected* B&W RED full browse:
+
+    * map-projected, because a ``NOMAP`` product is in raw detector
+      geometry — it carries roll/skew relative to every other sibling, so
+      aligning to it drags a registration error into every measurement;
+    * full ``browse`` rather than ``abrowse``/``thumb``, so the reference
+      holds the most real detail;
+    * largest, as a final tie-break.
+
+    Ranking by "is it a browse" and then by size alone silently selects
+    ``*_RED.NOMAP.browse.jpg``, which is the largest B&W product in a
+    typical RDR set and is exactly the wrong choice. Lower rank wins, so
+    map-projected sorts ahead of detector geometry.
+    """
+    name = p.name.lower()
+    geom = 1 if (NOMAP_RX.search(name) or "qlook" in name) else 0
+    scale = {"abrowse": 1, "browse": 0, "thumb": 2}.get(
+        next((s for s in ("abrowse", "browse", "thumb") if s in name), ""), 3
+    )
+    return (geom, scale, -p.stat().st_size, p.name)
+
+
+def choose_reference(siblings: list[Path]) -> Path | None:
+    """Pick the B&W RED baseline that every other rendering aligns against."""
+    for role in ("red", "ortho_red"):
+        cands = [p for p in siblings if _variant_role(str(p)) == role]
+        if cands:
+            return min(cands, key=_reference_rank)
+    return max(siblings, key=lambda p: p.stat().st_size) if siblings else None
+
+
+def compare_footprint(
+    footprint_dir: Path,
+    candidates: list[dict],
+    out_root: Path,
+    reference: str | None = None,
+    diff_format: str = "jpeg",
+    diff_max_px: int = 1024,
+) -> dict:
     """
     footprint_dir: e.g. data/raw/mars/hirise_extras/ESP_013948_1410
+    reference:     optional file name to pin as the comparison baseline. Pass
+                   this when the caller has already chosen one (the
+                   acquisition pass pins the catalogue's map-projected RED
+                   browse) so that detection coordinates and comparison
+                   coordinates share a single reference.
+    diff_format:   ``jpeg`` (default), ``png`` or ``none``.
+    diff_max_px:   downsample cap for the difference maps; 0 keeps full
+                   resolution. Measured on a real RDR footprint the three
+                   full-res diffs total 15.7 MB as PNG; capped at 1024 px as
+                   JPEG they are well under 1 MB, and nothing quantitative
+                   lives in the pixels.
     Returns a report dict and writes artefacts to out_root/<footprint>/.
     """
     footprint = footprint_dir.name
@@ -314,18 +380,20 @@ def compare_footprint(footprint_dir: Path, candidates: list[dict], out_root: Pat
     if not siblings:
         return {"footprint": footprint, "error": "no image siblings found", "variants": []}
 
-    # Choose reference: B&W RED browse preferred, else largest image
+    # Thumbnails are downsamples of a rendering that is compared at full
+    # browse already, so their difference maps are redundant.
+    thumb_names = {p.name.lower() for p in siblings if ".thumb" in p.name.lower()}
+
+    # Reference: caller-pinned, else the map-projected B&W RED full browse.
     ref_path: Path | None = None
-    # priority: red browse > red ortho > any red > largest
-    for role in ("red", "ortho_red", "other"):
-        cands = [p for p in siblings if _variant_role(str(p)) == role]
-        if cands:
-            # Prefer full browse over ab/th
-            cands.sort(key=lambda p: (0 if "browse" in p.name.lower() else 1, -p.stat().st_size))
-            ref_path = cands[0]
-            break
+    if reference:
+        match = next((p for p in siblings if p.name == reference), None)
+        if match is not None:
+            ref_path = match
+        else:
+            print(f"[warn] pinned reference {reference!r} not among {len(siblings)} siblings; falling back")
     if ref_path is None:
-        ref_path = max(siblings, key=lambda p: p.stat().st_size)
+        ref_path = choose_reference(siblings)
     ref_arr_raw = _load_gray(str(ref_path))
     if ref_arr_raw is None:
         return {"footprint": footprint, "error": f"failed to load reference {ref_path.name}", "variants": []}
@@ -424,14 +492,35 @@ def compare_footprint(footprint_dir: Path, candidates: list[dict], out_root: Pat
             vals = list(persist.values())
             rec["candidate_median_persistence"] = round(float(np.median(vals)), 3)
         variants.append(rec)
-        # Write diff image
+        # Write the difference map. Three deliberate choices, all about disk,
+        # because at ~80k footprints this is the single largest consumer:
+        #
+        # * Downsampled to `diff_max_px`. A difference map is a *review* aid —
+        #   you look at where two renderings disagree, not at pixel-level
+        #   detail. The quantitative signal (mean_abs_diff, p95, ssim_proxy,
+        #   candidate_persistence) lives in this report, not in the pixels.
+        # * JPEG, not PNG. The map is percentile-stretched noise, so PNG's
+        #   lossless coding makes it *larger* than the source image.
+        # * Browses only. A `.thumb.jpg` is a downsample of the very same
+        #   rendering already compared above, so its diff is redundant.
         try:
-            diff = (np.abs(ref_arr - aligned) * 255).astype(np.uint8)
-            # Enhance diff for visibility: percentile stretch
-            lo, hi = np.percentile(diff, [2, 98])
-            if hi > lo:
-                diff = np.clip((diff.astype(np.float32) - lo) * (255.0 / (hi - lo)), 0, 255).astype(np.uint8)
-            Image.fromarray(diff).save(out_dir / f"diff_{sib.stem}_vs_{ref_path.stem}.png")
+            if sib.name.lower() not in thumb_names and diff_format != "none":
+                diff = (np.abs(ref_arr - aligned) * 255).astype(np.uint8)
+                # Enhance diff for visibility: percentile stretch
+                lo, hi = np.percentile(diff, [2, 98])
+                if hi > lo:
+                    diff = np.clip((diff.astype(np.float32) - lo) * (255.0 / (hi - lo)), 0, 255).astype(np.uint8)
+                im = Image.fromarray(diff)
+                if diff_max_px and max(im.size) > diff_max_px:
+                    s = diff_max_px / float(max(im.size))
+                    im = im.resize(
+                        (max(1, int(im.width * s)), max(1, int(im.height * s))), Image.BILINEAR
+                    )
+                stem = f"diff_{sib.stem}_vs_{ref_path.stem}"
+                if diff_format == "png":
+                    im.save(out_dir / f"{stem}.png")
+                else:
+                    im.save(out_dir / f"{stem}.jpg", quality=88)
         except Exception:
             pass
 
@@ -480,9 +569,26 @@ def compare_footprint(footprint_dir: Path, candidates: list[dict], out_root: Pat
             "note": "B&W RED is the baseline (least processing). Color/ortho/DTM variants should diverge only photometrically, not morphologically, for real terrain.",
         },
     }
-    # Persist candidate persistence detail if any
+    # Candidate persistence detail, one ratio per (variant, detected box).
+    #
+    # This used to be hard-capped at 50 boxes per variant, which silently threw
+    # away half the evidence on a busy footprint (50 of 96 boxes) and did so in
+    # arbitrary dict order. The values are 3-decimal floats, so the real cost
+    # is ~40 bytes per entry; a 2000-box cap is ~500 KB worst case and still
+    # bounds a pathological report. If the cap ever does bite, the shortfall is
+    # recorded explicitly rather than looking like "no evidence found".
     if persist_by_variant:
-        report["candidate_persistence"] = {k: dict(list(v.items())[:50]) for k, v in persist_by_variant.items()}
+        kept, dropped = {}, {}
+        for k, v in persist_by_variant.items():
+            items = list(v.items())
+            kept[k] = dict(items[:PERSISTENCE_BOX_CAP])
+            if len(items) > PERSISTENCE_BOX_CAP:
+                dropped[k] = len(items) - PERSISTENCE_BOX_CAP
+        report["candidate_persistence"] = kept
+        if dropped:
+            report["candidate_persistence_truncated"] = dropped
+            print(f"[warn] persistence map capped at {PERSISTENCE_BOX_CAP} boxes/variant: "
+                  f"{dropped}")
     # Write JSON + MD
     common.atomic_text_write(str(out_dir / "compare_report.json"), json.dumps(report, indent=2))
     md_lines = [

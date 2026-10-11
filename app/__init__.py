@@ -1,3 +1,3 @@
 """Full-stack app package for NASA Investigation."""
 
-__version__ = "1.0.95"
+__version__ = "2.0.0"

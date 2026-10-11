@@ -1028,8 +1028,22 @@ def build_shared() -> None:
     (a / "app.js").write_text(JS, encoding="utf-8")
     if (BRAND / "logo.svg").exists():
         shutil.copy2(BRAND / "logo.svg", a / "logo.svg")
+    else:
+        print(
+            f"WARNING: {BRAND / 'logo.svg'} is missing; the site's favicon and "
+            f"header brand will 404 on /assets/logo.svg"
+        )
     if (BRAND / "social-preview.png").exists():
         shutil.copy2(BRAND / "social-preview.png", a / "og-image.png")
+    else:
+        # The HTML social card cannot stand in here: og:image and the PWA icon
+        # manifest both require a raster image. Skipping silently produced a
+        # build that reported success while emitting 404s for the social preview.
+        print(
+            f"WARNING: {BRAND / 'social-preview.png'} is missing; og:image, "
+            f"twitter:image and the PWA icon will 404 on /assets/og-image.png. "
+            f"social-preview.html does not substitute -- og:image must be raster."
+        )
 
 
 def build_sitemap() -> None:

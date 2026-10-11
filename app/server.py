@@ -296,6 +296,28 @@ def run_image_analysis(image_bytes: bytes, filename: str = "upload.png",
 
 
 # ---------------------------------------------------------------------------
+# AI helper: resolve a feature by ID from the leads/adjudicated data
+# ---------------------------------------------------------------------------
+
+def _resolve_feature(feature_id: str) -> dict | None:
+    if not feature_id:
+        return None
+    for path in (ROOT / "data" / "anomalies" / "conclusions" / "leads.csv",
+                 ROOT / "data" / "anomalies" / "conclusions" / "adjudicated.csv"):
+        if path.exists():
+            try:
+                with path.open(encoding="utf-8-sig", newline="") as f:
+                    for row in csv.DictReader(f):
+                        if (row.get("image", "") == feature_id or
+                            row.get("path", "") == feature_id or
+                            feature_id in (row.get("base", "") + " " + row.get("image", ""))):
+                            return row
+            except Exception:
+                pass
+    return None
+
+
+# ---------------------------------------------------------------------------
 # FastAPI app (preferred)
 # ---------------------------------------------------------------------------
 
@@ -399,6 +421,117 @@ def create_fastapi_app():
         rows = _safe_read_csv(path)
         total = len(rows)
         return {"total": total, "rows": rows[offset: offset + limit]}
+
+    # ---- AI Intelligence endpoints ----
+
+    @app.get("/api/intelligence/query")
+    def ai_query(q: str = ""):
+        """Natural language query → filtered features + AI summary + insights."""
+        if not q:
+            return {"error": "Query parameter 'q' required", "usage": "/api/intelligence/query?q=bright+mars+craters"}
+        try:
+            from intelligence import query_features
+            leads_path = ROOT / "data" / "anomalies" / "conclusions" / "leads.csv"
+            adj_path = ROOT / "data" / "anomalies" / "conclusions" / "adjudicated.csv"
+            rows = _safe_read_csv(leads_path) or _safe_read_csv(adj_path)
+            if not rows:
+                return {"query": q, "matched": 0, "total": 0, "features": [],
+                        "summary": "No data available. Run the pipeline first.", "insights": []}
+            result = query_features(rows, q)
+            # serialize for JSON
+            out_features = []
+            for f in result["features"]:
+                out = {k: v for k, v in f.items()}
+                out["members"] = [{k: (round(float(v), 2) if isinstance(v, (int, float)) else v) for k, v in m.items() if not isinstance(v, (list, dict))} for m in f.get("members", [])]
+                out_features.append(out)
+            return {
+                "query": q,
+                "criteria": result["criteria"],
+                "matched": result["matched"],
+                "total": result["total"],
+                "features": out_features,
+                "summary": result["summary"],
+                "insights": result["insights"],
+            }
+        except Exception as e:
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/intelligence/summary")
+    def ai_summary():
+        """AI-generated plain-language summary of all findings."""
+        try:
+            from intelligence import generate_summary, enrich_features, generate_insights
+            leads_path = ROOT / "data" / "anomalies" / "conclusions" / "leads.csv"
+            adj_path = ROOT / "data" / "anomalies" / "conclusions" / "adjudicated.csv"
+            rows = _safe_read_csv(leads_path) or _safe_read_csv(adj_path)
+            enriched = enrich_features(rows)
+            summary = generate_summary(enriched)
+            insights = generate_insights(enriched)
+            return {"summary": summary, "insights": insights, "total": len(enriched)}
+        except Exception as e:
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/intelligence/insights")
+    def ai_insights():
+        """Smart actionable insights from the dataset."""
+        try:
+            from intelligence import generate_insights, enrich_features
+            leads_path = ROOT / "data" / "anomalies" / "conclusions" / "leads.csv"
+            adj_path = ROOT / "data" / "anomalies" / "conclusions" / "adjudicated.csv"
+            rows = _safe_read_csv(leads_path) or _safe_read_csv(adj_path)
+            enriched = enrich_features(rows)
+            return {"insights": generate_insights(enriched)}
+        except Exception as e:
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/intelligence/analyze")
+    async def ai_analyze(request: Request):
+        """Run vision LLM analysis on a specific anomaly.
+
+        Body: {"feature_id": "..."} or {"feature": {...}}
+        """
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        try:
+            from intelligence import llm_analyze_feature, has_llm_config
+            if not has_llm_config():
+                return {"error": "AI LLM not configured. Set AI_LLM_KEY and AI_LLM_ENDPOINT environment variables.",
+                        "llm_available": False}
+            feat = body.get("feature") or _resolve_feature(body.get("feature_id", ""))
+            if not feat:
+                return {"error": "Feature not found", "llm_available": True}
+            result = llm_analyze_feature(feat)
+            return result
+        except Exception as e:
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/intelligence/status")
+    def ai_status():
+        """Check what AI features are available."""
+        from intelligence import has_llm_config
+        return {
+            "nlp_query": True,
+            "smart_categorization": True,
+            "summary_generation": True,
+            "insights_generation": True,
+            "vision_llm": has_llm_config(),
+            "vision_llm_configured": has_llm_config(),
+        }
+
+    @app.get("/map")
+    def map_page():
+        """Serve the interactive anomaly map."""
+        map_path = ROOT / "site" / "map.html"
+        if map_path.exists():
+            return map_path.read_text(encoding="utf-8", errors="replace")
+        return HTMLResponse("<h1>Map</h1><p>map.html not found</p>")
 
     @app.post("/api/analyze")
     async def analyze_upload(file: UploadFile = File(...)):

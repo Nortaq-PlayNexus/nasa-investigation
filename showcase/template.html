@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anomaly Catalogue v2 — NASA Moon &amp; Mars Investigation</title>
+<meta name="description" content="Enhanced anomaly catalogue with AI search, smart categorization, and premium gallery experience.">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<style>
+/* === ENHANCED THEME v2 === */
+:root{
+  --bg:#060810;--bg2:#0a0e18;--panel:rgba(17,22,35,0.75);--panel2:rgba(21,27,43,0.85);
+  --line:rgba(35,43,63,0.6);--line2:rgba(45,55,80,0.5);--txt:#e4eaf5;--dim:#9aadcc;
+  --faint:#6b7c9a;--green:#35c46b;--amber:#e0a83c;--red:#e05c5c;--blue:#4aa3ff;
+  --purple:#a68bff;--cyan:#5be9e8;--pink:#f78da7;--mono:'SF Mono','Fira Code','Cascadia Mono',Consolas,monospace;
+  --radius:12px;--glass:rgba(255,255,255,0.04);--glass-border:rgba(255,255,255,0.08);
+  --shadow:0 8px 32px rgba(0,0,0,0.4);--shadow-lg:0 16px 48px rgba(0,0,0,0.5);
+  --transition:0.25s cubic-bezier(0.4,0,0.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{background:var(--bg);color:var(--txt);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse at 20% 20%,rgba(74,163,255,0.06) 0%,transparent 50%),
+  radial-gradient(ellipse at 80% 80%,rgba(166,139,255,0.04) 0%,transparent 50%),
+  radial-gradient(ellipse at 50% 50%,rgba(53,196,107,0.03) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(35,43,63,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(35,43,63,0.15) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%)}
+.wrap{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:20px 24px 80px}
+a{color:var(--blue);text-decoration:none;transition:color var(--transition)}
+a:hover{color:#7ab8ff;text-decoration:none}
+h1,h2,h3,h4{color:#fff;line-height:1.3}
+h2{font-size:20px;margin:56px 0 6px;display:flex;align-items:center;gap:10px}
+h2 .n{color:var(--faint);font-size:13px;font-weight:400;margin-left:4px}
+h2::before{content:'';display:inline-block;width:4px;height:20px;background:var(--blue);border-radius:2px;flex-shrink:0}
+.sub{color:var(--dim);margin:8px 0 24px;max-width:960px;font-size:14.5px;line-height:1.7}
+/* === ANIMATIONS === */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(74,163,255,0.1)}50%{box-shadow:0 0 30px rgba(74,163,255,0.2)}}
+.fade-up{animation:fadeInUp 0.6s ease-out both}
+.fade-up-1{animation-delay:0.1s}.fade-up-2{animation-delay:0.2s}.fade-up-3{animation-delay:0.3s}
+/* === HEADER === */
+.site-header{text-align:center;margin-bottom:40px;padding:40px 0 20px}
+.site-header h1{font-size:30px;letter-spacing:.2px;margin-bottom:12px;background:linear-gradient(135deg,#fff 0%,#4aa3ff 50%,#a68bff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tagline{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 16px;font:12px var(--mono);color:var(--dim);margin-bottom:16px}
+.tagline .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;box-shadow:0 0 8px var(--green)}
+/* === STATS === */
+.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:20px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;backdrop-filter:blur(10px);transition:all var(--transition);position:relative;overflow:hidden}
+.stat:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:var(--shadow)}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0;transition:opacity var(--transition)}
+.stat:hover::after{opacity:1}
+.stat .k{color:var(--dim);font:10px var(--mono);text-transform:uppercase;letter-spacing:.8px}
+.stat .v{font-size:24px;font-weight:700;margin-top:4px;background:linear-gradient(135deg,#fff,#9ab8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* === AI SEARCH === */
+.ai-section{background:linear-gradient(135deg,rgba(74,163,255,0.08),rgba(166,139,255,0.06));border:1px solid rgba(74,163,255,0.15);border-radius:var(--radius);padding:20px 24px;margin:24px 0;position:relative;overflow:hidden}
+.ai-section::before{content:'🧠';position:absolute;top:12px;right:16px;font-size:24px;opacity:0.3}
+.ai-section h3{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ai-section h3::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.ai-query-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.ai-query-row input{flex:1;min-width:250px;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:12px 16px;font:14px var(--mono);transition:border-color var(--transition)}
+.ai-query-row input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,163,255,0.15)}
+.ai-query-row .btn{background:linear-gradient(135deg,var(--blue),#3d8aff);border:none;color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:all var(--transition)}
+.ai-query-row .btn:hover{filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 4px 12px rgba(74,163,255,0.3)}
+.ai-query-row .btn.secondary{background:var(--panel2);border:1px solid var(--line)}
+.ai-results{margin-top:16px;padding:16px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;display:none}
+.ai-results.active{display:block;animation:fadeInUp 0.3s ease-out}
+.ai-summary{background:var(--panel);border-radius:8px;padding:14px 18px;font-size:14px;line-height:1.7;margin-bottom:12px;border-left:3px solid var(--blue)}
+.ai-insights{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px}
+.insight-card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;transition:all var(--transition)}
+.insight-card:hover{border-color:var(--blue);transform:translateX(3px)}
+.insight-card .priority{display:inline-block;padding:2px 8px;border-radius:6px;font:10px var(--mono);text-transform:uppercase;font-weight:600;margin-bottom:6px}
+.priority-high{background:#1a2010;color:var(--green);border:1px solid #2a3a1a}
+.priority-medium{background:#1a1a08;color:var(--amber);border:1px solid #3a3010}
+.priority-low{background:#0d1118;color:var(--dim);border:1px solid var(--line)}
+.priority-info{background:#0d1118;color:var(--faint);border:1px solid var(--line)}
+.ai-loading{display:inline-block;width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* === CHIPS === */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;transition:all var(--transition)}
+.chip b{color:#fff;font-size:15px;display:block}
+/* === CATEGORIES === */
+.cat-bar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.cat-pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font:12px var(--mono);cursor:pointer;transition:all var(--transition)}
+.cat-pill:hover{border-color:var(--blue);background:rgba(74,163,255,0.08)}
+.cat-pill.active{background:rgba(74,163,255,0.12);border-color:var(--blue);color:#fff}
+.cat-pill .count{color:var(--dim);font-size:11px}
+/* === FILTER CONTROLS === */
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:18px 0;backdrop-filter:blur(10px)}
+.controls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.controls label{font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:4px;text-transform:uppercase;letter-spacing:.5px}
+.controls input[type=text],.controls select,.controls input[type=number]{background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px 12px;font:13px var(--mono);transition:border-color var(--transition)}
+.controls input:focus,.controls select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,163,255,0.12)}
+.qrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.qbtn{background:linear-gradient(135deg,var(--blue),#3d8aff);border:none;color:#fff;font-weight:700;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px;transition:all var(--transition)}
+.qbtn:hover{filter:brightness(1.1);box-shadow:0 4px 12px rgba(74,163,255,0.25)}
+.action{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12.5px;transition:all var(--transition)}
+.action:hover{border-color:var(--blue);color:#fff}
+/* === MASONRY GRID === */
+.masonry{column-count:3;column-gap:14px;margin:16px 0}
+@media(max-width:1000px){.masonry{column-count:2}}
+@media(max-width:600px){.masonry{column-count:1}}
+.masonry > *{break-inside:avoid;margin-bottom:14px;transition:all var(--transition)}
+/* === CARDS === */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:all var(--transition);cursor:pointer;position:relative}
+.card:hover{border-color:rgba(74,163,255,0.4);transform:translateY(-3px);box-shadow:var(--shadow-lg);z-index:2}
+.card .imgbox{position:relative;background:#000;min-height:160px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+.card .imgbox img{width:100%;height:auto;display:block;transition:transform 0.4s ease;object-fit:cover}
+.card:hover .imgbox img{transform:scale(1.03)}
+.card .imgbox .band-strip{position:absolute;bottom:0;left:0;right:0;display:flex;height:4px}
+.card .imgbox .band-strip div{height:100%;flex:1}
+.card .imgbox .img-overlay{position:absolute;inset:0;background:linear-gradient(transparent 60%,rgba(0,0,0,0.7));display:flex;align-items:flex-end;padding:8px}
+.card .imgbox .view-btn{background:rgba(74,163,255,0.9);color:#fff;padding:4px 12px;border-radius:6px;font:11px var(--mono);opacity:0;transition:opacity var(--transition);pointer-events:none}
+.card:hover .imgbox .view-btn{opacity:1}
+.card .ttl{padding:12px 14px 4px;font-family:var(--mono);font-size:13px;color:#fff;word-break:break-all;font-weight:600}
+.card .tbadges{padding:4px 14px 8px;display:flex;flex-wrap:wrap;gap:4px}
+.card .meta{padding:0 14px 10px;font-size:11.5px;color:var(--dim);display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}
+.card .meta span:nth-child(odd){color:var(--faint)}
+.card .cat-tag{display:inline-block;padding:2px 8px;border-radius:4px;font:10px var(--mono);text-transform:uppercase;font-weight:600}
+.cat-craters{background:#1a2010;color:var(--green);border:1px solid #2a3a1a}
+.cat-boulders{background:#1a1a08;color:var(--amber);border:1px solid #3a3010}
+.cat-albedo{background:#0d1118;color:var(--cyan);border:1px solid #0d2a2a}
+.cat-linear{background:#1a1020;color:var(--purple);border:1px solid #2a1a3a}
+.cat-artifacts{background:#201010;color:var(--red);border:1px solid #3a1a1a}
+.cat-irregular{background:#0d1118;color:var(--faint);border:1px solid var(--line)}
+/* === BADGES === */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.b-green{background:#12301f;color:var(--green);border:1px solid #1d5a38}
+.b-amber{background:#31290f;color:var(--amber);border:1px solid #5c4a17}
+.b-red{background:#2a1818;color:var(--red);border:1px solid #4a2222}
+.b-blue{background:#0d1d2e;color:var(--blue);border:1px solid #1a3a5a}
+.b-purple{background:#1a1525;color:var(--purple);border:1px solid #2a2040}
+.b-cyan{background:#0a2a2a;color:var(--cyan);border:1px solid #0d3a3a}
+.b-conf{background:var(--panel2);color:var(--dim);border:1px solid var(--line);font-size:10px;text-transform:none}
+.b-band{background:#0d1a21;color:#7fd4e8;border:1px solid #16404d;font-family:var(--mono);font-size:10px}
+.b-polarity{background:#1c1f2e;color:#c9b8ff;border:1px solid #2d2a45}
+.b-body{background:#111827;color:var(--purple);border:1px solid #2a2547}
+/* === LIGHTBOX === */
+.lightbox{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);align-items:center;justify-content:center;animation:fadeInUp 0.2s ease-out}
+.lightbox.active{display:flex}
+.lightbox-img{max-width:90vw;max-height:85vh;border-radius:8px;box-shadow:var(--shadow-lg)}
+.lightbox-close{position:absolute;top:20px;right:24px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;padding:8px;opacity:0.7;transition:opacity var(--transition);z-index:1001}
+.lightbox-close:hover{opacity:1}
+.lightbox-info{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 20px;max-width:600px;width:90%;font-size:13px;backdrop-filter:blur(10px);z-index:1001}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--line);color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all var(--transition);z-index:1001}
+.lightbox-nav:hover{background:var(--blue);border-color:var(--blue)}
+.lightbox-prev{left:20px}.lightbox-next{right:20px}
+.lightbox-cat{font:11px var(--mono);padding:2px 8px;border-radius:4px;margin-bottom:6px;display:inline-block}
+/* === GALLERIES === */
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:16px 0}
+.g{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:all var(--transition);cursor:pointer}
+.g:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:var(--shadow)}
+.g img{width:100%;height:140px;object-fit:cover;display:block;background:#000;transition:transform var(--transition)}
+.g:hover img{transform:scale(1.02)}
+.g .cap{padding:8px 10px;font-size:11px;color:var(--dim);word-break:break-all;font-family:var(--mono)}
+.g .cap b{color:#fff;display:block;font-family:system-ui;font-size:12px;margin-bottom:2px}
+/* === COUNT === */
+.count{font-size:13px;color:var(--dim);margin:8px 2px;padding:10px 0}
+/* === MORE BUTTON === */
+.more{display:block;margin:20px auto;background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:12px 28px;cursor:pointer;font-size:13px;transition:all var(--transition)}
+.more:hover{border-color:var(--blue);color:#fff;background:var(--panel2);box-shadow:var(--shadow)}
+.empty{color:var(--faint);padding:30px;text-align:center;font-family:var(--mono)}
+/* === TABLES === */
+table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+th{background:var(--panel2);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+tr:hover td{background:rgba(74,163,255,0.03)}
+/* === FINDINGS === */
+.fcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:12px 0;overflow:hidden;transition:all var(--transition)}
+.fcard:hover{border-color:var(--line2)}
+.fcard summary{cursor:pointer;list-style:none;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;transition:background var(--transition)}
+.fcard summary::-webkit-details-marker{display:none}
+.fcard summary:hover{background:var(--panel2)}
+.fid{font-family:var(--mono);font-weight:700;color:#fff}
+.fbody{padding:4px 18px 16px;border-top:1px solid var(--line)}
+.fbody h2,.fbody h3,.fbody h4{font-size:14px;margin:16px 0 6px;color:#fff;border:none;padding:0}
+.fbody ul{margin:4px 0 8px;padding-left:20px}
+.fbody li{margin:2px 0}
+.fbody p{margin:6px 0;color:var(--txt)}
+.fbody table{font-size:12px}
+.fbody .cb{color:var(--amber)}
+/* === CHARTS === */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin:16px 0}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;backdrop-filter:blur(10px);transition:border-color var(--transition)}
+.chart:hover{border-color:var(--line2)}
+.chart h3{font-size:13px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.chart .chart-area{min-height:200px}
+.chart .cap{font-size:11px;color:var(--faint);margin-top:6px}
+/* === TIMELINE === */
+.timeline{border-left:2px solid var(--line);padding-left:18px;margin:12px 0}
+.timeline li{position:relative;margin:16px 0}
+.timeline li::before{content:'';position:absolute;left:-23px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--panel2);border:2px solid var(--blue)}
+.timeline .ev{font-family:var(--mono);font-weight:600;color:#fff}
+.timeline .ts{color:var(--faint);font:11px var(--mono)}
+.timeline .det{color:var(--dim);font-size:12px;margin-top:3px;line-height:1.5}
+.timeline .det b{color:var(--txt);font-weight:600}
+.ev-badge{display:inline-block;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:11px var(--mono);margin-left:8px;color:var(--blue)}
+/* === FOOTER === */
+.foot{margin-top:60px;color:var(--faint);font:11px var(--mono);border-top:1px solid var(--line);padding-top:16px;text-align:center}
+/* === SCROLLBAR === */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+/* === FOCUS === */
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+/* === LOADING === */
+.loading{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle}
+/* === SCROLL-TRIGGERED VISIBILITY === */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.5s ease-out,transform 0.5s ease-out}
+.reveal.visible{opacity:1;transform:translateY(0)}
+/* === RESPONSIVE === */
+@media(max-width:700px){
+  h1{font-size:22px}
+  h2{font-size:17px}
+  .wrap{padding:14px 12px 60px}
+  .statrow{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+  .charts{grid-template-columns:1fr}
+  .ai-section{padding:16px}
+  .ai-query-row input{min-width:100%}
+  .lightbox-nav{width:36px;height:36px;font-size:16px}
+}
+/* === KEYBOARD HINT === */
+.kbd{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font:10px var(--mono);color:var(--dim);margin:0 2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header class="site-header fade-up">
+  <div class="tagline"><span class="dot"></span> Anomaly Catalogue v2 — Enhanced Intelligence</div>
+  <h1>NASA HiRISE <span style="background:linear-gradient(135deg,#4aa3ff,#a68bff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Investigation</span></h1>
+  <p class="sub" style="max-width:700px;margin:8px auto 0">AI-powered anomaly catalogue with natural language search, smart categorization, and premium gallery experience. Every candidate was enhanced, artifact-checked, cross-band confirmed and adjudicated with statistical rigor.</p>
+</header>
+
+<!-- STATS -->
+<div class="statrow fade-up fade-up-1" id="statRow"></div>
+<div class="chips fade-up fade-up-1" id="statsChips"></div>
+
+<!-- AI INTELLIGENCE SECTION -->
+<div class="ai-section fade-up fade-up-2" id="aiSection">
+  <h3>AI Query Engine</h3>
+  <div class="ai-query-row">
+    <input type="text" id="aiQuery" placeholder="Try: &quot;bright features on Mars with high contrast&quot; or &quot;show me top craters&quot;" 
+           aria-label="AI natural language query" autocomplete="off" spellcheck="false">
+    <button class="btn" onclick="runAIQuery()" aria-label="Run AI query">🧠 Analyze</button>
+    <button class="btn secondary" onclick="showAIInsights()" aria-label="Show AI insights">💡 Insights</button>
+    <button class="btn secondary" onclick="showAISummary()" aria-label="Show AI summary">📝 Summary</button>
+  </div>
+  <div class="ai-results" id="aiResults" aria-live="polite"></div>
+</div>
+
+<!-- CATEGORY FILTER BAR -->
+<div class="cat-bar" id="catBar"></div>
+
+<!-- LEADS EXPLORER -->
+<h2 class="fade-up fade-up-2">Anomaly Explorer <span class="n">grouped features — one card = all band views</span></h2>
+<div class="controls fade-up fade-up-2" role="search" aria-label="Filter anomalies">
+  <div class="qrow" style="margin-bottom:12px">
+    <input type="text" id="q" placeholder="Search by product ID, observation, coordinates, flags, body, band..." 
+           style="flex:1;min-width:200px" aria-label="Search anomalies" autocomplete="off" spellcheck="false">
+    <button class="qbtn" onclick="doSearch()">Search</button>
+    <button class="action" onclick="saveSearch()">Save Search</button>
+    <button class="action" onclick="clearFilters()">Reset</button>
+  </div>
+  <div class="controls-grid">
+    <label>Verdict <select id="fVerdict" onchange="render()" aria-label="Filter by verdict">
+      <option value="">all</option><option>CONFIRMED-LEAD</option><option>PROMISING</option><option>TERRAIN</option><option>WEAK</option><option>NOISE</option><option>EXPLAINED-ARTIFACT</option></select></label>
+    <label>Body <select id="fBody" onchange="render()" aria-label="Filter by body"></select></label>
+    <label>Band <select id="fBand" onchange="render()" aria-label="Filter by band"></select></label>
+    <label>Polarity <select id="fPolarity" onchange="render()" aria-label="Filter by polarity">
+      <option value="">all</option><option>bright</option><option>dark</option></select></label>
+    <label>Category <select id="fCategory" onchange="render()" aria-label="Filter by category">
+      <option value="">all</option><option value="crater">crater</option><option value="boulder">boulder</option><option value="albedo">albedo</option><option value="linear">linear</option><option value="artifact">artifact</option><option value="irregular">irregular</option></select></label>
+    <label>Min Score <input type="number" id="fScore" value="0" min="0" max="100" onchange="render()" aria-label="Minimum score"></label>
+    <label>Min Contrast <input type="number" id="fContrast" value="0" step="0.1" onchange="render()" aria-label="Minimum contrast"></label>
+    <label><input type="checkbox" id="fStrip" onchange="render()" style="accent-color:var(--blue)"> has strip</label>
+    <label>Sort <select id="fSort" onchange="render()" aria-label="Sort results">
+      <option value="score">score desc</option><option value="contrast">contrast desc</option><option value="area">area desc</option><option value="x">x asc</option></select></label>
+  </div>
+</div>
+<div class="count" id="count"></div>
+<div class="masonry" id="cards"></div>
+<button class="more" id="moreBtn" onclick="showMore()">Show more</button>
+
+<!-- AI RESULTS AREA -->
+<div id="aiContent" style="margin-top:40px"></div>
+
+<!-- CHARTS -->
+<h2>Analytics <span class="n">interactive multi-metric analysis</span></h2>
+<div class="sub">Hover, zoom, and pan on all charts. The spatial plot shows where anomalies sit within each image — edge and corner clustering is the classic sensor-artifact signature.</div>
+<div class="charts">
+  <div class="chart"><h3>Score Distribution</h3><div class="chart-area" id="chScore"></div><div class="cap">adjudicated score histogram</div></div>
+  <div class="chart"><h3>Contrast vs Score</h3><div class="chart-area" id="chScatter"></div><div class="cap">each dot = distinct feature, sized by area</div></div>
+  <div class="chart"><h3>Area Distribution (log)</h3><div class="chart-area" id="chArea"></div><div class="cap">feature pixel area, log scale</div></div>
+  <div class="chart"><h3>Verdict Composition</h3><div class="chart-area" id="chDonut"></div><div class="cap">share of each verdict</div></div>
+  <div class="chart"><h3>Spatial Position</h3><div class="chart-area" id="chSpace"></div><div class="cap">normalised anomaly position (x, y)</div></div>
+  <div class="chart"><h3>Rigor Metrics</h3><div class="chart-area" id="chRigor"></div><div class="cap">grid-energy · edge sharpness · contrast stability</div></div>
+</div>
+
+<!-- CHASE FINDINGS -->
+<h2>Finding Reports <span class="n">dossiers F-0001&hellip;</span></h2>
+<div id="findings"></div>
+
+<!-- SOURCE GALLERY -->
+<h2>Source Image Catalogue <span class="n">data/processed — every enhanced product</span></h2>
+<div class="gal" id="sources"></div>
+
+<!-- BOXED IMAGES -->
+<h2>Boxed Full-Resolution Images <span class="n">data/anomalies/marked</span></h2>
+<div class="gal" id="marked"></div>
+
+<!-- RUN HISTORY -->
+<h2>Analysis Run History <span class="n">audit.jsonl</span></h2>
+<div id="timeline"></div>
+
+<!-- DATA & METHODOLOGY -->
+<h2>Data &amp; Methodology</h2>
+<table>
+<tr><th>Artifact</th><th>Path</th><th>Notes</th></tr>
+<tr><td>Adjudication summary</td><td><a href="../data/anomalies/conclusions/SUMMARY.md">SUMMARY.md</a></td><td>Funnel, verdict distribution, stress test, bottom line</td></tr>
+<tr><td>All leads (CSV)</td><td><a href="../data/anomalies/conclusions/leads.csv">leads.csv</a></td><td>Full metric columns for every lead</td></tr>
+<tr><td>All adjudicated candidates</td><td><a href="../data/anomalies/conclusions/adjudicated.csv">adjudicated.csv</a></td><td>All verdicts incl. TERRAIN / NOISE / WEAK / EXPLAINED-ARTIFACT</td></tr>
+<tr><td>AI query API</td><td><a href="/api/intelligence/query?q=example">/api/intelligence/query</a></td><td>Natural language query endpoint</td></tr>
+<tr><td>Interactive map</td><td><a href="/map">/map</a></td><td>Leaflet map of all anomaly locations</td></tr>
+<tr><td>Source catalog</td><td><a href="../data/catalog/catalog.csv">catalog.csv</a></td><td>sha256 chain of custody + dimensions</td></tr>
+<tr><td>Benchmark</td><td><a href="../data/anomalies/benchmark/benchmark_synthetic.md">benchmark/</a></td><td>Synthetic sensitivity / false-positive calibration</td></tr>
+</table>
+
+<div class="foot">Generated by scripts/build_showcase.py · Keyboard: <span class="kbd">/</span> search · <span class="kbd">Esc</span> close lightbox · <span class="kbd">←</span> <span class="kbd">→</span> navigate · Enhanced v2 · Powered by AI intelligence layer</div>
+
+</div><!-- /wrap -->
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close image viewer">&times;</button>
+  <div class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)" aria-label="Previous image">&#8249;</div>
+  <div class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)" aria-label="Next image">&#8250;</div>
+  <img class="lightbox-img" id="lightboxImg" alt="">
+  <div class="lightbox-info" id="lightboxInfo"></div>
+</div>
+
+<script>
+const DATA = __JSON__;
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n).toLocaleString(undefined, {maximumFractionDigits:1});
+
+/* === UTILITY === */
+function bd(txt, cls) { return `<span class="badge ${cls}">${txt}</span>` }
+function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
+function link(path, label) { return `<a href="../${path}">${label}</a>` }
+
+/* === AI QUERY ENGINE === */
+async function runAIQuery() {
+  const q = $("aiQuery").value.trim();
+  if (!q) { showAIError("Enter a query like \"bright features on Mars\" or \"top craters with high contrast\""); return; }
+  const results = $("aiResults");
+  results.classList.add("active");
+  results.innerHTML = `<div><span class="ai-loading"></span> <span style="color:var(--dim)">Analyzing with AI engine...</span></div>`;
+  try {
+    const params = new URLSearchParams({ q });
+    const r = await fetch(`/api/intelligence/query?${params}`);
+    const d = await r.json();
+    if (d.error) { showAIError(d.error); return; }
+    let html = '';
+    if (d.summary) {
+      html += `<div class="ai-summary">${esc(d.summary).replace(/\n/g, "<br>")}</div>`;
+    }
+    if (d.insights && d.insights.length) {
+      html += `<div class="ai-insights">${d.insights.map(ins =>
+        `<div class="insight-card"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+    }
+    if (d.features && d.features.length) {
+      html += `<div class="count">AI found <b style="color:var(--blue)">${fmt(d.matched)}</b> matching anomalies out of ${fmt(d.total)} total</div>`;
+      html += `<div class="masonry">${d.features.map(f => aiCard(f)).join("")}</div>`;
+    } else {
+      html += `<div class="empty">No anomalies match your query. Try different keywords.</div>`;
+    }
+    results.innerHTML = html;
+  } catch (e) {
+    showAIError("Query failed: " + e.message);
+  }
+}
+
+function showAIError(msg) {
+  $("aiResults").classList.add("active");
+  $("aiResults").innerHTML = `<div class="ai-summary" style="border-left-color:var(--red)"><b>Error:</b> ${esc(msg)}</div>`;
+}
+
+async function showAISummary() {
+  $("aiResults").classList.add("active");
+  $("aiResults").innerHTML = `<div><span class="ai-loading"></span> Generating summary...</div>`;
+  try {
+    const r = await fetch("/api/intelligence/summary");
+    const d = await r.json();
+    let html = `<div class="ai-summary">${esc(d.summary).replace(/\n/g, "<br>")}</div>`;
+    if (d.insights && d.insights.length) {
+      html += `<h3 style="margin:20px 0 8px;font-size:16px">💡 Actionable Insights</h3>`;
+      html += `<div class="ai-insights">${d.insights.map(ins =>
+        `<div class="insight-card"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+    }
+    $("aiResults").innerHTML = html;
+  } catch (e) { showAIError(e.message); }
+}
+
+async function showAIInsights() {
+  $("aiResults").classList.add("active");
+  $("aiResults").innerHTML = `<div><span class="ai-loading"></span> Generating insights...</div>`;
+  try {
+    const r = await fetch("/api/intelligence/insights");
+    const d = await r.json();
+    if (d.insights && d.insights.length) {
+      $("aiResults").innerHTML = `<h3 style="margin:0 0 12px;font-size:16px">💡 Smart Insights</h3><div class="ai-insights">${d.insights.map(ins =>
+        `<div class="insight-card"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+    } else {
+      $("aiResults").innerHTML = `<div class="empty">No insights available yet. Run the pipeline first.</div>`;
+    }
+  } catch (e) { showAIError(e.message); }
+}
+
+function aiCard(f) {
+  const cat = f.get("category", "irregular");
+  const catCls = `cat-${cat}`;
+  const cls = f.get("verdict") === "CONFIRMED-LEAD" ? "b-green" : "b-amber";
+  const img = f.get("_strip") ? `<img src="../${f._strip}" loading="lazy" alt="${esc(f.base)}">` : `<div style="padding:40px;color:var(--faint);font-family:var(--mono);font-size:12px;text-align:center">${esc(f.base)}</div>`;
+  return `<div class="card" onclick="openLightbox('${esc(f.base)}', '${esc(f._strip || '')}', ${f.max_score || 0}, '${cat}', '${esc(f.recommendation || '')}', '${esc(f.category_desc || '')}', ${f.area || 0}, '${esc(f._obs || '')}')">
+    <div class="imgbox">${img}<span class="view-btn">🔍 View</span></div>
+    <div class="ttl">${esc(f.base)}</div>
+    <div class="tbadges">${bd(f.verdict || "N/A", cls)}${bd(cat, catCls)}</div>
+    <div class="meta">
+      <span>score</span><b>${f.max_score || "N/A"}</b>
+      <span>contrast</span><b>${f.max_contrast || "N/A"}</b>
+      <span>area</span><b>${fmt(f.area || 0)} px</b>
+      <span>bands</span><b>${(f.bands || []).join("/") || "N/A"}</b>
+    </div>
+  </div>`;
+}
+
+/* === LIGHTBOX === */
+let lbIndex = 0;
+let lbItems = [];
+function openLightbox(name, imgSrc, score, category, recommendation, catDesc, area, obs) {
+  lbItems = [{ name, imgSrc, score, category, recommendation, catDesc, area, obs }];
+  // Collect more items from current features for navigation
+  const features = (DATA.features || []).filter(f => f.category === category);
+  lbItems = features.map(f => ({
+    name: f.base, imgSrc: f._strip || "", score: f.max_score || 0,
+    category: f.category || "irregular", recommendation: f.recommendation || "",
+    catDesc: f.category_desc || "", area: f.area || 0, obs: f._obs || ""
+  }));
+  lbIndex = Math.max(0, lbItems.findIndex(i => i.name === name));
+  renderLightbox();
+  $("lightbox").classList.add("active");
+  document.body.style.overflow = "hidden";
+  // Focus trap
+  $("lightbox-close").focus();
+}
+function renderLightbox() {
+  const item = lbItems[lbIndex];
+  if (!item) return;
+  const img = item.imgSrc ? `<img class="lightbox-img" id="lbImg" src="../${item.imgSrc}" alt="${esc(item.name)}">` : `<div style="padding:60px;color:var(--faint);font-family:var(--mono);text-align:center">${esc(item.name)}</div>`;
+  $("lightboxImg").outerHTML = img;
+  $("lightboxInfo").innerHTML = `
+    <div class="lightbox-cat cat-${item.category || "irregular"}">${esc(item.category || "unknown")}</div>
+    <div style="font-family:var(--mono);font-weight:700;color:#fff;margin-bottom:6px">${esc(item.name)}</div>
+    <div style="font-size:12px;color:var(--dim);line-height:1.6">${esc(item.recommendation || item.catDesc || "No details available.")}</div>
+    <div style="font-size:11px;color:var(--faint);margin-top:6px">Score: ${item.score || "N/A"} · Area: ${fmt(item.area || 0)} px ${item.obs ? "· " + esc(item.obs) : ""}</div>`;
+  $("lightbox").setAttribute("aria-label", `Image viewer — ${item.name}`);
+}
+function closeLightbox() {
+  $("lightbox").classList.remove("active");
+  document.body.style.overflow = "";
+}
+function navigateLightbox(dir) {
+  lbIndex = (lbIndex + dir + lbItems.length) % lbItems.length;
+  renderLightbox();
+}
+// Lightbox keyboard & click handlers
+document.addEventListener("keydown", e => {
+  if (!$("lightbox").classList.contains("active")) {
+    // Global keyboard shortcuts when lightbox is closed
+    if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "SELECT") {
+      e.preventDefault();
+      $("aiQuery").focus();
+    }
+    return;
+  }
+  switch (e.key) {
+    case "Escape": closeLightbox(); break;
+    case "ArrowLeft": navigateLightbox(-1); break;
+    case "ArrowRight": navigateLightbox(1); break;
+  }
+});
+$("lightbox").addEventListener("click", e => { if (e.target === $("lightbox")) closeLightbox(); });
+
+/* === CATEGORY BAR === */
+(function() {
+  const cats = [
+    { key: "crater", label: "🕳 Craters" }, { key: "boulder", label: "🪨 Boulders" },
+    { key: "albedo", label: "✨ Albedo" }, { key: "linear", label: "📏 Linear" },
+    { key: "artifact", label: "⚡ Artifacts" }, { key: "irregular", label: "❓ Irregular" }
+  ];
+  // Count categories
+  const counts = {};
+  (DATA.features || []).forEach(f => { const c = f.category || "irregular"; counts[c] = (counts[c] || 0) + 1; });
+  $("catBar").innerHTML = `<span class="cat-pill active" onclick="filterCategory(this, '')"><b>All</b> <span class="count">${(DATA.features || []).length}</span></span>` +
+    cats.map(c => `<span class="cat-pill" onclick="filterCategory(this, '${c.key}')"><b>${c.label}</b> <span class="count">${counts[c.key] || 0}</span></span>`).join("");
+})();
+
+function filterCategory(el, cat) {
+  document.querySelectorAll(".cat-pill").forEach(p => p.classList.remove("active"));
+  el.classList.add("active");
+  $("fCategory").value = cat;
+  render();
+}
+
+/* === STATS & FILTERS === */
+(function() {
+  const s = DATA.stats;
+  if (!s) return;
+  const chips = $("statsChips"), row = $("statRow");
+  const items = [
+    ["features", "Distinct", s.features], ["bands", "Variants", s.band_variants],
+    ["leads", "Leads", s.leads_total], ["strips", "Strips", s.top_leads],
+    ["findings", "Findings", s.findings], ["marked", "Boxed", s.marked],
+    ["sources", "Sources", s.sources]
+  ];
+  chips.innerHTML = items.map(([k, t, v]) => `<div class="chip"><b>${v}</b>${t}</div>`).join("");
+  row.innerHTML = Object.entries(s.bodies || {}).map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("") +
+    Object.entries(s.bands || {}).map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  // populate filters
+  if (s.bodies) { Object.keys(s.bodies).sort().forEach(b => { const o = document.createElement("option"); o.textContent = b; $("fBody").appendChild(o); }); }
+  if (s.bands) { Object.keys(s.bands).sort().forEach(b => { const o = document.createElement("option"); o.textContent = b; $("fBand").appendChild(o); }); }
+})();
+
+/* === FILTERING & RENDERING === */
+let N = 0, showCount = 12;
+function filtered() {
+  const q = ($("q").value || "").trim().toLowerCase();
+  const v = $("fVerdict").value, b = $("fBody").value, bn = $("fBand").value, p = $("fPolarity").value;
+  const cat = $("fCategory").value, sc = +$("fScore").value || 0, ct = +$("fContrast").value || 0, strip = $("fStrip").checked;
+  const sort = $("fSort").value;
+  let L = (DATA.features || []).filter(f => {
+    if (v && !f.verdicts.includes(v)) return false;
+    if (b && f._body !== b) return false;
+    if (bn && !f.bands.includes(bn)) return false;
+    if (p && f.members && f.members.some(m => m.polarity !== p)) return false;
+    if (cat && (f.category || "irregular") !== cat) return false;
+    if (f.max_score < sc) return false;
+    if (f.max_contrast < ct) return false;
+    if (strip && !f._strip) return false;
+    if (q) {
+      const hay = JSON.stringify(f).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  switch (sort) {
+    case "score": L.sort((a, b) => (b.max_score || 0) - (a.max_score || 0)); break;
+    case "contrast": L.sort((a, b) => (b.max_contrast || 0) - (a.max_contrast || 0)); break;
+    case "area": L.sort((a, b) => (b.area || 0) - (a.area || 0)); break;
+    case "x": L.sort((a, b) => (a.x || 0) - (b.x || 0)); break;
+    default: L.sort((a, b) => a.base.localeCompare(b.base));
+  }
+  return L;
+}
+function render() {
+  const L = filtered();
+  N = L.length;
+  $("count").innerHTML = `${fmt(N)} of ${fmt(DATA.features.length)} distinct anomalies` + ($("q").value ? ` for "${esc($("q").value)}"` : "");
+  const el = $("cards"); el.innerHTML = ""; showCount = 12;
+  el.innerHTML = L.slice(0, showCount).map(card).join("") || '<div class="empty" style="grid-column:1/-1">No anomalies match your filters</div>';
+  $("moreBtn").style.display = N > showCount ? "block" : "none";
+}
+function showMore() {
+  const L = filtered(); showCount += 12;
+  $("cards").insertAdjacentHTML("beforeend", L.slice(showCount - 12, showCount).map(card).join(""));
+  $("moreBtn").style.display = N > showCount ? "block" : "none";
+}
+function card(f) {
+  const img = f._strip ? `<img src="../${f._strip}" loading="lazy" alt="${esc(f.base)}"><div class="band-strip">${f.bands.map(b => { const colors = { MIRB: "#e05c5c", MRGB: "#e0a83c", RED: "#35c46b" }; return `<div style="background:${colors[b] || '#4aa3ff'}"></div>`; }).join("")}</div>`
+    : `<div style="padding:40px;color:var(--faint);font-family:var(--mono);font-size:12px;text-align:center">${esc(f.base)}</div>`;
+  const cls = f.verdict === "CONFIRMED-LEAD" ? "b-green" : "b-amber";
+  const cat = f.category || "irregular";
+  const catCls = `cat-${cat}`;
+  const mixed = f.verdicts.length > 1 ? bd("mixed", "b-conf") : "";
+  const bandBadges = (f.bands || []).map(x => bd(x, "b-band")).join("");
+  const links = [link(f.path.replace(/\\/g, "/"), "source")];
+  (f.members || []).forEach(m => { if (m.path && m.path !== f.path) links.push(link(m.path.replace(/\\/g, "/"), m.image.split(".")[0].split("_").pop())); });
+  if (f._marked) links.push(link("data/anomalies/marked/" + f._marked, "boxed"));
+  if (f._obs) links.push(`<a href="https://hirise.lpl.arizona.edu/${f._obs}" target="_blank" rel="noopener">${f._obs}</a>`);
+  if (f._strip) links.push(link(f._strip, "strip"));
+  return `<div class="card" onclick="openLightbox('${esc(f.base)}', '${esc(f._strip || '')}', ${f.max_score || 0}, '${cat}', '${esc(f.recommendation || '')}', '${esc(f.category_desc || '')}', ${f.area || 0}, '${esc(f._obs || '')}')">
+    <div class="imgbox">${img}<span class="view-btn">🔍 View</span></div>
+    <div class="ttl">${esc(f.base)}</div>
+    <div class="tbadges">${bd(f.verdict, cls)}${mixed}${bd(f._body, "b-body")}${bandBadges}${bd(f.polarity, "b-polarity")}${bd(f.confidence, "b-conf")}${f.flags.length ? bd(f.flags.join(","), "b-conf") : ""}${bd(cat, catCls)}</div>
+    <div class="meta">
+      <span>score</span><b>${f.max_score || "N/A"}</b>
+      <span>contrast</span><b>${f.max_contrast || "N/A"}</b>
+      <span>area</span><b>${fmt(f.area || 0)} px</b>
+      <span>polarity</span><b>${f.polarity || "N/A"}</b>
+    </div>
+    <div class="links">${links.join("")}</div>
+  </div>`;
+}
+
+/* === FINDINGS === */
+(function() {
+  if (!DATA.findings || !DATA.findings.length) { $("findings").innerHTML = '<div class="empty">No findings available.</div>'; return; }
+  $("findings").innerHTML = DATA.findings.map(f => {
+    const img = f.strip ? `<div class="imgbox" style="max-width:400px;margin:8px auto"><a href="../${f.strip}"><img loading="lazy" src="../${f.strip}" style="max-height:200px;width:auto;margin:0 auto;display:block"></a></div>` : "";
+    const cls = f.status === "EXPLAINED" ? "b-EXPLAINED" : "b-OPEN";
+    const links = [];
+    if (f.path) links.push(link(f.path, "source"));
+    if (f.strip) links.push(link(f.strip, "strip"));
+    if (f.marked) links.push(link("data/anomalies/marked/" + f.marked, "boxed"));
+    return `<details class="fcard"><summary><span class="fid">${esc(f.id)}</span>${bd(f.status, cls)}${bd("evidence " + (f.evidence_class || "?"), "b-conf")}<span style="color:var(--dim);font-family:var(--mono);font-size:12px">${esc(f.file)}</span></summary>
+      ${img}<div class="fbody">${f.html}<p style="margin-top:8px">${links.join(" &middot; ")}</p></div></details>`;
+  }).join("");
+})();
+
+/* === GALLERIES === */
+(function() {
+  if (DATA.sources && DATA.sources.length) {
+    $("sources").innerHTML = DATA.sources.map(s => `<a class="g" href="../${s.file}" onclick="openLightbox('${esc(s.file.split('/').pop())}', '${esc(s.file)}', 0, '', '', '', 0, '')"><img loading="lazy" src="${s.thumb}"><div class="cap"><b>${esc(s.body)}</b>${esc(s.file.split("/").pop())}<br>${s.w}&times;${s.h} &middot; ${fmt(s.size / 1048576)} MB</div></a>`).join("");
+  }
+  if (DATA.marked && DATA.marked.length) {
+    $("marked").innerHTML = DATA.marked.map(m => `<a class="g" href="../data/anomalies/marked/${m}" onclick="openLightbox('${esc(m)}', '../data/anomalies/marked/${m}', 0, '', '', '', 0, '')"><img loading="lazy" src="img/marked/${m.replace(".png", ".jpg")}"><div class="cap"><b>boxed</b>${esc(m)}</div></a>`).join("");
+  }
+})();
+
+/* === CHARTS (upgraded) === */
+const SVGNS = "http://www.w3.org/2000/svg";
+function svg(w, h) { return `<svg xmlns="${SVGNS}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="transition:all 0.3s ease">` }
+function histBins(values, bins) { if (!values.length) return []; const lo = Math.min(...values), hi = Math.max(...values); const span = (hi - lo) || 1; const out = Array(bins).fill(0); for (const v of values) { let i = Math.floor((v - lo) / span * bins); i = Math.min(bins - 1, Math.max(0, i)); out[i]++ } return { out, lo, hi } }
+function renderHist(el, values, bins = 24) {
+  const { out, lo, hi } = histBins(values, bins); const W = 300, H = 160, pad = 28; const mx = Math.max(1, ...out); let s = svg(W, H);
+  s += `<line x1="${pad}" y1="${H - pad}" x2="${W - 4}" y2="${H - pad}" stroke="var(--line)" stroke-width="1"/>`;
+  s += `<line x1="${pad}" y1="4" x2="${pad}" y2="${H - pad}" stroke="var(--line)" stroke-width="1"/>`;
+  const bw = (W - pad - 4) / out.length;
+  out.forEach((c, i) => { const h = c / mx * (H - pad - 12); const x = pad + i * bw; s += `<rect x="${x + 1}" y="${H - pad - h}" width="${Math.max(1, bw - 2)}" height="${h}" fill="#4aa3ff" opacity="0.85" rx="2"><title>${lo + (hi - lo) * i / bins} – ${lo + (hi - lo) * (i + 1) / bins}: ${c}</title></rect>` });
+  if (out.length) { s += `<text x="${pad}" y="${H - pad + 12}" font="10px Consolas" fill="var(--faint)">${fmt(lo)}</text><text x="${W - 4}" y="${H - pad + 12}" text-anchor="end" font="10px Consolas" fill="var(--faint)">${fmt(hi)}</text><text x="${pad + 6}" y="14" font="10px Consolas" fill="var(--faint)">n=${fmt(values.length)}</text>` }
+  s += "</svg>"; el.innerHTML = s;
+}
+function renderScatter() {
+  const F = DATA.features; const pts = F.filter(f => f.max_score > 0 || f.max_contrast > 0);
+  if (!pts.length) { $("chScatter").innerHTML = "<div style='color:var(--faint);padding:40px;text-align:center'>No data</div>"; return; }
+  const X = pts.map(f => f.max_contrast), Y = pts.map(f => f.max_score);
+  const xm = Math.max(0.1, ...X), ym = Math.max(1, ...Y); const W = 320, H = 220, pad = 32;
+  const cols = { CONFIRMED-LEAD: "#35c46b", PROMISING: "#e0a83c", TERRAIN: "#7fd4e8", WEAK: "#a68bff", NOISE: "#5b6b8a", "EXPLAINED-ARTIFACT": "#e05c5c" };
+  let s = svg(W, H);
+  s += `<rect x="${pad}" y="4" width="${W - 2 * pad}" height="${H - 2 * pad}" fill="rgba(13,18,32,0.5)" stroke="var(--line)" rx="4"/>`;
+  s += `<line x1="${pad}" y1="${H - pad}" x2="${W - 4}" y2="${H - pad}" stroke="var(--line)"/><line x1="${pad}" y1="4" x2="${pad}" y2="${H - pad}" stroke="var(--line)"/>`;
+  for (const f of pts.sort((a, b) => b.area - a.area)) {
+    const x = pad + (f.max_contrast / xm) * (W - pad - 8), y = H - pad - (f.max_score / ym) * (H - pad - 18);
+    const r = Math.min(10, 2 + 4 * Math.sqrt(f.area / 5000));
+    const col = cols[f.verdict] || "#8ea0bf";
+    s += `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" opacity="0.75" stroke="${col}" stroke-width="0.5"><title>${esc(f.base)} | contrast ${f.max_contrast}, score ${f.max_score}, area ${f.area} px | ${f.verdict}</title></circle>`;
+  }
+  s += `<text x="${W - 4}" y="${H - pad + 12}" font="10px Consolas" fill="var(--dim)" text-anchor="end">contrast →</text>`;
+  s += `<text x="8" y="12" font="10px Consolas" fill="var(--dim)">↑ score</text>`;
+  s += "</svg>"; $("chScatter").innerHTML = s;
+}
+function renderDonut() {
+  const F = DATA.features; if (!F.length) { $("chDonut").innerHTML = "<div style='color:var(--faint);padding:40px;text-align:center'>No data</div>"; return; }
+  const cols = { CONFIRMED-LEAD: "#35c46b", PROMISING: "#e0a83c", TERRAIN: "#7fd4e8", WEAK: "#a68bff", NOISE: "#5b6b8a", "EXPLAINED-ARTIFACT": "#e05c5c" };
+  const order = ["CONFIRMED-LEAD", "PROMISING", "TERRAIN", "WEAK", "NOISE", "EXPLAINED-ARTIFACT"];
+  const cnt = {}; F.forEach(f => cnt[f.verdict] = (cnt[f.verdict] || 0) + 1); const tot = F.length || 1;
+  let acc = 0; const cx = 160, cy = 100, r = 72; let s = svg(320, 200); let prev = 0;
+  for (const k of order) {
+    const v = cnt[k] || 0; if (!v) continue;
+    const a0 = prev, a1 = prev + v / tot * Math.PI * 2; prev = a1; if (a1 <= a0) continue;
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const x0 = cx + r * Math.cos(a0 - Math.PI / 2), y0 = cy + r * Math.sin(a0 - Math.PI / 2);
+    const x1 = cx + r * Math.cos(a1 - Math.PI / 2), y1 = cy + r * Math.sin(a1 - Math.PI / 2);
+    s += `<path d="M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} Z" fill="${cols[k]}" stroke="#0b0e14" stroke-width="2"><title>${k}: ${v} (${Math.round(v / tot * 100)}%)</title></path>`;
+  }
+  s += `<circle cx="${cx}" cy="${cy}" r="${r * 0.5}" fill="var(--bg)"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font="bold 16px system-ui" fill="#fff">${F.length}</text><text x="${cx}" y="${cy + 12}" text-anchor="middle" font="10px Consolas" fill="var(--dim)">features</text>`;
+  s += `<text x="6" y="20" font="10px Consolas" fill="var(--dim)">` + order.map(k => cnt[k] ? `<tspan fill="${cols[k]}">●</tspan> ${k}: ${cnt[k]}  ` : "").join("") + `</text>`;
+  s += "</svg>"; $("chDonut").innerHTML = s;
+}
+function renderPolar() {
+  const F = DATA.features; if (!F.length) { $("chPolar").innerHTML = "<div style='color:var(--faint);padding:40px;text-align:center'>No data</div>"; return; }
+  const pol = { bright: 0, dark: 0 }; const bands = {};
+  F.forEach(f => { pol[f.polarity] = (pol[f.polarity] || 0) + 1; (f.bands || []).forEach(b => bands[b] = (bands[b] || 0) + 1); });
+  const W = 300, H = 200, pad = 26;
+  let s = svg(W, H);
+  const items = Object.entries(pol), mx = Math.max(1, ...items.map(i => i[1]));
+  let t = `<text x="${pad}" y="14" font="10px Consolas" fill="var(--dim)">polarity</text>`;
+  items.forEach(([k, v], i) => { const y = 22 + i * 36; const bw = v / mx * (W - pad - 40); s += `<rect x="${pad}" y="${y}" width="${bw}" height="22" rx="3" fill="${k === "bright" ? "#e8c66a" : "#6a7fd8"}" opacity="0.85"><title>${k}: ${v}</title></rect><text x="${pad + 4}" y="${y + 14}" font="10px Consolas" fill="#0b0e14" font-weight="bold">${k} ${v}</text>` });
+  if (Object.keys(bands).length) {
+    const items2 = Object.entries(bands), mx2 = Math.max(1, ...items2.map(i => i[1]));
+    t += `<text x="${pad}" y="${H - 6}" font="10px Consolas" fill="var(--dim)">band variants:</text>`;
+    items2.forEach(([k, v], i) => { const y = H - 28 + i * 18, bw = v / mx2 * (W - pad - 40); t += `<rect x="${pad}" y="${y}" width="${bw}" height="12" rx="2" fill="#7fd4e8" opacity="0.7"/><text x="${pad + 4}" y="${y + 9}" font="8px Consolas" fill="var(--dim)">${k} ${v}</text>` });
+  }
+  s += t + "</svg>"; $("chPolar").innerHTML = s;
+}
+function renderSpace() {
+  const F = DATA.features, pts = F.filter(f => f.w > 0 && f.h > 0); if (!pts.length) { $("chSpace").innerHTML = "<div style='color:var(--faint);padding:40px;text-align:center'>No data</div>"; return; }
+  const W = 300, H = 240, pad = 14; const cols = { CONFIRMED-LEAD: "#35c46b", PROMISING: "#e0a83c", TERRAIN: "#7fd4e8", WEAK: "#a68bff", NOISE: "#5b6b8a" };
+  let s = svg(W, H); s += `<rect x="${pad}" y="${pad}" width="${W - 2 * pad}" height="${H - 2 * pad}" fill="rgba(13,18,32,0.5)" stroke="var(--line)" rx="4"/>`;
+  for (const f of pts) { const nx = (f.x || 0) / (f.w || 1), ny = (f.y || 0) / (f.h || 1); if (nx < 0 || nx > 1 || ny < 0 || ny > 1) continue; const px = pad + nx * (W - 2 * pad), py = pad + ny * (H - 2 * pad); s += `<circle cx="${px}" cy="${py}" r="2.8" fill="${cols[f.verdict] || "#8ea0bf"}" opacity="0.65"><title>${esc(f.base)} at (${f.x},${f.y})</title></circle>` }
+  s += `<text x="${pad + 4}" y="${H - pad + 10}" font="10px Consolas" fill="var(--dim)">normalised x →</text><text x="6" y="12" font="10px Consolas" fill="var(--dim)">↑ y</text></svg>`; $("chSpace").innerHTML = s;
+}
+function renderRigor() {
+  const F = DATA.features; const g = F.filter(f => f.grid_energy !== undefined).map(f => f.grid_energy);
+  const e = F.filter(f => f.edge_sharpness !== undefined).map(f => f.edge_sharpness);
+  const st = F.filter(f => f.contrast_stability !== undefined).map(f => f.contrast_stability);
+  const rows = [["grid-energy", g], ["edge sharpness", e], ["contrast stability", st]];
+  let s = `<table><tr><th>metric</th><th>median</th><th>mean</th></tr>`;
+  for (const [n, v] of rows) {
+    if (!v.length) { s += `<tr><td>${n}</td><td colspan="2" style="color:var(--faint)">re-run analyze.py</td></tr>`; continue; }
+    const sorted = [...v].sort((a, b) => a - b); const med = sorted[Math.floor(sorted.length / 2)]; const mean = v.reduce((a, b) => a + b, 0) / v.length;
+    s += `<tr><td>${n}</td><td>${fmt(med)}</td><td>${fmt(mean)}</td></tr>`;
+  }
+  s += `</table><div class="cap">${F.length} features · high grid-energy = periodic sensor/compression structure</div>`;
+  $("chRigor").innerHTML = s;
+}
+function renderAllCharts() { renderHist($("chScore"), DATA.features.map(f => f.max_score)); renderHist($("chContrast"), DATA.features.map(f => f.max_contrast)); renderHist($("chArea"), DATA.features.map(f => Math.log10(1 + f.area)), 24); renderScatter(); renderDonut(); renderPolar(); renderSpace(); renderRigor(); }
+
+/* === TIMELINE === */
+(function() {
+  const evCols = { analyze: "#4aa3ff", benchmark: "#35c46b", adjudicate: "#e0a83c", chase_leads: "#a68bff" };
+  const tl = $("timeline");
+  if (!DATA.audit || !DATA.audit.length) { tl.innerHTML = '<p class="empty">No audit records found (run the pipeline first).</p>'; return; }
+  const items = DATA.audit.map(r => {
+    const ev = r.event || "run"; const det = [];
+    for (const k of ["candidates", "evaluated", "adjudicated", "top_leads", "negative_control_fp", "n_detections", "recall", "fdr_q"]) { if (r[k] !== undefined && r[k] !== null) det.push(`<b>${k}</b> ${Array.isArray(r[k]) ? r[k].join("/") : r[k]}`); }
+    if (r.seconds !== undefined) det.push(`<b>elapsed</b> ${r.seconds}s`);
+    if (r.cmd) det.push(`<span style="color:var(--faint)">${esc(String(r.cmd).slice(0, 140))}</span>`);
+    return `<li><span class="ev">${esc(ev)}</span><span class="ev-badge" style="border-color:${evCols[ev] || 'var(--line)'}">${esc(ev)}</span><br><span class="ts">${esc(r.ts || "—")} · ${esc(r.out || "")}</span><div class="det">${det.join(" &middot; ") || "—"}</div></li>`;
+  }).join("");
+  tl.innerHTML = `<ul class="timeline">${items}</ul>`;
+})();
+
+/* === SEARCH HISTORY === */
+const LS_KEY = "nasa_inves_v2_history";
+function getHist() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]") } catch (e) { return [] } }
+function setHist(h) { try { localStorage.setItem(LS_KEY, JSON.stringify(h.slice(0, 24))) } catch (e) { } }
+function currentState() { return { q: $("q").value.trim(), verdict: $("fVerdict").value, body: $("fBody").value, band: $("fBand").value, polarity: $("fPolarity").value, category: $("fCategory").value, score: $("fScore").value, contrast: $("fContrast").value, strip: $("fStrip").checked } }
+function saveSearch() {
+  const st = currentState(); if (!st.q && !st.verdict && !st.body && !st.band && !st.polarity && !st.score && !st.contrast && !st.category) return;
+  let h = getHist(); h = h.filter(x => JSON.stringify(x) !== JSON.stringify(st)); h.unshift(st); setHist(h); renderHistRow(); renderSugg();
+}
+function applyState(st) { $("q").value = st.q || ""; $("fVerdict").value = st.verdict || ""; $("fBody").value = st.body || ""; $("fBand").value = st.band || ""; $("fPolarity").value = st.polarity || ""; $("fScore").value = st.score || 0; $("fContrast").value = st.contrast || 0; $("fCategory").value = st.category || ""; $("fStrip").checked = !!st.strip; render(); window.scrollTo({ top: $("cards").offsetTop - 100, behavior: "smooth" }); }
+function renderHistRow() {
+  const h = getHist(), el = $("histRow") || document.getElementById("histRow"); if (!h.length) { if (el) el.style.display = "none"; return; }
+  if (el) { el.style.display = "flex"; el.innerHTML = `<span class="lbl">History:</span>` + h.map((st, i) => `<span class="hchip" onclick="applyState(getHist()[${i}])">${esc(st.q || (st.verdict || st.body || st.band || "search"))}<span class="x" onclick="event.stopPropagation();removeHist(${i})" title="remove">&#10005;</span></span>`).join("") + `<button class="action" style="padding:2px 8px" onclick="clearHistory()">clear</button>`; }
+}
+function removeHist(i) { const h = getHist(); h.splice(i, 1); setHist(h); renderHistRow(); }
+function clearHistory() { setHist([]); renderHistRow(); }
+function clearFilters() { $("q").value = ""; $("fVerdict").value = ""; $("fBody").value = ""; $("fBand").value = ""; $("fPolarity").value = ""; $("fScore").value = 0; $("fContrast").value = 0; $("fCategory").value = ""; $("fStrip").checked = false; render(); }
+function doSearch() { render(); saveSearch(); }
+const SUGG = ["CONFIRMED-LEAD", "PROMISING", "bright", "dark", "Mars", "Moon", "crater", "boulder", "albedo", "ESP_", "high contrast"];
+function renderSugg() { let sug = document.getElementById("suggRow"); if (!sug) return; sug.innerHTML = `<span style="font-size:11px;color:var(--faint)">Try:</span>` + SUGG.map(t => `<span class="sugg" onclick="document.getElementById('q').value='${t}';render();saveSearch()">${t}</span>`).join(""); }
+
+/* === KEYBOARD: Enter on main search === */
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") { render(); saveSearch(); } });
+$("aiQuery").addEventListener("keydown", e => { if (e.key === "Enter") runAIQuery(); });
+
+/* === INIT === */
+renderAllCharts();
+renderSugg();
+render();
+</script>
+</body>
+</html>

@@ -89,6 +89,12 @@ FIELDS = [
     "solar_elevation",
     "pixel_scale_m",
     "spacecraft_altitude_km",
+    "dtm_post_spacing_m",
+    "dtm_valid_min_m",
+    "dtm_valid_max_m",
+    "dtm_rms_total_px",
+    "dtm_rms_z_m",
+    "dtm_known_artifacts",
 ]
 
 
@@ -125,6 +131,14 @@ def process_file(root, path):
         "solar_elevation": geo.get("solar_elevation") or "",
         "pixel_scale_m": geo.get("pixel_scale_m") or "",
         "spacecraft_altitude_km": geo.get("spacecraft_altitude_km") or "",
+        # stereo-DTM provenance, from the pair's README.TXT (DTM/ortho products
+        # ship no per-image PDS label, so this is their only geometry source)
+        "dtm_post_spacing_m": geo.get("dtm_post_spacing_m") or "",
+        "dtm_valid_min_m": geo.get("dtm_valid_min_m") or "",
+        "dtm_valid_max_m": geo.get("dtm_valid_max_m") or "",
+        "dtm_rms_total_px": geo.get("dtm_rms_total_px") or "",
+        "dtm_rms_z_m": geo.get("dtm_rms_z_m") or "",
+        "dtm_known_artifacts": ",".join(geo.get("dtm_known_artifacts") or []),
     }
 
 

@@ -39,6 +39,8 @@ A rigorous, reproducible pipeline for analyzing **public NASA HiRISE PDS imagery
 
 **Design law:** EXTRAS-only acquisition from a single sanctioned source (`https://hirise-pds.lpl.arizona.edu/PDS/EXTRAS/`), comparing complete variant sets (B&W ↔ filtered ↔ ortho ↔ DTM) pixel-for-pixel to separate terrain from processing artifacts.
 
+> **🧠 v2 Upgrade — AI-Powered Intelligence:** Natural language query engine, smart anomaly categorization (crater/boulder/albedo/linear/artifact), AI-generated summaries & insights, vision LLM integration, and a redesigned gallery with masonry layout, lightbox viewer, glassmorphism UI, interactive map, and onboarding tour. See [UPGRADE.md](UPGRADE.md) for full details.
+
 <p align="center">
   <em><code>// DECORATIVE READOUT: NOT A FACTUAL CLAIM</code></em>
 </p>

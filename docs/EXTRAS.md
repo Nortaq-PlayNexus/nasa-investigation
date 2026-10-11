@@ -207,7 +207,197 @@ Integration with the main pipeline:
 
 ---
 
-## 9. What is NOT allowed
+## 9. Whole-site catalogue + systematic pass
+
+The exemplar path above fetches one footprint. The site as a whole is far
+larger, so acquisition runs in two stages.
+
+### 9a. `scripts/catalog_extras_site.py` — index the whole tree
+
+Walks every branch of the live Apache index and writes one organised JSON of
+every footprint and every product. No image bytes are fetched.
+
+```bash
+python scripts/catalog_extras_site.py --workers 6 --scales core
+```
+
+Outputs `data/catalog/extras_site.json` (hierarchical),
+`extras_site.csv` (one row per product) and `extras_summary.json`
+(counts + byte budget). Listings are cached under `data/catalog/extras_listings/`
+keyed by URL hash, so the crawl is **resumable** and a re-run costs zero
+requests. Use `--branches`, `--shard-limit`, `--footprint-limit` for trials and
+`--append` to add a branch to an existing catalogue.
+
+**Host behaviour (measured).** The PDS host answers roughly one index request
+per 10 s and starts returning `HTTP 503` beyond ~8 concurrent connections, so
+raising `--workers` trades real throughput for errors. The crawler treats a
+503 as "over the limit right now" and makes every worker back off, which keeps
+the crawl inside the host's envelope instead of hammering it.
+
+### 9b. `scripts/extras_pass.py` — one image at a time, full pipeline
+
+Walks the catalogue in a fixed order and takes every footprint through
+acquire → catalog → detect → mark/triage → analyze → adjudicate → record,
+writing a per-image `report.json` and appending to `index.jsonl`.
+
+```bash
+python scripts/extras_pass.py --plan                 # the plan and the disk budget
+python scripts/extras_pass.py --limit 3               # a bounded trial
+python scripts/extras_pass.py                         # the whole site
+python scripts/extras_pass.py --status                # progress, no network
+```
+
+Order is a pure function of the catalogue: branch scientific priority
+(`extras_taxonomy.BRANCH_PRIORITY` — RDR/ESP, DTM/ESP, RDR/PSP … legacy EDR
+last), then orbit, then footprint. Resume is derived from each image's
+`report.json`, not from an in-memory map, so state stays a fixed size. The run
+stops cleanly on `--limit`, `--max-hours` or `--disk-floor-gb` and picks up
+where it left off.
+
+### 9c. What the comparison reference must be
+
+`extras_compare` aligns every sibling to the **map-projected B&W RED full
+browse**. Ranking candidates by "is it a browse" and then by file size silently
+picks `*_RED.NOMAP.browse.jpg`, which is the *largest* B&W product in a
+typical RDR set and is in raw detector geometry — aligning to it drags a
+registration error into every measurement. The acquisition pass pins the
+reference explicitly so detection coordinates and comparison coordinates can
+never disagree.
+
+Cross-variant persistence, measured by `extras_compare` on the same terrain in
+every band, is the adjudicator's *second* route to a verdict. It matters
+because with reference-only detection there is exactly one detection image per
+footprint, so `cross_band_agreement` has no sibling detections to compare and
+`agrees` would otherwise always be 0 — every candidate parked at `PROMISING`,
+with `CONFIRMED-LEAD` and `TERRAIN` unreachable.
+
+The reading of that evidence is deliberately conservative:
+
+| cross-rendering result | verdict | meaning |
+|---|---|---|
+| holds in another rendering, contrast ≥ bar, compact | `CONFIRMED-LEAD` | a real feature worth an independent check |
+| holds in another rendering, below the bar | `TERRAIN` | real, and ordinary — persistence is the *null* result |
+| vanishes in **every** other rendering | `BAND-DEPENDENT` | tracks the reference rendering, not the ground |
+| on a product from a stereo DTM | `DTM-ARTIFACT-RISK` | the terrain model has declared defects; not usable as a surface feature |
+
+Per §6, a feature surviving B&W → colour → ortho → DTM *is terrain*.
+Persistence therefore demotes to `TERRAIN` by default and only promotes a
+candidate when it is also compact, plausibly sized and above the contrast bar.
+Neither outcome is a finding: that needs an independent acquisition at
+different lighting.
+
+### 9d. Provenance, and where the geometry comes from
+
+Nothing in a candidate's record is invented; each field has one source, and the
+source is recorded.
+
+| field | RDR / ortho browse | DTM derivative |
+|---|---|---|
+| solar incidence, azimuth, elevation | the product's own `*.LBL` | borrowed from the source RDR observation, whose ids the pair README lists |
+| pixel scale | `MAP_SCALE` (or `MAP_RESOLUTION` × local radius) | the README's "Post spacing in DTM is N m" |
+| observation, target, instrument | label | README "PROJECT NAME" + "HIRISE SOURCE IMAGES" |
+| stereo quality | — | README RMS x/y/z, total RMS px, MOLA difference |
+
+Two traps in the EXTRAS naming, both of which produce confidently wrong numbers:
+
+- **Grid spacing is not in the filename.** The letter in `..._A01` / `..._U01`
+  is the producing *institution* (A = Arizona, U = USGS), not the grid
+  spacing, as the README's own naming-convention section invites you to
+  read. Post spacing appears only in prose.
+- **A label describes the product, not every rendering of it.** Resolving a
+  `.thumb.jpg` to the map-projected label makes it inherit that label's
+  `MAP_SCALE` verbatim, reporting a thumbnail at full-browse resolution.
+  Ground sample distance belongs to the rendering, so it is corrected from
+  actual pixel widths and copied only between products sharing an identical
+  geometry and scale class. A wrong scale is worse than a missing one: the
+  adjudicator multiplies shadow length by it to infer a physical height.
+
+Verification that the correction is right: every product in a footprint then
+reports the same ground footprint, e.g. `2048 px × 0.5 m`, `1024 px × 1.0 m`
+and `512 px × 2.0 m` all give 1024 m.
+
+### 9e. Supervision — surviving the hours
+
+Indexing the whole tree takes many hours at the host's ~1 req/s, and the jobs
+had been killed by server restarts four times. Both are resumable — the listing
+cache and per-image `report.json` files mean a restart costs nothing — but
+something had to restart them:
+
+```bash
+python scripts/run_extras_pipeline.py --both      # supervise catalogue + pass
+python scripts/run_extras_pipeline.py --status    # health, no side effects
+```
+
+It restarts a job on a non-zero exit with capped exponential backoff, kills and
+relaunches one that makes no progress for `--catalogue-stall` / `--pass-stall`
+seconds, and stops cleanly on SIGINT/SIGTERM or `--max-hours`. A clean exit is
+treated as final: both jobs exit 0 when finished, or when a budget such as
+`--disk-floor-gb` stops them, and relaunching on rc=0 would just spin.
+
+The two jobs run together but the pass is throttled to `--pass-file-workers`
+(default 2) so total in-flight requests stay near the host's 503 threshold.
+
+### 9f. Reading progress honestly
+
+`extras_pass.py --status` reports throughput from a **trailing window of 50
+images**, not a lifetime average. A `--force` reprocess re-adjudicates
+already-fetched images and skips the ~40 s download, so a lifetime average can
+report >100 images/min while a fresh image genuinely takes that long. The
+window reflects the current mix of work; the lifetime figure is still reported,
+labelled as not comparable. Download and analysis seconds are accumulated
+separately, since the pass is network-bound, not compute-bound.
+
+### 9g. Scale, geometry, and what actually fits
+
+Two orthogonal knobs, because they cut different costs:
+
+`--scales` — which render scales count as the comparison unit:
+
+| set | contents |
+|---|---|
+| `thumb` | `.thumb.jpg` only — a cheap full-site index pass |
+| `browse` | `.browse.jpg` only |
+| `core` (default) | `.browse.jpg` + `.thumb.jpg` |
+| `full` | + the half-res `.abrowse.jpg` |
+
+`--geometries` — which geometry classes are in budget:
+
+| set | contents |
+|---|---|
+| `map` (default) | map-projected, orthorectified, DTM and anaglyph products |
+| `all` | + raw detector geometry (`NOMAP`) and quicklooks |
+
+Full-resolution JP2s are never fetched unless `--max-fullres-mb` is set.
+
+**Why `map` is the default.** Measured over ~7,600 real RDR footprints, an
+`*_RED.NOMAP.browse.jpg` averages 5.6 MB against 2.3 MB for the map-projected
+`*_RED.browse.jpg` — NOMAP preserves native detector resolution while the
+projected product is resampled onto a common grid. Across a whole observation
+that is ~9.5 MB of the ~18 MB budget:
+
+| policy | per footprint | RDR/ESP alone (~83k observations) |
+|---|---|---|
+| all geometries | ~18.0 MB | ~1489 GB |
+| `map` only | ~8.5 MB | ~705 GB |
+| `thumb` only | ~1.2 MB | ~102 GB |
+
+The science survives the cut. The documented debunk path is B&W RED → filtered
+colour → orthorectified → DTM-shaded, and every one of those is map-projected.
+`extras_compare` already scores the NOMAP siblings as STRONG DIVERGENCE
+(`mean_abs_diff` ~0.32) precisely because they are in a different geometry, so
+they confirm coverage rather than morphology. A footprint still ships its
+complete cross-rendering set: RED (the reference) + MIRB + MRGB + COLOR, each
+at browse and thumbnail scale, plus the PDS labels.
+
+**A whole-site `map` acquisition is the only policy that fits one volume.**
+`--plan` reports the byte budget and where the disk floor will land; because
+the order is priority-ordered, the archive fills with the most scientifically
+useful data first, and legacy `EDR/` (which `docs/EXTRAS.md` §2 already marks
+as "not used") is reached last.
+
+---
+
+## 10. What is NOT allowed
 
 - Fetching from `images-api.nasa.gov`, `mars.nasa.gov/rss`, `pds-imaging.jpl.nasa.gov`,
   ESA PSA, or any non-EXTRAS mirror. Those scripts remain in `scripts/` only as
@@ -216,6 +406,9 @@ Integration with the main pipeline:
   downloader groups siblings; the comparator assumes a B&W baseline exists.
 - Trusting JP2 full-res without the browse set — browses are the comparison unit;
   JP2s are gated by `--max-size-mb` and are optional for the variant-set contract.
+- Treating a `NOMAP` product as the comparison reference, or propagating one
+  product's pixel scale onto a rendering with a different ground scale
+  (a thumbnail, or a detector-geometry product).
 
 ---
 

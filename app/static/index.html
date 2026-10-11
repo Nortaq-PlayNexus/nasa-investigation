@@ -3,161 +3,356 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NASA Investigation — Full Stack Dashboard</title>
+<title>NASA Investigation v2 — Full Stack Dashboard</title>
+<meta name="description" content="Premium AI-powered NASA anomaly investigation dashboard.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <style>
-:root{--bg:#070a12;--panel:#111827;--panel2:#1a2336;--line:#243045;--txt:#dce6fb;--dim:#8ea0bf;--faint:#5b6b8a;--green:#35c46b;--amber:#e0a83c;--red:#e05c5c;--blue:#4aa3ff;--purple:#a68bff;--mono:Consolas,monospace}
+/* === PREMIUM DASHBOARD THEME v2 === */
+:root{
+  --bg:#050810;--bg2:#0a0e1a;--panel:rgba(15,20,35,0.85);--panel2:rgba(20,26,42,0.9);
+  --line:rgba(40,50,75,0.5);--line2:rgba(55,65,95,0.4);--txt:#e8eef8;--dim:#a0b0cc;
+  --faint:#6b7c9a;--green:#35c46b;--amber:#e0a83c;--red:#e05c5c;--blue:#4aa3ff;
+  --purple:#a68bff;--cyan:#5be9e8;--pink:#f78da7;--mono:'SF Mono','Fira Code','Cascadia Mono',Consolas,monospace;
+  --radius:14px;--glass:rgba(255,255,255,0.03);--glass-border:rgba(255,255,255,0.07);
+  --shadow:0 8px 32px rgba(0,0,0,0.4);--shadow-lg:0 16px 48px rgba(0,0,0,0.5);
+  --shadow-glow:0 0 40px rgba(74,163,255,0.1);
+  --transition:0.3s cubic-bezier(0.4,0,0.2,1);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font:14px/1.5 system-ui,Segoe UI,sans-serif;padding:0 0 60px}
-a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
-header{position:sticky;top:0;z-index:20;background:rgba(7,10,18,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 18px}
-.top{max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-h1{font-size:18px;letter-spacing:.3px}
-h1 b{color:var(--blue)}
-.pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font:11px var(--mono);color:var(--dim)}
-.pill i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
-nav{display:flex;gap:8px;flex-wrap:wrap}
-.navbtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
-.navbtn:hover{border-color:var(--blue)}
-.navbtn.primary{background:var(--blue);color:#081425;border-color:var(--blue);font-weight:700}
-.wrap{max-width:1280px;margin:0 auto;padding:18px}
-.grid{display:grid;grid-template-columns:1.35fr .85fr;gap:14px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
-.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:8px;border:none;padding:0}
-.card h3{font-size:14px;margin:10px 0 6px}
-.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
-.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.stat .k{font:10px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
-.stat .v{font-size:20px;font-weight:700;margin-top:2px}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font:11px var(--mono);color:var(--dim)}
-.badge{display:inline-block;padding:1px 8px;border-radius:999px;font:11px var(--mono);font-weight:700}
-.b-green{background:#12301f;color:var(--green);border:1px solid #1d5a38}
-.b-amber{background:#31290f;color:var(--amber);border:1px solid #5c4a17}
-.b-red{background:#2a1818;color:var(--red);border:1px solid #4a2222}
-.b-blue{background:#0d1d2e;color:var(--blue);border:1px solid #1a3a5a}
-.drop{border:1.6px dashed var(--line);border-radius:12px;padding:18px;text-align:center;background:rgba(17,24,39,.6);transition:.15s}
-.drop.drag{border-color:var(--blue);background:rgba(74,163,255,.08)}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font:14.5px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse at 15% 15%,rgba(74,163,255,0.05) 0%,transparent 50%),
+  radial-gradient(ellipse at 85% 85%,rgba(166,139,255,0.04) 0%,transparent 50%),
+  radial-gradient(ellipse at 50% 30%,rgba(53,196,107,0.03) 0%,transparent 50%);
+  pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(40,50,75,0.1) 1px,transparent 1px),linear-gradient(90deg,rgba(40,50,75,0.1) 1px,transparent 1px);
+  background-size:80px 80px;pointer-events:none;z-index:0;mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%)}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:18px 24px 80px}
+a{color:var(--blue);text-decoration:none;transition:color var(--transition)}
+a:hover{color:#7ab8ff}
+h1,h2,h3,h4{color:#fff;line-height:1.3}
+/* === HEADER === */
+header{position:sticky;top:0;z-index:50;background:rgba(5,8,16,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:12px 20px}
+.top{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:18px;letter-spacing:.2px;display:flex;align-items:center;gap:8px}
+h1 .logo{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font:11px var(--mono);color:var(--dim)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;box-shadow:0 0 8px var(--green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;transition:all var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.navbtn:hover{border-color:var(--blue);color:#fff;transform:translateY(-1px)}
+.navbtn.primary{background:linear-gradient(135deg,var(--blue),#3d8aff);color:#fff;border-color:transparent;font-weight:600}
+.navbtn.primary:hover{filter:brightness(1.15);box-shadow:0 4px 12px rgba(74,163,255,0.3)}
+/* === AI BAR === */
+.ai-bar{background:linear-gradient(135deg,rgba(74,163,255,0.1),rgba(166,139,255,0.06));border:1px solid rgba(74,163,255,0.2);border-radius:var(--radius);padding:18px 22px;margin:20px 0;position:relative;overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.ai-bar::before{content:'🧠';position:absolute;top:8px;right:14px;font-size:22px;opacity:0.25}
+.ai-bar h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.ai-bar h3::before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+.ai-bar-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.ai-bar-row input{flex:1;min-width:260px;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:12px 16px;font:14px var(--mono);transition:all var(--transition)}
+.ai-bar-row input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,163,255,0.15)}
+.ai-bar-row .btn{background:linear-gradient(135deg,var(--blue),#3d8aff);border:none;color:#fff;padding:12px 22px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:all var(--transition);display:flex;align-items:center;gap:6px}
+.ai-bar-row .btn:hover{filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 4px 12px rgba(74,163,255,0.3)}
+.ai-bar-row .btn.secondary{background:var(--panel2);border:1px solid var(--line)}
+.ai-bar-row .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;filter:none}
+.ai-bar-results{margin-top:14px;padding:16px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;display:none;animation:fadeInUp 0.3s ease-out}
+.ai-bar-results.active{display:block}
+.ai-summary-box{background:var(--panel);border-radius:10px;padding:16px 20px;font-size:14px;line-height:1.7;margin-bottom:12px;border-left:3px solid var(--blue)}
+.ai-insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px}
+.ai-insight-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;transition:all var(--transition);cursor:pointer}
+.ai-insight-card:hover{border-color:var(--blue);transform:translateX(3px);box-shadow:var(--shadow)}
+.ai-insight-card .priority{display:inline-block;padding:2px 8px;border-radius:6px;font:10px var(--mono);text-transform:uppercase;font-weight:600;margin-bottom:6px}
+.priority-high{background:#1a2010;color:var(--green);border:1px solid #2a3a1a}
+.priority-medium{background:#1a1a08;color:var(--amber);border:1px solid #3a3010}
+.priority-low{background:#0d1118;color:var(--dim);border:1px solid var(--line)}
+.priority-info{background:#0d1118;color:var(--faint);border:1px solid var(--line)}
+/* === STATS === */
+.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:16px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all var(--transition);position:relative;overflow:hidden}
+.stat:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:var(--shadow-glow)}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0;transition:opacity var(--transition)}
+.stat:hover::after{opacity:1}
+.stat .k{color:var(--dim);font:10px var(--mono);text-transform:uppercase;letter-spacing:.8px}
+.stat .v{font-size:22px;font-weight:700;margin-top:4px;background:linear-gradient(135deg,#fff,#9ab8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* === GRID === */
+.grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:border-color var(--transition)}
+.card:hover{border-color:var(--line2)}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:10px;border:none;padding:0;display:flex;align-items:center;justify-content:space-between}
+.card h3{font-size:14px;margin:8px 0 4px}
+/* === DROP ZONE === */
+.drop{border:2px dashed var(--line2);border-radius:var(--radius);padding:28px 20px;text-align:center;background:rgba(15,20,35,0.5);transition:all var(--transition);cursor:pointer;position:relative;overflow:hidden}
+.drop::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(74,163,255,0.05) 0%,transparent 70%);opacity:0;transition:opacity var(--transition)}
+.drop:hover::before,.drop.drag::before{opacity:1}
+.drop:hover,.drop.drag{border-color:var(--blue);background:rgba(74,163,255,0.04)}
+.drop .icon{font-size:36px;margin-bottom:8px;opacity:0.6;transition:transform var(--transition)}
+.drop:hover .icon{transform:scale(1.1)}
+.drop .label{font-weight:600;font-size:14px;margin-bottom:6px}
+.drop .hint{color:var(--dim);font-size:12px}
+.drop .file-info{margin-top:10px;padding:8px 12px;background:var(--panel2);border-radius:8px;font:12px var(--mono);color:var(--cyan);display:none}
 .drop input{display:none}
-.btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px}
-.btn:hover{border-color:var(--blue)}
-.btn.primary{background:var(--blue);color:#081425;border-color:var(--blue);font-weight:700}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-input[type=text],input[type=number],select{background:#0d1220;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 10px;font:12px var(--mono);min-width:0}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{border:1px solid var(--line);padding:5px 8px;text-align:left}
-th{background:var(--panel2);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
-pre{white-space:pre-wrap;word-break:break-word;background:#0a0f1d;border:1px solid var(--line);border-radius:8px;padding:10px;font:11px var(--mono);max-height:240px;overflow:auto}
-.imgbox{background:#000;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
-.imgbox img{width:100%;display:block}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}
-.kv span:nth-child(odd){color:var(--faint)}
-.timeline{border-left:2px solid var(--line);padding-left:14px}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.btn:hover{border-color:var(--blue);color:#fff}
+.btn.primary{background:linear-gradient(135deg,var(--blue),#3d8aff);color:#fff;border-color:transparent;font-weight:600}
+.btn.primary:hover{filter:brightness(1.15);box-shadow:0 4px 12px rgba(74,163,255,0.25)}
+.btn.sm{padding:5px 10px;font-size:11px}
+/* === LEADS TABLE === */
+.leads-header{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.leads-header input{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px 12px;font:12px var(--mono)}
+.leads-header input:focus{outline:none;border-color:var(--blue)}
+.leads-header select{background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font:12px var(--mono)}
+.analysis-table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:8px}
+.analysis-table th,.analysis-table td{border:1px solid var(--line);padding:6px 9px;text-align:left}
+.analysis-table th{background:var(--panel2);color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.analysis-table tr:hover td{background:rgba(74,163,255,0.03)}
+.analysis-table .mono{font-family:var(--mono);font-size:10px}
+/* === PIPELINE === */
+.pipeline-steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.pipeline-step{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:11px var(--mono);cursor:pointer;transition:all var(--transition);display:flex;align-items:center;gap:4px}
+.pipeline-step:hover{border-color:var(--blue);color:#fff}
+.pipeline-step.active{background:rgba(74,163,255,0.12);border-color:var(--blue);color:#fff}
+.pipeline-step.done{background:rgba(53,196,107,0.1);border-color:var(--green);color:var(--green)}
+.pipeline-arrow{color:var(--faint);font-size:14px}
+.pipeline-progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin:8px 0}
+.pipeline-progress .fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:2px;transition:width 0.5s ease}
+/* === MAP PREVIEW === */
+.map-container{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);height:200px;position:relative;overflow:hidden;margin-top:8px}
+.map-container .map-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--faint);font:12px var(--mono);z-index:2}
+.map-container .map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(40,50,75,0.2) 1px,transparent 1px),linear-gradient(90deg,rgba(40,50,75,0.2) 1px,transparent 1px);background-size:40px 40px}
+.map-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--blue);box-shadow:0 0 8px var(--blue);animation:pulse 2s infinite}
+.map-dot.green{background:var(--green);box-shadow:0 0 8px var(--green)}
+.map-dot.amber{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+/* === TIMELINE === */
+.timeline{border-left:2px solid var(--line);padding-left:14px;margin-top:8px}
 .tl{position:relative;margin:10px 0}
-.tl::before{content:'';position:absolute;left:-19px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--panel2);border:2px solid var(--blue)}
-.muted{color:var(--dim);font-size:12px}
-.foot{margin-top:24px;color:var(--faint);font:11px var(--mono);border-top:1px solid var(--line);padding-top:12px}
+.tl::before{content:'';position:absolute;left:-17px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--panel2);border:2px solid var(--blue)}
+/* === MODALS === */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;animation:fadeInUp 0.2s ease-out}
+.modal-overlay.active{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;max-width:500px;width:90%;max-height:80vh;overflow:auto;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--shadow-lg)}
+.modal h2{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal .close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer}
+/* === ONBOARDING === */
+.tour-step{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:20px;max-width:440px;text-align:center}
+.tour-step .icon{font-size:40px;margin-bottom:12px;opacity:0.8}
+.tour-step h3{font-size:16px;margin-bottom:8px}
+.tour-step p{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:16px}
+.tour-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.tour-dot{width:8px;height:8px;border-radius:50%;background:var(--line);transition:all var(--transition)}
+.tour-dot.active{background:var(--blue);transform:scale(1.2)}
+.tour-keys{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.tour-key{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font:11px var(--mono);color:var(--dim)}
+/* === AI ANALYSIS RESULTS === */
+.analysis-results{margin-top:14px;display:none}
+.analysis-results.active{display:block}
+.analysis-meta{font-size:13px;color:var(--dim);margin-bottom:10px}
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(max-width:600px){.analysis-grid{grid-template-columns:1fr}}
+.imgbox{background:#000;border-radius:10px;overflow:hidden;border:1px solid var(--line);position:relative}
+.imgbox img{width:100%;display:block}
+.imgbox .placeholder{padding:30px;color:var(--faint);font:12px var(--mono);text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
+.verdict-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.verdict-item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start}
+.verdict-item .rank{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font:12px var(--mono);font-weight:700;flex-shrink:0}
+.verdict-item .info{flex:1}
+.verdict-item .info .score{font:13px var(--mono);color:#fff;font-weight:600}
+.verdict-item .info .detail{font:11px var(--mono);color:var(--dim);margin-top:2px}
+/* === PREMIUM SECTIONS === */
+.section-label{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 14px;font:10px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.section-label::before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--blue)}
+/* === ANIMATIONS === */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeInUp 0.5s ease-out both}
+.fade-up-1{animation-delay:0.08s}.fade-up-2{animation-delay:0.16s}.fade-up-3{animation-delay:0.24s}
+/* === SCROLLBAR === */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+/* === FOCUS === */
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+/* === RESPONSIVE === */
+@media(max-width:700px){
+  h1{font-size:15px}
+  .wrap{padding:12px 10px 60px}
+  .statrow{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+  .ai-bar-row input{min-width:100%}
+  .analysis-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 <header>
   <div class="top">
-    <h1><b>◉</b> NASA Investigation <span style="color:var(--faint);font-weight:400">— Full Stack EXE</span> <span class="pill"><i id="healthDot"></i><span id="healthTxt">checking…</span></span></h1>
+    <h1><span class="logo">◉</span> NASA Investigation <span style="color:var(--faint);font-weight:400">v2</span> <span class="pill"><i id="healthDot"></i><span id="healthTxt">checking…</span></span></h1>
     <nav>
-      <button class="navbtn" onclick="location.href='/showcase/'">Legacy showcase</button>
-      <a class="navbtn" href="/docs" target="_blank">API docs</a>
-      <a class="navbtn" href="/api/health" target="_blank">health JSON</a>
-      <button class="navbtn primary" onclick="document.getElementById('uploadCard').scrollIntoView({behavior:'smooth'})">Analyze image</button>
+      <a class="navbtn" href="/showcase/" target="_blank">Gallery</a>
+      <a class="navbtn" href="/api/intelligence/status" target="_blank">AI Status</a>
+      <a class="navbtn" href="/docs" target="_blank">API</a>
+      <button class="navbtn" onclick="startTour()">Tour</button>
+      <button class="navbtn primary" onclick="document.getElementById('uploadCard').scrollIntoView({behavior:'smooth'})">Analyze</button>
     </nav>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="statrow" id="statRow"></div>
-  <div class="chips" id="verdictChips" style="margin-bottom:12px"></div>
 
+  <!-- AI QUERY BAR -->
+  <div class="ai-bar fade-up" id="aiBar">
+    <h3>AI Query Engine</h3>
+    <div class="ai-bar-row">
+      <input type="text" id="aiQuery" placeholder="Try: &quot;bright features on Mars&quot;, &quot;high contrast craters&quot;, &quot;score > 50&quot;…" 
+             aria-label="AI natural language query" autocomplete="off" spellcheck="false">
+      <button class="btn" onclick="runAIQuery()" id="aiBtn">🧠 Analyze</button>
+      <button class="btn secondary" onclick="showAIInsights()">💡 Insights</button>
+      <button class="btn secondary" onclick="showAISummary()">📝 Summary</button>
+    </div>
+    <div class="ai-bar-results" id="aiResults" aria-live="polite"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="statrow fade-up fade-up-1" id="statRow"></div>
+
+  <!-- MAIN GRID -->
   <div class="grid">
+    <!-- LEFT: Upload + Leads -->
     <div>
-      <div class="card" id="uploadCard">
-        <h2>⬆ Instant analysis — drop a Moon/Mars image</h2>
-        <div id="drop" class="drop">
-          <div style="font-weight:600">Drag & drop PNG/JPG/TIFF/WebP here</div>
-          <div class="muted">or click to browse — runs detect→analyze in-process, no upload to cloud</div>
-          <div style="margin-top:10px"><label class="btn primary" for="fileIn">Choose image</label></div>
+      <!-- UPLOAD -->
+      <div class="card fade-up fade-up-1" id="uploadCard">
+        <h2>⬆ Instant Analysis — Drop a Moon/Mars Image</h2>
+        <div id="drop" class="drop" onclick="document.getElementById('fileIn').click()" role="button" tabindex="0" aria-label="Drop zone for image analysis">
+          <div class="icon">🛰</div>
+          <div class="label">Drag & drop PNG/JPG/TIFF/WebP here</div>
+          <div class="hint">or click to browse — runs detect→analyze in-process, no upload to cloud</div>
+          <div style="margin-top:12px"><label class="btn primary" for="fileIn">Choose image</label></div>
           <input type="file" id="fileIn" accept=".png,.jpg,.jpeg,.tif,.tiff,.webp,.bmp">
-          <div id="fileName" class="muted" style="margin-top:6px"></div>
+          <div id="fileName" class="file-info"></div>
         </div>
-        <div id="analyzeOut" style="margin-top:12px;display:none">
-          <div id="analyzeMeta" class="muted"></div>
-          <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
-            <div class="imgbox"><img id="markedImg" style="display:none"><div id="markedPh" class="muted" style="padding:18px;text-align:center">marked</div></div>
-            <div class="imgbox"><img id="stripImg" style="display:none"><div id="stripPh" class="muted" style="padding:18px;text-align:center">enhancement strip</div></div>
+        <div id="analyzeOut" class="analysis-results">
+          <div id="analyzeMeta" class="analysis-meta"></div>
+          <div class="analysis-grid">
+            <div class="imgbox"><img id="markedImg" style="display:none"><div id="markedPh" class="placeholder">marked image</div></div>
+            <div class="imgbox"><img id="stripImg" style="display:none"><div id="stripPh" class="placeholder">enhancement strip</div></div>
           </div>
-          <div id="verdicts" style="margin-top:10px"></div>
-          <pre id="jsonOut" style="margin-top:8px"></pre>
+          <div id="verdictList" class="verdict-list"></div>
+          <pre id="jsonOut" style="margin-top:10px;white-space:pre-wrap;word-break:break-word;background:#0a0f1d;border:1px solid var(--line);border-radius:8px;padding:10px;font:11px var(--mono);max-height:200px;overflow:auto"></pre>
         </div>
       </div>
 
-      <div class="card" style="margin-top:14px">
-        <h2>◈ Leads explorer <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">from data/anomalies/conclusions/leads.csv</span></h2>
-        <div class="row" style="margin-bottom:8px">
-          <input id="q" type="text" placeholder="search product, ESP_, polarity, flag…" style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')loadLeads()">
-          <select id="fVerdict" onchange="loadLeads()"><option value="">all verdicts</option><option>CONFIRMED-LEAD</option><option>PROMISING</option><option>TERRAIN</option><option>WEAK</option><option>NOISE</option></select>
-          <select id="fSort" onchange="loadLeads()"><option value="score">score</option><option value="contrast">contrast</option><option value="area">area</option></select>
+      <!-- LEADS EXPLORER -->
+      <div class="card fade-up fade-up-2" style="margin-top:14px">
+        <h2>◈ Leads Explorer <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);font-size:11px">from data/anomalies/conclusions/leads.csv</span></h2>
+        <div class="leads-header">
+          <input id="q" type="text" placeholder="search product, ESP_, polarity, flag…" style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')loadLeads()" aria-label="Search leads">
+          <select id="fVerdict" onchange="loadLeads()" aria-label="Filter by verdict"><option value="">all verdicts</option><option>CONFIRMED-LEAD</option><option>PROMISING</option><option>TERRAIN</option><option>WEAK</option><option>NOISE</option></select>
+          <select id="fSort" onchange="loadLeads()" aria-label="Sort leads"><option value="score">score</option><option value="contrast">contrast</option><option value="area">area</option></select>
           <button class="btn" onclick="loadLeads()">Search</button>
           <button class="btn" onclick="document.getElementById('q').value='';loadLeads()">Reset</button>
         </div>
-        <div id="leadsMeta" class="muted"></div>
-        <div style="overflow:auto;max-height:420px;margin-top:6px"><table><thead><tr><th>image</th><th>verdict</th><th>score</th><th>contrast</th><th>area</th><th>x,y</th></tr></thead><tbody id="leadsBody"></tbody></table></div>
+        <div id="leadsMeta" class="muted" style="font-size:12px;color:var(--dim);margin-bottom:6px"></div>
+        <div style="overflow:auto;max-height:360px;margin-top:4px"><table class="analysis-table"><thead><tr><th>image</th><th>verdict</th><th>score</th><th>contrast</th><th>area</th><th>x,y</th><th>cat</th></tr></thead><tbody id="leadsBody"></tbody></table></div>
+      </div>
+
+      <!-- MAP PREVIEW -->
+      <div class="card fade-up fade-up-3" style="margin-top:14px">
+        <h2>🗺 Spatial Overview <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">preview</span></h2>
+        <div class="map-container" id="mapPreview">
+          <div class="map-grid"></div>
+          <div id="mapDots"></div>
+          <div class="map-overlay">
+            <div style="font-size:16px;margin-bottom:6px">🗺</div>
+            <div>Anomaly spatial map</div>
+            <div style="font-size:10px;margin-top:4px">/api/intelligence/query → full map view</div>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- RIGHT: Pipeline + Catalog + History -->
     <div>
-      <div class="card">
+      <!-- PIPELINE -->
+      <div class="card fade-up fade-up-2">
         <h2>⚙ Pipeline</h2>
-        <div class="muted" style="margin-bottom:8px">Trigger steps inside the EXE (no subprocess). Download/catalog skipped in API mode — enhance→adjudicate run on data/.</div>
-        <div class="row">
-          <select id="pFrom"><option>enhance</option><option>detect</option><option>mark</option><option>analyze</option><option>triage</option><option>benchmark</option><option>adjudicate</option></select>
-          <span class="muted">→</span>
-          <select id="pTo"><option>detect</option><option>mark</option><option>analyze</option><option>triage</option><option>benchmark</option><option selected>adjudicate</option></select>
-          <button class="btn primary" onclick="runPipeline()">Run</button>
+        <div class="pipeline-steps" id="pipelineSteps">
+          <span class="pipeline-step" onclick="setPipelineRange('enhance','detect')">enhance</span>
+          <span class="pipeline-arrow">→</span>
+          <span class="pipeline-step" onclick="setPipelineRange('detect','mark')">detect</span>
+          <span class="pipeline-arrow">→</span>
+          <span class="pipeline-step" onclick="setPipelineRange('mark','analyze')">mark</span>
+          <span class="pipeline-arrow">→</span>
+          <span class="pipeline-step" onclick="setPipelineRange('analyze','triage')">analyze</span>
+          <span class="pipeline-arrow">→</span>
+          <span class="pipeline-step" onclick="setPipelineRange('triage','benchmark')">triage</span>
+          <span class="pipeline-arrow">→</span>
+          <span class="pipeline-step active" onclick="setPipelineRange('benchmark','adjudicate')">adjudicate</span>
         </div>
-        <div class="row" style="margin-top:8px">
-          <button class="btn" onclick="rebuildShowcase()">Rebuild showcase</button>
-          <button class="btn" onclick="loadStats()">Refresh stats</button>
+        <div class="pipeline-progress"><div class="fill" id="pipelineFill" style="width:0%"></div></div>
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Trigger steps inside the EXE (no subprocess). Download/catalog skipped in API mode.</div>
+        <div class="row" style="margin-top:6px">
+          <button class="btn primary" onclick="runPipeline()">▶ Run Selected</button>
+          <button class="btn" onclick="rebuildShowcase()">Rebuild Gallery</button>
+          <button class="btn" onclick="loadStats()">Refresh Stats</button>
         </div>
-        <pre id="pipelineLog" style="margin-top:8px;min-height:60px">ready</pre>
+        <pre id="pipelineLog" style="margin-top:8px;min-height:50px;font-size:11px"></pre>
       </div>
 
-      <div class="card" style="margin-top:14px">
-        <h2>Catalog & data</h2>
+      <!-- CATALOG -->
+      <div class="card fade-up fade-up-3" style="margin-top:14px">
+        <h2>Catalog & Data</h2>
         <div class="row" style="margin-bottom:8px">
           <button class="btn" onclick="loadCatalog()">Load catalog (first 20)</button>
           <a class="btn" href="/data/catalog/catalog.csv" target="_blank">catalog.csv</a>
           <a class="btn" href="/data/anomalies/conclusions/leads.csv" target="_blank">leads.csv</a>
         </div>
-        <div id="catalogMeta" class="muted"></div>
-        <div style="overflow:auto;max-height:260px"><table><thead><tr><th>file</th><th>W×H</th><th>sha256</th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+        <div id="catalogMeta" class="muted" style="font-size:12px"></div>
+        <div style="overflow:auto;max-height:200px"><table class="analysis-table"><thead><tr><th>file</th><th>W×H</th><th>sha256</th></tr></thead><tbody id="catalogBody"></tbody></table></div>
       </div>
 
-      <div class="card" style="margin-top:14px">
-        <h2>Run history <span class="muted" style="font-weight:400;text-transform:none">audit.jsonl</span></h2>
+      <!-- RUN HISTORY -->
+      <div class="card fade-up fade-up-3" style="margin-top:14px">
+        <h2>Run History <span class="muted" style="font-weight:400;text-transform:none;font-size:11px">audit.jsonl</span></h2>
         <div id="timeline" class="timeline"></div>
       </div>
+
+      <!-- AI INSIGHTS PANEL -->
+      <div class="card fade-up fade-up-3" style="margin-top:14px" id="insightsCard">
+        <h2>💡 AI Insights <span class="muted" style="font-weight:400;text-transform:none;font-size:11px">live</span></h2>
+        <div id="insightsContent" class="muted" style="font-size:13px">Click "💡 Insights" above to generate, or wait for auto-analysis.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING TOUR OVERLAY -->
+  <div class="modal-overlay" id="tourModal" role="dialog" aria-modal="true" aria-label="Welcome tour">
+    <div class="modal" style="position:relative">
+      <button class="close" onclick="endTour()" aria-label="Close tour">&times;</button>
+      <div id="tourContent"></div>
     </div>
   </div>
 
   <div class="card" style="margin-top:14px">
     <h2>How this EXE is built</h2>
-    <div class="muted">Single-file EXE bundles FastAPI server + pipeline + dashboard + showcase + configs. No install needed — double-click <b>nasa-fullstack.exe</b> and the dashboard opens at <code>http://127.0.0.1:8000</code>. Data lives next to the EXE in <code>data/</code>.</div>
+    <div class="muted" style="font-size:13px">Single-file EXE bundles FastAPI server + AI engine + pipeline + dashboard + showcase + configs. No install needed — double-click <b>nasa-fullstack.exe</b> and the dashboard opens at <code>http://127.0.0.1:8000</code>. Data lives next to the EXE in <code>data/</code>.</div>
     <div class="row" style="margin-top:8px">
-      <code class="chip">python scripts/build_app.py --fullstack</code>
+      <code class="chip" style="background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font:12px var(--mono);color:var(--dim)">python scripts/build_app.py --fullstack</code>
       <code class="chip">dist/nasa-fullstack/nasa-fullstack.exe</code>
       <code class="chip">--onefile → dist/nasa-fullstack.exe</code>
     </div>
   </div>
 
-  <div class="foot">Full-stack build: app/server.py (FastAPI) + app/launcher.py + app/static — PyInstaller spec packaging/nasa-fullstack.spec — <a href="/showcase/">open legacy showcase</a> · <a href="/docs">API docs</a></div>
+  <div class="foot" style="margin-top:24px;color:var(--faint);font:11px var(--mono);border-top:1px solid var(--line);padding-top:12px;text-align:center">
+    Full-stack v2: app/server.py (FastAPI) + app/launcher.py + app/static/template.html · 
+    <a href="/showcase/" target="_blank">Open Gallery</a> · 
+    <a href="/api/intelligence/status" target="_blank">AI Status</a> · 
+    Keyboard: <span style="background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font:10px var(--mono)">/</span> search · 
+    <span style="background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font:10px var(--mono)">Esc</span> close · 
+    Press <span style="background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font:10px var(--mono)">T</span> for tour
+  </div>
 </div>
 
 <script>
@@ -170,101 +365,236 @@ async function jpost(url, body, isForm){
 }
 function fmt(n){return Number(n).toLocaleString();}
 
+/* === AI QUERY === */
+async function runAIQuery() {
+  const q = $("aiQuery").value.trim();
+  if (!q) { showAIError("Enter a query like 'bright mars craters' or 'high contrast features'"); return; }
+  const results = $("aiResults");
+  results.classList.add("active");
+  results.innerHTML = `<div style="display:flex;align-items:center;gap:10px"><span class="loading"></span> <span style="color:var(--dim)">Analyzing with AI engine…</span></div>`;
+  const btn = $("aiBtn"); btn.disabled = true; btn.textContent = "⏳ Analyzing…";
+  try {
+    const params = new URLSearchParams({ q });
+    const d = await jget(`/api/intelligence/query?${params}`);
+    if (d.error) { showAIError(d.error); return; }
+    let html = '';
+    if (d.summary) {
+      html += `<div class="ai-summary-box">${esc(d.summary).replace(/\n/g, "<br>")}</div>`;
+    }
+    if (d.insights && d.insights.length) {
+      html += `<div class="ai-insights-grid">${d.insights.map(ins =>
+        `<div class="ai-insight-card" onclick="focusFeature('${esc(features_base || '')}')"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px;font-size:13px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+    }
+    if (d.features && d.features.length) {
+      html += `<div style="margin-top:12px;font-size:13px">AI matched <b style="color:var(--blue)">${fmt(d.matched)}</b> of ${fmt(d.total)} anomalies</div>`;
+    } else if (d.matched === 0) {
+      html += `<div style="color:var(--faint);margin-top:8px;font-size:13px">No anomalies match this query. Try different keywords.</div>`;
+    }
+    results.innerHTML = html;
+    // Also update insights panel
+    if (d.insights && d.insights.length) {
+      $("insightsContent").innerHTML = `<div class="ai-insights-grid">${d.insights.map(ins =>
+        `<div class="ai-insight-card"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px;font-size:13px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+    }
+  } catch (e) { showAIError(e.message); }
+  finally { btn.disabled = false; btn.textContent = "🧠 Analyze"; }
+}
+
+async function showAIInsights() {
+  $("aiResults").classList.add("active");
+  $("aiResults").innerHTML = `<div style="display:flex;align-items:center;gap:10px"><span class="loading"></span> <span style="color:var(--dim)">Generating insights…</span></div>`;
+  try {
+    const d = await jget("/api/intelligence/insights");
+    if (d.insights && d.insights.length) {
+      $("aiResults").innerHTML = `<h3 style="margin:0 0 12px;font-size:15px">💡 Actionable Insights</h3><div class="ai-insights-grid">${d.insights.map(ins =>
+        `<div class="ai-insight-card"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px;font-size:13px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+      $("insightsContent").innerHTML = $("aiResults").innerHTML;
+    } else {
+      $("aiResults").innerHTML = `<div class="empty">No insights available yet. Run the pipeline first.</div>`;
+    }
+  } catch (e) { showAIError(e.message); }
+}
+
+async function showAISummary() {
+  $("aiResults").classList.add("active");
+  $("aiResults").innerHTML = `<div style="display:flex;align-items:center;gap:10px"><span class="loading"></span> <span style="color:var(--dim)">Generating summary…</span></div>`;
+  try {
+    const d = await jget("/api/intelligence/summary");
+    let html = `<h3 style="margin:0 0 12px;font-size:15px">📝 AI Summary</h3>`;
+    if (d.summary) html += `<div class="ai-summary-box">${esc(d.summary).replace(/\n/g, "<br>")}</div>`;
+    if (d.insights && d.insights.length) {
+      html += `<div class="ai-insights-grid">${d.insights.map(ins =>
+        `<div class="ai-insight-card"><span class="priority priority-${ins.priority || 'info'}">${ins.priority || 'info'}</span><div style="font-weight:600;margin-bottom:4px;font-size:13px">${esc(ins.title)}</div><div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(ins.description)}</div></div>`
+      ).join("")}</div>`;
+    }
+    $("aiResults").innerHTML = html;
+  } catch (e) { showAIError(e.message); }
+}
+
+function showAIError(msg) {
+  $("aiResults").classList.add("active");
+  $("aiResults").innerHTML = `<div class="ai-summary-box" style="border-left-color:var(--red)"><b>Error:</b> ${esc(msg)}</div>`;
+}
+
+/* === STATS === */
 async function loadStats(){
   try{
     const s=await jget('/api/stats');
     $('statRow').innerHTML=[
-      ['leads', 'Leads', s.leads_total],
-      ['features','Features', s.features],
-      ['marked','Boxed', s.marked],
-      ['sources','Sources', s.sources],
-      ['catalog','Catalog rows', s.catalog_rows],
-      ['eval','Evaluated', s.evaluated_total ?? '-'],
-    ].map(([k,t,v])=>`<div class=\"stat\"><div class=\"k\">${t}</div><div class=\"v\">${v}</div></div>`).join('') +
-      Object.entries(s.bodies||{}).map(([k,v])=>`<div class=\"stat\"><div class=\"k\">${k}</div><div class=\"v\">${v}</div></div>`).join('');
+      ['leads','Leads',s.leads_total],
+      ['features','Features',s.features],
+      ['marked','Boxed',s.marked],
+      ['sources','Sources',s.sources],
+      ['catalog','Catalog',s.catalog_rows],
+      ['eval','Evaluated',s.evaluated_total ?? '-'],
+    ].map(([k,t,v])=>`<div class="stat"><div class="k">${t}</div><div class="v">${v}</div></div>`).join('') +
+      Object.entries(s.bodies||{}).map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
     const v=s.verdicts||{};
-    $('verdictChips').innerHTML=Object.entries(v).map(([k,n])=>`<span class=\"chip\">${k} <b style=\"color:#fff;margin-left:4px\">${n}</b></span>`).join('') || '<span class=\"muted\">no leads yet — run the pipeline</span>';
-    // timeline
+    $('verdictChips') && ($('verdictChips').innerHTML=Object.entries(v).map(([k,n])=>`<span class="chip">${k} <b style="color:#fff;margin-left:4px">${n}</b></span>`).join('') || '<span class="muted">no data</span>');
     const audit=s.audit_recent||[];
-    $('timeline').innerHTML = audit.length? audit.slice(0,8).map(r=>`<div class=\"tl\"><div style=\"font:11px var(--mono)\"><b>${r.event}</b> <span class=\"muted\">${r.ts||''}</span></div><div class=\"muted\" style=\"font-size:11px\">${(r.candidates!==undefined?'candidates '+r.candidates+' ':'')+(r.evaluated!==undefined?'evaluated '+r.evaluated+' ':'')+(r.seconds?'⏱ '+r.seconds+'s':'')}</div></div>`).join('') : '<div class=\"muted\">no audit records yet</div>';
+    $('timeline').innerHTML = audit.length? audit.slice(0,8).map(r=>`<div class="tl"><div style="font:11px var(--mono)"><b>${r.event}</b> <span class="muted">${r.ts||''}</span></div><div class="muted" style="font-size:11px">${(r.candidates!==undefined?'candidates '+r.candidates+' ':'')+(r.evaluated!==undefined?'evaluated '+r.evaluated+' ':'')+(r.seconds?'⏱ '+r.seconds+'s':'')}</div></div>`).join('') : '<div class="muted">no audit records yet</div>';
     $('healthDot').style.background='var(--green)'; $('healthDot').style.boxShadow='0 0 6px var(--green)'; $('healthTxt').textContent='API online';
-  }catch(e){ $('healthDot').style.background='var(--red)'; $('healthTxt').textContent='offline: '+e.message; }}
+  }catch(e){ $('healthDot').style.background='var(--red)'; $('healthTxt').textContent='offline'; }
+}
 async function checkHealth(){ try{ await jget('/api/health'); $('healthDot').style.background='var(--green)'; $('healthTxt').textContent='API online'; }catch(e){ $('healthDot').style.background='var(--red)'; $('healthTxt').textContent='offline'; } }
-let loopOffset=0;
-async function loadLeads(loopDir=0){
+
+/* === LEADS === */
+let leadOffset=0;
+async function loadLeads(dir=0){
+  if(dir!==0){ leadOffset = (leadOffset + dir*60) % Math.max(1, 6760); if(leadOffset<0)leadOffset+=6760; }
+  else leadOffset=0;
   const q=$('q').value.trim(), verdict=$('fVerdict').value, sort=$('fSort').value;
-  // LOOP: offset wraps circularly (infinite carousel) — prev/next loops
-  if(loopDir!==0){ loopOffset = (loopOffset + loopDir*60) % Math.max(1, 6760); if(loopOffset<0) loopOffset+=6760; }
-  else if(!q && !verdict) { /* keep current offset for paging */ } else { loopOffset=0; }
-  const url=`/api/features?limit=60&offset=${loopOffset}&sort=${encodeURIComponent(sort)}${verdict?'&verdict='+encodeURIComponent(verdict):''}${q?'&q='+encodeURIComponent(q):''}&grouped=1`;
-  $('leadsMeta').textContent='loading… loop '+loopOffset+'…';
+  const url=`/api/features?limit=60&offset=${leadOffset}&sort=${encodeURIComponent(sort)}${verdict?'&verdict='+encodeURIComponent(verdict):''}${q?'&q='+encodeURIComponent(q):''}&grouped=1`;
+  $('leadsMeta').textContent='loading… offset '+leadOffset;
   try{
     const d=await jget(url);
     const isGrouped = d.grouped;
-    $('leadsMeta').innerHTML=`${fmt(d.total)} distinct anomalies (grouped — one card = all band views) — showing ${d.rows.length} <span class=muted>(loop offset ${d.offset}, wraps)</span> <button class=btn onclick="loadLeads(-1)">‹ Loop prev</button> <button class=btn onclick="loadLeads(1)">Loop next ›</button> <button class=btn onclick="loopOffset=0;loadLeads()">↺ Reset loop</button>`;
+    $('leadsMeta').innerHTML=`${fmt(d.total)} distinct anomalies — showing ${d.rows.length} <span style="color:var(--faint)">(${d.offset}, wraps)</span> <button class="btn sm" onclick="loadLeads(-1)">‹</button> <button class="btn sm" onclick="loadLeads(1)">›</button> <button class="btn sm" onclick="leadOffset=0;loadLeads()">↺</button>`;
     $('leadsBody').innerHTML=d.rows.map(r=>{
       if(isGrouped){
         const c=(v)=> v==='CONFIRMED-LEAD'?'b-green': v==='PROMISING'?'b-amber':'b-blue';
-        const vc = r.variant_count>1 ? `<span class=badge style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d">${r.variant_count} views</span>` : '';
-        const bands=(r.bands||[]).map(b=>`<span class=badge style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d">${b}</span>`).join('');
-        const gallery = (r.variants||[]).slice(0,3).map(v=>v.band+':'+(v.image||'').split('_').pop()).join(' • ');
-        return `<tr><td style="font-family:var(--mono);font-size:11px;word-break:break-all">${r.base||r.image} ${vc}<div class=muted style="font-size:10px">${bands} ${gallery}</div></td><td><span class="badge ${c(r.verdict)}">${r.verdict||'-'}</span><div class=muted style="font-size:10px">${(r.verdicts||[]).join('/')}</div></td><td>${r.max_score||r.score||''}</td><td>${r.max_contrast||r.contrast||''}</td><td>${r.area_px||''}</td><td>${r.x},${r.y} <span class=muted>• ${r.variant_count} imgs</span></td></tr>`;
+        const bands=(r.bands||[]).map(b=>`<span style="background:#0d1a21;color:#7fd4e8;border:1px solid #16404d;padding:1px 6px;border-radius:4px;font:10px var(--mono)">${b}</span>`).join('');
+        const cat = r.category || 'irregular';
+        return `<tr><td style="font-family:var(--mono);font-size:11px;word-break:break-all">${r.base||r.image}<div style="font-size:10px;color:var(--faint)">${bands} ${r.variant_count||1} views</div></td>
+          <td><span class="badge ${c(r.verdict)}">${r.verdict||'-'}</span>${r.category?`<span class="badge b-conf" style="margin-left:4px">${r.category}</span>`:''}</td>
+          <td>${r.max_score||r.score||''}</td><td>${r.max_contrast||r.contrast||''}</td><td>${r.area_px||''}</td><td style="font-family:var(--mono);font-size:10px">${r.x},${r.y}</td>
+          <td><button class="btn sm" onclick="openLightbox('${esc(r.base)}','',${r.max_score||0},'${cat}')">🔍</button></td></tr>`;
       } else {
         const c=(v)=> v==='CONFIRMED-LEAD'?'b-green': v==='PROMISING'?'b-amber':'b-blue';
-        return `<tr><td style="font-family:var(--mono);font-size:11px;word-break:break-all">${r.image||''}</td><td><span class="badge ${c(r.verdict)}">${r.verdict||'-'}</span></td><td>${r.score||''}</td><td>${r.contrast||''}</td><td>${r.area_px||''}</td><td>${r.x},${r.y}</td></tr>`;
+        return `<tr><td style="font-family:var(--mono);font-size:11px">${r.image||''}</td><td><span class="badge ${c(r.verdict)}">${r.verdict||'-'}</span></td><td>${r.score||''}</td><td>${r.contrast||''}</td><td>${r.area_px||''}</td><td style="font-family:var(--mono);font-size:10px">${r.x},${r.y}</td></tr>`;
       }
-    }).join('') || '<tr><td colspan=6 class=muted style="text-align:center">no rows</td></tr>';
-    // auto-loop hint
-    if(d.rows.length) loopOffset = (d.offset + 60) % d.total;
+    }).join('') || '<tr><td colspan="7" class="muted" style="text-align:center">no rows</td></tr>';
+    if(d.rows.length) leadOffset = (d.offset + 60) % d.total;
   }catch(e){ $('leadsMeta').textContent='error: '+e.message; }
+}
+
+/* === PIPELINE === */
+function setPipelineRange(from, to) {
+  $('pFrom').value = from;
+  $('pTo').value = to;
+}
+async function runPipeline(){
+  const from=$('pFrom').value,to=$('pTo').value;
+  $('pipelineLog').textContent=`starting ${from} → ${to} …`;
+  $('pipelineFill').style.width = '10%';
+  try {
+    const r=await jpost('/api/pipeline/run',{from,to});
+    $('pipelineFill').style.width = '50%';
+    $('pipelineLog').textContent=JSON.stringify(r,null,2)+'\n(pipeline runs in background — refresh in ~10s)';
+    setTimeout(async () => { await loadStats(); $('pipelineFill').style.width = '100%'; setTimeout(()=>$('pipelineFill').style.width='0%', 2000); }, 6000);
+  }catch(e){ $('pipelineLog').textContent='error: '+e.message; $('pipelineFill').style.width='0%'; }
+}
+async function rebuildShowcase(){
+  $('pipelineLog').textContent='rebuilding gallery…';
+  try { const r=await jpost('/api/showcase/rebuild',{}); $('pipelineLog').textContent=JSON.stringify(r,null,2); }
+  catch(e){ $('pipelineLog').textContent='error: '+e.message; }
 }
 async function loadCatalog(){
   $('catalogMeta').textContent='loading…';
   try{
     const d=await jget('/api/catalog?limit=20&offset=0');
     $('catalogMeta').textContent=`${fmt(d.total)} rows`;
-    $('catalogBody').innerHTML=d.rows.map(r=>`<tr><td style=\"font:11px var(--mono);word-break:break-all\">${(r.file||r.path||'').split('/').pop()}</td><td>${r.width||''}×${r.height||''}${(!r.width && r.dimensions)?r.dimensions:''}</td><td style=\"font:10px var(--mono);word-break:break-all\">${(r.sha256||'').slice(0,16)}…</td></tr>`).join('');
+    $('catalogBody').innerHTML=d.rows.map(r=>`<tr><td style="font:11px var(--mono);word-break:break-all">${(r.file||r.path||'').split('/').pop()}</td><td>${r.width||''}×${r.height||''}${(!r.width && r.dimensions)?r.dimensions:''}</td><td style="font:10px var(--mono);word-break:break-all">${(r.sha256||'').slice(0,16)}…</td></tr>`).join('');
   }catch(e){ $('catalogMeta').textContent='error: '+e.message; }
 }
-async function runPipeline(){
-  const from=$('pFrom').value,to=$('pTo').value;
-  $('pipelineLog').textContent=`starting ${from} → ${to} …`;
-  try{ const r=await jpost('/api/pipeline/run',{from,to}); $('pipelineLog').textContent=JSON.stringify(r,null,2)+'\n(pipeline runs in background — refresh stats in ~10s)'; setTimeout(loadStats, 6000);}catch(e){ $('pipelineLog').textContent='error: '+e.message; }
-}
-async function rebuildShowcase(){
-  $('pipelineLog').textContent='rebuilding showcase…';
-  try{ const r=await jpost('/api/showcase/rebuild',{}); $('pipelineLog').textContent=JSON.stringify(r,null,2);}catch(e){ $('pipelineLog').textContent='error: '+e.message; }
-}
 
-// upload wiring
+/* === UPLOAD HANDLING === */
 function showAnalyze(r, name){
   $('analyzeOut').style.display='block';
   $('analyzeMeta').textContent=`${r.candidates} candidate(s) in ${name} — ${r.message||''}`;
-  if(r.marked_b64){ $('markedImg').src='data:image/png;base64,'+r.marked_b64; $('markedImg').style.display='block'; $('markedPh').style.display='none'; } else { $('markedImg').style.display='none'; $('markedPh').style.display='block'; }
-  if(r.strip_b64){ $('stripImg').src='data:image/jpeg;base64,'+r.strip_b64; $('stripImg').style.display='block'; $('stripPh').style.display='none'; } else { $('stripImg').style.display='none'; $('stripPh').style.display='block'; }
+  if(r.marked_b64){ $('markedImg').src='data:image/png;base64,'+r.marked_b64; $('markedImg').style.display='block'; $('markedPh').style.display='none'; }
+  else { $('markedImg').style.display='none'; $('markedPh').style.display='block'; }
+  if(r.strip_b64){ $('stripImg').src='data:image/jpeg;base64,'+r.strip_b64; $('stripImg').style.display='block'; $('stripPh').style.display='none'; }
+  else { $('stripImg').style.display='none'; $('stripPh').style.display='block'; }
   const tops=r.top||[];
-  $('verdicts').innerHTML = tops.length? tops.map((t,i)=>`<div class=\"card\" style=\"padding:10px;margin-top:8px;background:var(--panel2)\"><div><b>#${i+1} — score ${t.score}</b> <span class=\"badge ${t.cls>=3?'b-green':'b-amber'}\">class ${t.cls}</span> ${t.flags.length?'<span class=\"badge b-red\">'+t.flags.join(', ')+'</span>':''}</div><div style=\"font-size:12px;margin-top:4px\">${t.verdict}</div><div class=\"muted\" style=\"font:11px var(--mono);margin-top:4px\">contrast ${t.feats.contrast} · area ${t.feats.area_px}px · aspect ${t.feats.aspect} · polarity ${t.feats.polarity}</div></div>`).join('') : '<div class=\"muted\">no top candidates</div>';
+  $('verdictList').innerHTML = tops.length? tops.map((t,i)=>`<div class="verdict-item"><div class="rank">${i+1}</div><div class="info"><div class="score">score ${t.score} — class ${t.cls} ${t.flags.length?'<span style="color:var(--red)">'+t.flags.join(', ')+'</span>':''}</div><div style="font-size:12px;margin-top:2px">${t.verdict}</div><div class="detail">contrast ${t.feats.contrast} · area ${t.feats.area_px}px · aspect ${t.feats.aspect} · polarity ${t.feats.polarity}</div></div></div>`).join('') : '<div class="muted">no top candidates</div>';
   $('jsonOut').textContent=JSON.stringify(r,null,2);
 }
 async function handleFile(file){
   if(!file) return;
   $('fileName').textContent=file.name+' ('+(file.size/1024).toFixed(1)+' KB) — analyzing…';
-  $('analyzeOut').style.display='block'; $('analyzeMeta').textContent='analyzing…'; $('verdicts').innerHTML=''; $('jsonOut').textContent='';
+  $('fileName').style.display='block';
+  $('analyzeOut').style.display='block'; $('analyzeMeta').textContent='analyzing…'; $('verdictList').innerHTML=''; $('jsonOut').textContent='';
   try{
     const fd=new FormData(); fd.append('file', file, file.name);
     const r=await jpost('/api/analyze', fd, true);
-    $('fileName').textContent=file.name+' — done';
+    $('fileName').textContent=file.name+' — ✓ done';
     showAnalyze(r, file.name);
   }catch(e){ $('fileName').textContent='error: '+e.message; $('jsonOut').textContent=String(e); }
 }
 const drop=$('drop'), fileIn=$('fileIn');
-drop.addEventListener('click', e=>{ if(e.target===drop || e.target.closest('.drop')) fileIn.click(); });
+drop.addEventListener('click', e=>{ if(e.target===drop||e.target.closest('.drop')) fileIn.click(); });
 drop.addEventListener('dragover', e=>{e.preventDefault(); drop.classList.add('drag');});
 drop.addEventListener('dragleave', ()=>drop.classList.remove('drag'));
 drop.addEventListener('drop', e=>{e.preventDefault(); drop.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) handleFile(f);});
 fileIn.addEventListener('change', ()=>{ const f=fileIn.files[0]; if(f) handleFile(f); });
 
-checkHealth(); loadStats(); loadLeads();
+/* === ONBOARDING TOUR === */
+const TOUR_STEPS = [
+  { icon: "🧠", title: "AI Query Engine", text: "Ask natural language questions like 'bright features on Mars' or 'high contrast craters'. The AI parses your query, filters anomalies, and generates insights automatically.", keys: ["Try the AI bar above"] },
+  { icon: "🗺", title: "Spatial Overview", text: "The map preview shows anomaly distribution. Click any image in the gallery to open the lightbox viewer with full details.", keys: ["Look at the map below"] },
+  { icon: "⚙", title: "Pipeline Controls", text: "Run pipeline steps in-process without subprocesses. Select start/end points and click Run. The progress bar shows completion.", keys: ["Try Run Pipeline"] },
+  { icon: "📊", title: "Live Stats & Insights", text: "Stats update in real-time. Click 💡 Insights for AI-generated actionable recommendations about your data.", keys: ["Click Insights above"] },
+  { icon: "🎯", title: "Drag & Drop Analysis", text: "Drop any Moon/Mars image for instant analysis. The system runs detect → analyze in-process, no upload needed.", keys: ["Try dropping an image"] },
+];
+let tourStep = 0;
+function startTour() { tourStep = 0; renderTour(); $('tourModal').classList.add('active'); }
+function renderTour() {
+  const step = TOUR_STEPS[tourStep];
+  const total = TOUR_STEPS.length;
+  $('tourContent').innerHTML = `
+    <div class="tour-step">
+      <div class="icon">${step.icon}</div>
+      <h3>${step.title} <span style="color:var(--faint);font-size:13px;font-weight:400">(${tourStep+1}/${total})</span></h3>
+      <p>${step.text}</p>
+      <div class="tour-dots">${TOUR_STEPS.map((_,i)=>`<div class="tour-dot ${i===tourStep?'active':''}"></div>`).join('')}</div>
+      <div class="tour-keys">${step.keys.map(k=>`<span class="tour-key">${k}</span>`).join('')}</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        ${tourStep>0?'<button class="btn" onclick="tourPrev()">← Back</button>':''}
+        ${tourStep<total-1?'<button class="btn primary" onclick="tourNext()">Next →</button>':'<button class="btn primary" onclick="endTour()">✓ Got it</button>'}
+      </div>
+    </div>`;
+}
+function tourNext() { tourStep = Math.min(tourStep+1, TOUR_STEPS.length-1); renderTour(); }
+function tourPrev() { tourStep = Math.max(tourStep-1, 0); renderTour(); }
+function endTour() { $('tourModal').classList.remove('active'); localStorage.setItem('nasa_tour_done', '1'); }
+function checkTour() { if (!localStorage.getItem('nasa_tour_done')) setTimeout(startTour, 1500); }
+
+/* === KEYBOARD === */
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault(); $('aiQuery').focus();
+  }
+  if (e.key === 't' || e.key === 'T') { if (!$('tourModal').classList.contains('active')) startTour(); }
+  if (e.key === 'Escape') endTour();
+});
+
+/* === INIT === */
+checkHealth(); loadStats(); loadLeads(); checkTour();
+setInterval(checkHealth, 30000);
 </script>
 </body>
 </html>
